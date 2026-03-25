@@ -1,0 +1,13 @@
+{
+  "resultNode": {
+    "skillFile": "Skill File:",
+    "notSet": "Not set",
+    "resourceOutput": "Resource Output:"
+  },
+  "commandNode": {
+    "textCommand": "Text Command",
+    "noContent": "No content",
+    "placeholder": "Enter command...",
+    "executing": "Executing..."
+  }
+}

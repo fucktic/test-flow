@@ -1,0 +1,13 @@
+{
+  "resultNode": {
+    "skillFile": "Skill 文件:",
+    "notSet": "未设置",
+    "resourceOutput": "资源输出:"
+  },
+  "commandNode": {
+    "textCommand": "文本指令",
+    "noContent": "暂无内容",
+    "placeholder": "请输入命令...",
+    "executing": "执行中..."
+  }
+}
