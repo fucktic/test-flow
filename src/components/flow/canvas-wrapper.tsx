@@ -6,11 +6,21 @@ import "@xyflow/react/dist/style.css";
 import { useFlowStore } from "../../lib/store/use-flow";
 import { TextNode } from "./nodes/command-node";
 import { SkillNode } from "./nodes/result-node";
+import { EpisodeNode } from "./nodes/episode-node";
+import { SceneNode } from "./nodes/scene-node";
+import SceneImageNode from "./nodes/scene-image-node";
+import SceneVideoNode from "./nodes/scene-video-node";
+import VideoPreviewNode from "./nodes/video-preview-node";
 import { useTheme } from "next-themes";
 
 const nodeTypes = {
   textNode: TextNode,
   skillNode: SkillNode,
+  episodeNode: EpisodeNode,
+  sceneNode: SceneNode,
+  sceneImageNode: SceneImageNode,
+  sceneVideoNode: SceneVideoNode,
+  videoPreviewNode: VideoPreviewNode,
 };
 
 export const FlowCanvas = () => {

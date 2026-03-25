@@ -9,5 +9,52 @@
     "noContent": "No content",
     "placeholder": "Enter command...",
     "executing": "Executing..."
+  },
+  "episodeNode": {
+    "title": "Episodes"
+  },
+  "scriptNode": {
+    "title": "Script Details"
+  },
+  "sceneNode": {
+    "title": "Scenes",
+    "edit": "Edit current scene",
+    "delete": "Delete current scene",
+    "add": "Add scene at current position"
+  },
+  "sceneImageNode": {
+    "title": "Generate Image",
+    "referenceImage": "Ref",
+    "img": "IMG",
+    "ratioAndResolution": "Ratio/Resolution",
+    "generate": "Generate",
+    "promptPlaceholder": "Generate an image based on the provided reference images and storyboard script, with reasonable scene structure, lighting atmosphere, strong narrative sense, and high-quality finished product that meets the standards of film and television animation storyboards.",
+    "format": {
+      "9grid": "9 Grid",
+      "single": "Single",
+      "first": "First",
+      "last": "Last"
+    }
+  },
+  "sceneVideoNode": {
+    "title": "Generate Video",
+    "vid": "VID",
+    "ratioAndResolution": "Ratio/Resolution",
+    "generate": "Generate",
+    "promptPlaceholder": "Generate a video based on the provided material images, strictly following the content, composition, and style of the original images, to create a dynamic video with coherent logic, natural movements, realistic lighting, and smooth transitions.",
+    "refTypes": {
+      "single": "Single",
+      "grid": "Grid",
+      "first": "First",
+      "last": "Last"
+    },
+    "img": "+ IMG"
+  },
+  "videoPreviewNode": {
+    "title": "Storyboard Video Preview",
+    "refresh": "Refresh",
+    "progress": "Generation Progress",
+    "postEdit": "Post-editing",
+    "pending": "Pending"
   }
 }

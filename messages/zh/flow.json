@@ -9,5 +9,52 @@
     "noContent": "暂无内容",
     "placeholder": "请输入命令...",
     "executing": "执行中..."
+  },
+  "episodeNode": {
+    "title": "剧集"
+  },
+  "scriptNode": {
+    "title": "剧本详情"
+  },
+  "sceneNode": {
+    "title": "分镜",
+    "edit": "编辑当前分镜",
+    "delete": "删除当前分镜",
+    "add": "当前位置手动增加分镜"
+  },
+  "sceneImageNode": {
+    "title": "生成图像",
+    "referenceImage": "参考图",
+    "img": "IMG",
+    "ratioAndResolution": "比例/分辨率",
+    "generate": "生成",
+    "promptPlaceholder": "按照提供的参考图与分镜脚本进行生成图像，合理的场景结构、光影氛围，叙事感强，符合影视动画分镜标准的高质量成品图。",
+    "format": {
+      "9grid": "9宫格",
+      "single": "单帧图",
+      "first": "首帧",
+      "last": "尾帧"
+    }
+  },
+  "sceneVideoNode": {
+    "title": "生成视频",
+    "vid": "VID",
+    "ratioAndResolution": "比例/分辨率",
+    "generate": "生成",
+    "promptPlaceholder": "请根据提供的素材图像进行视频生成，严格遵循原图的内容、构图与风格，生成逻辑连贯、动作自然、光影真实、过渡流畅的动态视频。",
+    "refTypes": {
+      "single": "单图",
+      "grid": "宫格",
+      "first": "首帧",
+      "last": "尾帧"
+    },
+    "img": "+ IMG"
+  },
+  "videoPreviewNode": {
+    "title": "分镜视频预览",
+    "refresh": "刷新",
+    "progress": "生成进度",
+    "postEdit": "后期剪辑",
+    "pending": "未生成"
   }
 }
