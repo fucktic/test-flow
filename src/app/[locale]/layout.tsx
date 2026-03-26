@@ -7,6 +7,7 @@ import { routing } from "@/i18n/routing";
 import { Header } from "@/components/layout/header";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/theme-provider";
+import { Toaster } from "@/components/ui/sonner";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -55,6 +56,7 @@ export default async function RootLayout({
             enableSystem={false}
             disableTransitionOnChange
           >
+            <Toaster />
             <TooltipProvider>
               <Header />
               <div className="flex-1 w-full overflow-hidden">{children}</div>
