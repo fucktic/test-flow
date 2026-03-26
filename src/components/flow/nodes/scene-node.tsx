@@ -1,4 +1,4 @@
-import { Handle, Position, useNodeId, useStore } from "@xyflow/react";
+import { Handle, Position } from "@xyflow/react";
 import { SceneNodeData } from "../../../lib/types/flow.types";
 import { useTranslations } from "next-intl";
 import { ScrollArea } from "../../ui/scroll-area";
@@ -7,12 +7,6 @@ import { cn } from "@/lib/utils";
 
 export const SceneNode = ({ data }: { data: SceneNodeData }) => {
   const tFlow = useTranslations("flow.sceneNode");
-  const nodeId = useNodeId();
-
-  // Check if there is an outgoing edge from this node's main handle
-  const hasConnection = useStore((state) =>
-    state.edges.some((edge) => edge.source === nodeId && edge.sourceHandle === "main"),
-  );
 
   return (
     <div className="flex flex-col gap-2 w-100 relative">
@@ -25,20 +19,22 @@ export const SceneNode = ({ data }: { data: SceneNodeData }) => {
         )}
       </div>
 
-      <div className="bg-card dark:bg-card rounded-xl shadow-lg border border-border p-4 text-card-foreground relative flex flex-col h-[500px]">
+      <div className="bg-card dark:bg-card rounded-xl shadow-lg border border-border p-4 text-card-foreground relative flex flex-col h-[500px] group/node">
         {/* Input Handle */}
         <Handle
           type="target"
           position={Position.Left}
           id="in"
-          className="w-3 h-3 bg-muted border-2 border-background left-[-6px] top-1/2 -translate-y-1/2"
-        />
+          className="w-6! h-6! flex items-center justify-center bg-background! border border-border! hover:bg-primary/80! transition-colors group-hover/node"
+        >
+          <Plus className="size-4 m-auto text-muted-foreground group-hover/node:text-white!" />
+        </Handle>
 
         <ScrollArea className="flex-1 pr-3 nodrag nowheel overflow-y-auto">
           <div className="flex flex-col">
             {/* Add Scene Button (Before first item) */}
             <div className="relative flex justify-center py-2 opacity-0 hover:opacity-100 transition-opacity group/add">
-              <div className="absolute top-1/2 left-0 right-0 h-[1px] bg-border/50 -translate-y-1/2"></div>
+              <div className="absolute top-1/2 left-0 right-0 h-px bg-border/50 -translate-y-1/2"></div>
               <button
                 onClick={() => data.onSceneAdd?.(0)}
                 className="relative z-10 w-5 h-5 bg-background border border-border rounded flex items-center justify-center text-muted-foreground hover:text-primary hover:border-primary transition-colors"
@@ -53,32 +49,34 @@ export const SceneNode = ({ data }: { data: SceneNodeData }) => {
                 {/* Scene Item */}
                 <div
                   className={cn(
-                    "group relative p-3 rounded-lg border transition-colors cursor-pointer",
+                    "group relative p-3 rounded-lg border transition-colors cursor-pointer overflow-hidden",
                     scene.selected
-                      ? "bg-primary text-primary-foreground border-primary"
+                      ? "bg-primary/50 text-primary-foreground border-primary"
                       : "bg-muted/30 border-border hover:border-border/80",
                   )}
                   onClick={() => data.onSceneSelect?.(scene.id)}
                 >
-                  <div className="flex items-center gap-2 mb-1">
+                  <div className="flex items-center gap-2 mb-1 absolute top-0 left-0 ">
                     <span
                       className={cn(
-                        "text-xs font-medium px-1.5 py-0.5 rounded-sm",
+                        "text-xs font-medium px-1.5 py-0.5 rounded-br-lg",
                         scene.selected
-                          ? "bg-primary-foreground/20 text-primary-foreground"
+                          ? "bg-primary text-primary-foreground"
                           : "bg-muted text-muted-foreground group-hover:bg-muted-foreground/20",
                       )}
                     >
                       {scene.name}
                     </span>
                   </div>
-                  <div
-                    className={cn(
-                      "text-[13px] leading-relaxed line-clamp-3",
-                      scene.selected ? "text-primary-foreground/90" : "text-muted-foreground",
-                    )}
-                  >
-                    {scene.content}
+                  <div className="pt-5">
+                    <div
+                      className={cn(
+                        "",
+                        scene.selected ? "text-primary-foreground/90" : "text-muted-foreground",
+                      )}
+                    >
+                      {scene.content}
+                    </div>
                   </div>
 
                   {/* Actions (Always show on hover) */}
@@ -133,22 +131,14 @@ export const SceneNode = ({ data }: { data: SceneNodeData }) => {
         </ScrollArea>
 
         {/* Main output handle like a Plus button */}
-        <div
-          className={cn(
-            "absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full flex items-center justify-center border transition-all z-10",
-            hasConnection
-              ? "bg-background border-border"
-              : "bg-primary border-primary text-primary-foreground cursor-crosshair hover:bg-primary/90",
-          )}
+        <Handle
+          type="source"
+          position={Position.Right}
+          id="main"
+          className="w-6! h-6! flex items-center justify-center bg-background! border border-border! hover:bg-primary/80! transition-colors group-hover/node"
         >
-          {!hasConnection && <Plus className="w-4 h-4" />}
-          <Handle
-            type="source"
-            position={Position.Right}
-            id="main"
-            className="size-full bg-transparent border-none right-0 top-0 transform-none opacity-0"
-          />
-        </div>
+          <Plus className="size-4 m-auto text-muted-foreground group-hover/node:text-white!" />
+        </Handle>
       </div>
     </div>
   );

@@ -1,0 +1,6 @@
+.react-flow {
+  --xy-handle-background-color-default: var(--primary);
+}
+.react-flow.dark {
+  --xy-handle-background-color-default: var(--primary);
+}

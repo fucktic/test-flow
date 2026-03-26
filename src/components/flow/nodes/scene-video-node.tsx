@@ -1,10 +1,9 @@
-import { memo } from "react";
-import { Handle, Position, useNodeId } from "@xyflow/react";
+import { memo, useState } from "react";
+import { Handle, Position } from "@xyflow/react";
 import { SceneVideoNodeData } from "@/lib/types/flow.types";
-import { useFlowStore } from "@/lib/store/use-flow";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
-import { Upload, Save, ChevronDown, ChevronUp } from "lucide-react";
+import { Upload, Save, ChevronDown, ChevronUp, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -22,14 +21,10 @@ interface SceneVideoNodeProps {
 
 const SceneVideoNode = ({ data }: SceneVideoNodeProps) => {
   const tFlow = useTranslations("flow.sceneVideoNode");
-  const nodeId = useNodeId();
-
-  const hasConnection = useFlowStore((state: any) =>
-    state.edges.some((edge: any) => edge.source === nodeId && edge.sourceHandle === "main"),
-  );
+  const [expanded, setExpanded] = useState(false);
 
   return (
-    <div className="flex flex-col gap-2 w-120 h-120 relative">
+    <div className="flex flex-col gap-2 w-100 h-100 relative group/node">
       {/* Header */}
       <div className="flex items-center gap-2 px-1">
         <span className="text-sm font-semibold text-foreground">{tFlow("title")}</span>
@@ -38,7 +33,7 @@ const SceneVideoNode = ({ data }: SceneVideoNodeProps) => {
       {/* Main Container */}
       <div className="flex flex-col bg-card border border-border rounded-xl shadow-sm overflow-hidden h-full">
         {/* Main Video/Image Area */}
-        <div className="relative w-full  h-full bg-[#2a2a2a] flex items-center justify-center group p-4">
+        <div className="relative w-full  h-full bg-muted flex items-center justify-center group p-4">
           {data.videos && data.videos.length > 0 ? (
             <div className="w-full h-full grid grid-cols-2 gap-4 ">
               {data.videos.map((video) => (
@@ -47,8 +42,8 @@ const SceneVideoNode = ({ data }: SceneVideoNodeProps) => {
                   className={cn(
                     "aspect-square relative rounded-lg overflow-hidden border-2 cursor-pointer transition-all",
                     video.selected
-                      ? "border-[#00a3ff] shadow-[0_0_0_2px_rgba(0,163,255,0.3)]"
-                      : "border-transparent hover:border-white/20",
+                      ? "border-primary shadow-[0_0_0_2px_rgba(0,163,255,0.3)]"
+                      : "border-transparent hover:border-border",
                   )}
                   onClick={() => data.onVideoSelect?.(video.id)}
                 >
@@ -57,7 +52,7 @@ const SceneVideoNode = ({ data }: SceneVideoNodeProps) => {
               ))}
             </div>
           ) : (
-            <span className="text-[#555555] text-4xl font-bold tracking-widest">
+            <span className="text-muted-foreground/50 text-4xl font-bold tracking-widest">
               {tFlow("vid")}
             </span>
           )}
@@ -88,7 +83,7 @@ const SceneVideoNode = ({ data }: SceneVideoNodeProps) => {
           {/* Bottom Right: Expand Toggle */}
           <div className="absolute bottom-3 right-3">
             <button
-              onClick={data.onToggleExpand}
+              onClick={() => setExpanded(!expanded)}
               className="p-1.5 bg-black/40 hover:bg-black/60 text-white/80 hover:text-white rounded-md transition-colors flex items-center justify-center"
             >
               {data.isExpanded ? (
@@ -101,7 +96,7 @@ const SceneVideoNode = ({ data }: SceneVideoNodeProps) => {
         </div>
 
         {/* Expanded Settings Area (Absolute positioned to exceed node width) */}
-        {data.isExpanded && (
+        {expanded && (
           <div className="absolute top-[calc(100%+8px)]  w-200 flex flex-col gap-4 p-4 bg-card border border-border rounded-xl shadow-xl z-50">
             {/* Row 1: Reference Images */}
             <div className="flex gap-3">
@@ -201,20 +196,18 @@ const SceneVideoNode = ({ data }: SceneVideoNodeProps) => {
       <Handle
         type="target"
         position={Position.Left}
-        className={cn(
-          "w-3 h-3 border-2 border-background transition-colors",
-          "bg-muted-foreground/30 hover:bg-primary",
-        )}
-      />
+        className="w-6! h-6! flex items-center justify-center bg-background! border border-border! hover:bg-primary/80! transition-colors group-hover/node"
+      >
+        <Plus className="size-4 m-auto text-muted-foreground group-hover/node:text-white!" />
+      </Handle>
       <Handle
         type="source"
         id="main"
         position={Position.Right}
-        className={cn(
-          "w-3 h-3 border-2 border-background transition-colors",
-          hasConnection ? "bg-primary" : "bg-muted-foreground/30 hover:bg-primary",
-        )}
-      />
+        className="w-6! h-6! flex items-center justify-center bg-background! border border-border! hover:bg-primary/80! transition-colors group-hover/node"
+      >
+        <Plus className="size-4 m-auto text-muted-foreground group-hover/node:text-white!" />
+      </Handle>
     </div>
   );
 };

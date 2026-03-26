@@ -1,10 +1,8 @@
-import { memo } from "react";
-import { Handle, Position, useNodeId } from "@xyflow/react";
+import { memo, useState } from "react";
+import { Handle, Position } from "@xyflow/react";
 import { SceneImageNodeData } from "@/lib/types/flow.types";
-import { useFlowStore } from "@/lib/store/use-flow";
 import { useTranslations } from "next-intl";
-import { cn } from "@/lib/utils";
-import { Upload, Save, ChevronDown, ChevronUp } from "lucide-react";
+import { Upload, Save, ChevronDown, ChevronUp, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -22,14 +20,9 @@ interface SceneImageNodeProps {
 
 const SceneImageNode = ({ data }: SceneImageNodeProps) => {
   const tFlow = useTranslations("flow.sceneImageNode");
-  const nodeId = useNodeId();
-
-  const hasConnection = useFlowStore((state: any) =>
-    state.edges.some((edge: any) => edge.source === nodeId && edge.sourceHandle === "main"),
-  );
-
+  const [expanded, setExpanded] = useState(false);
   return (
-    <div className="flex flex-col gap-2 w-120 h-120 relative">
+    <div className="flex flex-col gap-2 w-100 h-100 relative group/node">
       {/* Header */}
       <div className="flex items-center gap-2 px-1">
         <span className="text-sm font-semibold text-foreground">{tFlow("title")}</span>
@@ -37,15 +30,14 @@ const SceneImageNode = ({ data }: SceneImageNodeProps) => {
           {data.sceneId}
         </span>
       </div>
-
       {/* Main Container */}
       <div className="flex flex-col bg-card border border-border rounded-xl shadow-sm overflow-hidden h-full">
         {/* Main Image Area */}
-        <div className="relative w-full h-full aspect-[4/3] bg-[#2a2a2a] flex items-center justify-center group">
+        <div className="relative w-full h-full aspect-[4/3] bg-muted flex items-center justify-center group">
           {data.imageUrl ? (
             <img src={data.imageUrl} alt={data.sceneId} className="w-full h-full object-cover" />
           ) : (
-            <span className="text-[#555555] text-4xl font-bold tracking-widest">
+            <span className="text-muted-foreground/50 text-4xl font-bold tracking-widest">
               {tFlow("img")}
             </span>
           )}
@@ -76,7 +68,7 @@ const SceneImageNode = ({ data }: SceneImageNodeProps) => {
           {/* Bottom Right: Expand Toggle */}
           <div className="absolute bottom-3 right-3">
             <button
-              onClick={data.onToggleExpand}
+              onClick={() => setExpanded(!expanded)}
               className="p-1.5 bg-black/40 hover:bg-black/60 text-white/80 hover:text-white rounded-md transition-colors flex items-center justify-center"
             >
               {data.isExpanded ? (
@@ -89,14 +81,14 @@ const SceneImageNode = ({ data }: SceneImageNodeProps) => {
         </div>
 
         {/* Expanded Settings Area (Absolute positioned to exceed node width) */}
-        {data.isExpanded && (
+        {expanded && (
           <div className="absolute top-[calc(100%+8px)]  w-200 flex flex-col gap-4 p-4 bg-card border border-border rounded-xl shadow-xl z-50">
             {/* Row 1: Reference Images */}
             <div className="flex gap-3">
               {[0, 1, 2].map((index) => {
                 const refImg = data.referenceImages?.[index];
                 return (
-                  <div key={index} className="flex flex-col gap-1 w-[100px]">
+                  <div key={index} className="flex flex-col gap-1 w-25">
                     <div className="aspect-square bg-muted/50 rounded-md border border-border border-dashed flex flex-col items-center justify-center text-muted-foreground hover:bg-muted transition-colors cursor-pointer relative overflow-hidden">
                       {refImg?.url ? (
                         <img
@@ -205,25 +197,22 @@ const SceneImageNode = ({ data }: SceneImageNodeProps) => {
           </div>
         )}
       </div>
-
       {/* Connection Handles */}
       <Handle
         type="target"
         position={Position.Left}
-        className={cn(
-          "w-3 h-3 border-2 border-background transition-colors",
-          "bg-muted-foreground/30 hover:bg-primary",
-        )}
-      />
+        className="w-6! h-6! flex items-center justify-center bg-background! border border-border! hover:bg-primary/80! transition-colors group-hover/node"
+      >
+        <Plus className="size-4 m-auto text-muted-foreground group-hover/node:text-white!" />
+      </Handle>
       <Handle
         type="source"
         id="main"
         position={Position.Right}
-        className={cn(
-          "w-3 h-3 border-2 border-background transition-colors",
-          hasConnection ? "bg-primary" : "bg-muted-foreground/30 hover:bg-primary",
-        )}
-      />
+        className="w-6! h-6! flex items-center justify-center bg-background! border border-border! hover:bg-primary/80! transition-colors group-hover/node"
+      >
+        <Plus className="size-4 m-auto text-muted-foreground group-hover/node:text-white!" />
+      </Handle>
     </div>
   );
 };

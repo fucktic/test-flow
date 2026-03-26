@@ -8,6 +8,7 @@ export interface FlowState {
 }
 
 export interface TextNodeData {
+  title?: string;
   text: string;
   command: string;
   isExecuting?: boolean;

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { ReactFlow, Background, Controls, MiniMap } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
+import "@/styles/react-flow.css";
 import { useFlowStore } from "../../lib/store/use-flow";
 import { TextNode } from "./nodes/command-node";
 import { SkillNode } from "./nodes/result-node";
@@ -12,6 +13,7 @@ import SceneImageNode from "./nodes/scene-image-node";
 import SceneVideoNode from "./nodes/scene-video-node";
 import VideoPreviewNode from "./nodes/video-preview-node";
 import { useTheme } from "next-themes";
+import { useProjectStore } from "@/lib/store/use-projects";
 
 const nodeTypes = {
   textNode: TextNode,
@@ -24,13 +26,60 @@ const nodeTypes = {
 };
 
 export const FlowCanvas = () => {
-  const { nodes, edges, onNodesChange, onEdgesChange, onConnect } = useFlowStore();
+  const { nodes, edges, onNodesChange, onEdgesChange, onConnect, initFlow } = useFlowStore();
+  const currentProject = useProjectStore((state) => state.currentProject);
   const [isMounted, setIsMounted] = useState(false);
   const { theme, systemTheme } = useTheme();
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  // Load flow data when project changes
+  useEffect(() => {
+    if (currentProject?.id) {
+      fetch(`/api/projects/${currentProject.id}/flow`)
+        .then((res) => {
+          if (!res.ok) throw new Error("Not found");
+          return res.json();
+        })
+        .then((data) => {
+          if (data && data.nodes && data.edges) {
+            initFlow(data.nodes, data.edges);
+          }
+        })
+        .catch(() => {
+          // Ignore error, might be a new project without saved flow
+        });
+    }
+  }, [currentProject?.id, initFlow]);
+
+  // Auto-save flow data
+  useEffect(() => {
+    if (!currentProject?.id || !isMounted) return;
+
+    const timer = setTimeout(() => {
+      // Clean nodes: remove functions and expanded state
+      const cleanNodes = nodes.map((node) => {
+        const { isExpanded: _isExpanded, ...restData } = node.data as any;
+
+        // Strip out functions from data
+        const cleanData = Object.fromEntries(
+          Object.entries(restData).filter(([_, v]) => typeof v !== "function"),
+        );
+
+        return { ...node, data: cleanData };
+      });
+
+      fetch(`/api/projects/${currentProject.id}/flow`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nodes: cleanNodes, edges }),
+      }).catch((err) => console.error("Failed to save flow:", err));
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [nodes, edges, currentProject?.id, isMounted]);
 
   if (!isMounted) {
     return null;

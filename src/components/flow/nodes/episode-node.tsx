@@ -1,25 +1,32 @@
-import { Handle, Position, useNodeId, useStore } from "@xyflow/react";
-import { EpisodeNodeData } from "../../../lib/types/flow.types";
+import { Handle, Position } from "@xyflow/react";
+import { EpisodeItem, EpisodeNodeData } from "../../../lib/types/flow.types";
 import { useTranslations } from "next-intl";
 import { Checkbox } from "../../ui/checkbox";
 import { ScrollArea } from "../../ui/scroll-area";
 import { Wand2, Plus, UserCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useState } from "react";
 
 export const EpisodeNode = ({ data }: { data: EpisodeNodeData }) => {
   const tFlow = useTranslations("flow.episodeNode");
-  const activeEpisode = data.episodes?.find((ep) => ep.id === data.activeEpisodeId);
-  const nodeId = useNodeId();
 
-  // Check if there is an outgoing edge from this node's main handle
-  const hasConnection = useStore((state) =>
-    state.edges.some((edge) => edge.source === nodeId && edge.sourceHandle === "main"),
-  );
+  const [activeEpisode, setActiveEpisode] = useState<EpisodeItem | null>(null);
 
   return (
     <div className="flex flex-col gap-2 w-65 relative">
       <div className="text-sm font-semibold text-foreground px-1">{tFlow("title")}</div>
       <div className="bg-card dark:bg-card rounded-xl shadow-lg border border-border p-4 text-card-foreground relative flex flex-col h-80">
+        {/* Input Handle */}
+        <div className="absolute -left-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-muted border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors z-10 cursor-crosshair">
+          <Plus className="w-4 h-4" />
+          <Handle
+            type="target"
+            position={Position.Left}
+            id="in"
+            className="size-full bg-transparent border-none left-0 top-0 transform-none opacity-0"
+          />
+        </div>
+
         <ScrollArea className="flex-1 nodrag nowheel">
           <div className="flex flex-col gap-2 mt-2">
             {data.episodes?.map((ep) => (
@@ -43,13 +50,13 @@ export const EpisodeNode = ({ data }: { data: EpisodeNodeData }) => {
 
                 <div className="relative flex items-center h-full ml-2 shrink-0">
                   <button
-                    onClick={() => data.onEpisodeSelect?.(ep.id)}
+                    onClick={() => setActiveEpisode(activeEpisode?.id === ep.id ? null : ep)}
                     className="p-1.5  rounded-md hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer"
                   >
                     <Wand2
                       className={cn(
                         "size-3 transition-colors",
-                        data.activeEpisodeId === ep.id
+                        activeEpisode?.id === ep.id
                           ? "text-primary"
                           : ep.checked
                             ? "text-foreground"
@@ -64,22 +71,14 @@ export const EpisodeNode = ({ data }: { data: EpisodeNodeData }) => {
         </ScrollArea>
 
         {/* Main output handle like a Plus button */}
-        <div
-          className={cn(
-            "absolute -right-1.5 top-1/2 -translate-y-1/2 size-3 rounded-full flex items-center justify-center border transition-all z-10",
-            hasConnection
-              ? "bg-background border-border"
-              : "bg-primary border-primary text-primary-foreground cursor-crosshair hover:bg-primary/90",
-          )}
+        <Handle
+          type="source"
+          position={Position.Right}
+          id="main"
+          className="w-6! h-6! flex items-center justify-center bg-background! border border-border! hover:bg-primary/80! transition-colors group-hover/node"
         >
-          {!hasConnection && <Plus className="size-2" />}
-          <Handle
-            type="source"
-            position={Position.Right}
-            id="main"
-            className="size-full bg-transparent border-none right-0 top-0 transform-none opacity-0"
-          />
-        </div>
+          <Plus className="size-4 m-auto text-muted-foreground group-hover/node:text-white!" />
+        </Handle>
       </div>
 
       {/* Expanded Script Panel */}

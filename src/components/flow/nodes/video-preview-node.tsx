@@ -3,7 +3,7 @@ import { Handle, Position } from "@xyflow/react";
 import { VideoPreviewNodeData } from "@/lib/types/flow.types";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
-import { RefreshCcw, Download, ExternalLink } from "lucide-react";
+import { RefreshCcw, Download, ExternalLink, Plus } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
@@ -19,7 +19,7 @@ const VideoPreviewNode = ({ data }: VideoPreviewNodeProps) => {
     data.progress.total > 0 ? (data.progress.current / data.progress.total) * 100 : 0;
 
   return (
-    <div className="flex flex-col gap-2 w-200 h-200">
+    <div className="flex flex-col gap-2 w-160 h-160 relative group/node">
       {/* Header */}
       <div className="flex items-center gap-2 px-1">
         <span className="text-lg font-semibold text-foreground">
@@ -110,15 +110,22 @@ const VideoPreviewNode = ({ data }: VideoPreviewNodeProps) => {
         </ScrollArea>
       </div>
 
-      {/* Target Handle */}
+      {/* Connection Handles */}
       <Handle
         type="target"
         position={Position.Left}
-        className={cn(
-          "w-4 h-4 border-2 border-background transition-colors",
-          "bg-muted-foreground/30 hover:bg-primary",
-        )}
-      />
+        className="w-6! h-6! flex items-center justify-center bg-background! border border-border! hover:bg-primary/80! transition-colors group-hover/node"
+      >
+        <Plus className="size-4 m-auto text-muted-foreground group-hover/node:text-white!" />
+      </Handle>
+      <Handle
+        type="source"
+        id="main"
+        position={Position.Right}
+        className="w-6! h-6! flex items-center justify-center bg-background! border border-border! hover:bg-primary/80! transition-colors group-hover/node"
+      >
+        <Plus className="size-4 m-auto text-muted-foreground group-hover/node:text-white!" />
+      </Handle>
     </div>
   );
 };

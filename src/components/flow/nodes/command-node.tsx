@@ -9,7 +9,7 @@ export const TextNode = ({ data }: { data: TextNodeData }) => {
     <div className="bg-background rounded-lg shadow-md border border-border p-4 min-w-[200px] text-foreground">
       <Handle type="target" position={Position.Top} className="w-3 h-3" />
       <div className="flex flex-col gap-2">
-        <h3 className="text-sm font-semibold">{tFlow("textCommand")}</h3>
+        <h3 className="text-sm font-semibold">{data.title || tFlow("textCommand")}</h3>
         <p className="text-xs text-muted-foreground">{data.text || tFlow("noContent")}</p>
         <div className="mt-2 text-xs bg-muted p-2 rounded text-muted-foreground font-mono">
           {data.command || tFlow("placeholder")}
