@@ -6,7 +6,9 @@ interface ProjectState {
   currentProject: Project | null;
   projects: Project[];
   resources: Resource[];
+  setProjects: (projects: Project[]) => void;
   setCurrentProject: (project: Project) => void;
+  addProject: (project: Project) => void;
   createProject: (name: string) => void;
   addResource: (resource: Resource) => void;
 }
@@ -17,9 +19,21 @@ export const useProjectStore = create<ProjectState>()(
     projects: [],
     resources: [],
 
+    setProjects: (projects) => {
+      set((state) => {
+        state.projects = projects;
+      });
+    },
+
     setCurrentProject: (project) => {
       set((state) => {
         state.currentProject = project;
+      });
+    },
+
+    addProject: (project) => {
+      set((state) => {
+        state.projects.push(project);
       });
     },
 

@@ -8,6 +8,7 @@ import { Header } from "@/components/layout/header";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
+import { initializeAppDirectories } from "@/lib/services/init.service";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -39,6 +40,9 @@ export default async function RootLayout({
 
   setRequestLocale(locale);
 
+  // 初始化项目目录和 skills 目录
+  const isSkillsEmpty = await initializeAppDirectories();
+
   // 提供全部 messages 到 client (或者根据需要进行 pick)
   const messages = await getMessages();
 
@@ -58,7 +62,7 @@ export default async function RootLayout({
           >
             <Toaster />
             <TooltipProvider>
-              <Header />
+              <Header isSkillsEmpty={isSkillsEmpty} />
               <div className="flex-1 w-full overflow-hidden">{children}</div>
             </TooltipProvider>
           </ThemeProvider>

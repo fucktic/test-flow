@@ -1,4 +1,22 @@
 {
   "title": "Projects",
-  "testCanvas": "Enter Test Canvas"
+  "testCanvas": "Enter Test Canvas",
+  "skillsTitle": "Skills Management",
+  "skillsDesc": "Manage or import Skills folders",
+  "uploadSkillTitle": "Upload Skill Folder",
+  "uploadSkillDesc": "The skills folder is empty. Please upload your skill folder to initialize.",
+  "uploadSkillBtn": "Select Folder & Upload",
+  "uploadSuccess": "Upload successful",
+  "uploadFailed": "Upload failed",
+  "deleteSuccess": "Delete successful",
+  "deleteFailed": "Delete failed",
+  "noSkills": "No Skills",
+  "newCanvasTitle": "New Canvas",
+  "newCanvasDesc": "Please enter a name for the new canvas.",
+  "canvasNameLabel": "Canvas Name",
+  "canvasNamePlaceholder": "e.g., My New Canvas",
+  "cancel": "Cancel",
+  "confirm": "Confirm",
+  "creating": "Creating...",
+  "delete": "Delete"
 }

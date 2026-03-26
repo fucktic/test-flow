@@ -1,4 +1,22 @@
 {
   "title": "项目",
-  "testCanvas": "进入测试画布"
+  "testCanvas": "进入测试画布",
+  "skillsTitle": "Skills 管理",
+  "skillsDesc": "管理或导入 Skills 文件夹",
+  "uploadSkillTitle": "上传 Skill 文件夹",
+  "uploadSkillDesc": "未检测到 skills 文件夹内容，请上传您的 skill 文件夹进行初始化。",
+  "uploadSkillBtn": "选择文件夹并上传",
+  "uploadSuccess": "上传成功",
+  "uploadFailed": "上传失败",
+  "deleteSuccess": "删除成功",
+  "deleteFailed": "删除失败",
+  "noSkills": "暂无 Skills",
+  "newCanvasTitle": "新建画布",
+  "newCanvasDesc": "请输入新画布的名称。",
+  "canvasNameLabel": "画布名称",
+  "canvasNamePlaceholder": "例如：我的新画布",
+  "cancel": "取消",
+  "confirm": "确定",
+  "creating": "创建中...",
+  "delete": "删除"
 }

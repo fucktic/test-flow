@@ -7,7 +7,7 @@ import { ImportSkillButton } from "./import-skill-button";
 import { ThemeSwitcher } from "./theme-switcher";
 import { LanguageSwitcher } from "./language-switcher";
 
-export function Header() {
+export function Header({ isSkillsEmpty = false }: { isSkillsEmpty?: boolean }) {
   return (
     <header className="flex h-14 items-center justify-between border-b bg-background px-4 lg:px-6">
       <div className="flex items-center gap-4">
@@ -50,7 +50,7 @@ export function Header() {
       <div className="flex items-center gap-2">
         <ProjectSwitcher />
         <NewProjectButton />
-        <ImportSkillButton />
+        <ImportSkillButton defaultOpen={isSkillsEmpty} />
         <LanguageSwitcher />
         <ThemeSwitcher />
       </div>

@@ -16,6 +16,8 @@
 # next.js
 /.next/
 /out/
+/skills/
+/projects/
 
 # production
 /build
