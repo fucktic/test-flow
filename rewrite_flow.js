@@ -1,6 +1,6 @@
-const fs = require('fs');
+const fs = require("fs");
 
-let content = fs.readFileSync('src/lib/store/use-flow.ts', 'utf8');
+let _content = fs.readFileSync("src/lib/store/use-flow.ts", "utf8");
 
 // I need to change the initial nodes to match the image structure.
 // The image has:

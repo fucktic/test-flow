@@ -30,7 +30,7 @@ const syncGraph = (state: any, set: any) => {
   if (!episodeNode) return;
 
   const checkedEpisodes = episodeNode.data.episodes.filter((ep: any) => ep.checked);
-  
+
   const newNodes: Node[] = [];
   const newEdges: Edge[] = [];
 
@@ -45,7 +45,7 @@ const syncGraph = (state: any, set: any) => {
       target: "video-preview-1",
       sourceHandle: "main",
       animated: true,
-      style: { stroke: "#6366f1", strokeWidth: 2 }
+      style: { stroke: "#6366f1", strokeWidth: 2 },
     });
   }
 
@@ -54,7 +54,7 @@ const syncGraph = (state: any, set: any) => {
   checkedEpisodes.forEach((ep: any) => {
     const sceneNodeId = `scene-${ep.id}`;
     let sceneNode = state.nodes.find((n: any) => n.id === sceneNodeId);
-    
+
     if (!sceneNode) {
       sceneNode = {
         id: sceneNodeId,
@@ -63,8 +63,8 @@ const syncGraph = (state: any, set: any) => {
         data: {
           title: `分镜列表 ${ep.title.split(" ")[0]}`,
           scenes: JSON.parse(JSON.stringify(defaultScenes)),
-          ...getSceneHandlers(set, sceneNodeId)
-        }
+          ...getSceneHandlers(set, sceneNodeId),
+        },
       };
     } else {
       sceneNode.position.y = currentY;
@@ -78,7 +78,7 @@ const syncGraph = (state: any, set: any) => {
       target: sceneNodeId,
       sourceHandle: "main",
       animated: true,
-      style: { stroke: "#6366f1", strokeWidth: 2 }
+      style: { stroke: "#6366f1", strokeWidth: 2 },
     });
 
     const selectedScenes = sceneNode.data.scenes.filter((s: any) => s.selected);
@@ -94,7 +94,7 @@ const syncGraph = (state: any, set: any) => {
           id: imgNodeId,
           type: "sceneImageNode",
           position: { x: 950, y: sceneY },
-          data: { sceneId: scene.name, isExpanded: true, ...getImageHandlers(set, imgNodeId) }
+          data: { sceneId: scene.name, isExpanded: true, ...getImageHandlers(set, imgNodeId) },
         };
       } else {
         imgNode.position.y = sceneY;
@@ -107,7 +107,7 @@ const syncGraph = (state: any, set: any) => {
           id: vidNodeId,
           type: "sceneVideoNode",
           position: { x: 1350, y: sceneY },
-          data: { sceneId: scene.name, isExpanded: true, ...getVideoHandlers(set, vidNodeId) }
+          data: { sceneId: scene.name, isExpanded: true, ...getVideoHandlers(set, vidNodeId) },
         };
       } else {
         vidNode.position.y = sceneY;
@@ -122,7 +122,7 @@ const syncGraph = (state: any, set: any) => {
         target: imgNodeId,
         sourceHandle: "main",
         animated: true,
-        style: { stroke: "#3b82f6", strokeWidth: 2 }
+        style: { stroke: "#3b82f6", strokeWidth: 2 },
       });
       newEdges.push({
         id: `e-${imgNodeId}-${vidNodeId}`,
@@ -130,7 +130,7 @@ const syncGraph = (state: any, set: any) => {
         target: vidNodeId,
         sourceHandle: "main",
         animated: true,
-        style: { stroke: "#10b981", strokeWidth: 2 }
+        style: { stroke: "#10b981", strokeWidth: 2 },
       });
 
       sceneY += 450;
@@ -141,14 +141,20 @@ const syncGraph = (state: any, set: any) => {
 
   const totalHeight = currentY;
   const centerY = Math.max(0, totalHeight / 2 - 200);
-  
+
   episodeNode.position.y = centerY;
   if (previewNode) {
     previewNode.position.y = centerY - 350;
   }
 
   state.nodes.forEach((n: any) => {
-    if (n.type !== "episodeNode" && n.type !== "videoPreviewNode" && n.type !== "sceneNode" && n.type !== "sceneImageNode" && n.type !== "sceneVideoNode") {
+    if (
+      n.type !== "episodeNode" &&
+      n.type !== "videoPreviewNode" &&
+      n.type !== "sceneNode" &&
+      n.type !== "sceneImageNode" &&
+      n.type !== "sceneVideoNode"
+    ) {
       newNodes.push(n);
     }
   });
@@ -163,7 +169,7 @@ const getEpisodeHandlers = (set: any) => ({
       const node = state.nodes.find((n: any) => n.id === "episode-1");
       if (node && node.type === "episodeNode") {
         const eps = (node.data as any).episodes;
-        
+
         if (checked) {
           const checkedCount = eps.filter((e: any) => e.checked).length;
           if (checkedCount >= 3) return;
@@ -213,9 +219,7 @@ const getSceneHandlers = (set: any, nodeId: string) => ({
     set((state: any) => {
       const node = state.nodes.find((n: any) => n.id === nodeId);
       if (node && node.type === "sceneNode") {
-        (node.data as any).scenes = (node.data as any).scenes.filter(
-          (s: any) => s.id !== id,
-        );
+        (node.data as any).scenes = (node.data as any).scenes.filter((s: any) => s.id !== id);
         syncGraph(state, set);
       }
     });
@@ -332,7 +336,7 @@ const getVideoHandlers = (set: any, nodeId: string) => ({
 });
 
 export const rehydrateNodes = (nodes: Node[], set: any) => {
-  return nodes.map(node => {
+  return nodes.map((node) => {
     if (node.type === "episodeNode") {
       return { ...node, data: { ...node.data, ...getEpisodeHandlers(set) } };
     }
@@ -350,9 +354,27 @@ export const rehydrateNodes = (nodes: Node[], set: any) => {
 };
 
 const defaultScenes = [
-  { id: "s1", name: "S-1", content: "门被推开，林星阑站在门口。她的衣服被雨水打湿，发丝紧贴脸颊，眼神中带着一丝不甘与决绝。光线从她身后映入，勾勒出她的轮廓。", selected: false },
-  { id: "s2", name: "S-2", content: "门被推开，林星阑站在门口。她的衣服被雨水打湿，发丝紧贴脸颊，眼神中带着一丝不甘与决绝。光线从她身后映入，勾勒出她的轮廓。", selected: true },
-  { id: "s3", name: "S-3", content: "门被推开，林星阑站在门口。她的衣服被雨水打湿，发丝紧贴脸颊，眼神中带着一丝不甘与决绝。光线从她身后映入，勾勒出她的轮廓。", selected: true }
+  {
+    id: "s1",
+    name: "S-1",
+    content:
+      "门被推开，林星阑站在门口。她的衣服被雨水打湿，发丝紧贴脸颊，眼神中带着一丝不甘与决绝。光线从她身后映入，勾勒出她的轮廓。",
+    selected: false,
+  },
+  {
+    id: "s2",
+    name: "S-2",
+    content:
+      "门被推开，林星阑站在门口。她的衣服被雨水打湿，发丝紧贴脸颊，眼神中带着一丝不甘与决绝。光线从她身后映入，勾勒出她的轮廓。",
+    selected: true,
+  },
+  {
+    id: "s3",
+    name: "S-3",
+    content:
+      "门被推开，林星阑站在门口。她的衣服被雨水打湿，发丝紧贴脸颊，眼神中带着一丝不甘与决绝。光线从她身后映入，勾勒出她的轮廓。",
+    selected: true,
+  },
 ];
 
 export const useFlowStore = create<FlowState>()(
@@ -368,11 +390,21 @@ export const useFlowStore = create<FlowState>()(
             progress: { current: 3, total: 12 },
             vid: "VID_20260312",
             items: [
-              { id: "S-1", status: "generated", url: "https://images.unsplash.com/photo-1682687220742-aba13b6e50ba?q=80&w=200&h=200&auto=format&fit=crop", duration: "10s" },
+              {
+                id: "S-1",
+                status: "generated",
+                url: "https://images.unsplash.com/photo-1682687220742-aba13b6e50ba?q=80&w=200&h=200&auto=format&fit=crop",
+                duration: "10s",
+              },
               { id: "S-2", status: "pending" },
-              { id: "S-3", status: "generated", url: "https://images.unsplash.com/photo-1682687982501-1e5898cb8f4b?q=80&w=200&h=200&auto=format&fit=crop", duration: "5s" }
-            ]
-          }
+              {
+                id: "S-3",
+                status: "generated",
+                url: "https://images.unsplash.com/photo-1682687982501-1e5898cb8f4b?q=80&w=200&h=200&auto=format&fit=crop",
+                duration: "5s",
+              },
+            ],
+          },
         },
         {
           id: "episode-1",
@@ -381,13 +413,22 @@ export const useFlowStore = create<FlowState>()(
           data: {
             episodes: [
               { id: "ep1", title: "EP_001 第1集", checked: false },
-              { id: "ep2", title: "EP_002 第2集", checked: true, script: { title: "EP_002 剧本", timestamp: "2024-03-20 14:30", content: "林星阑站在门口..." } },
-              { id: "ep3", title: "EP_003 第3集", checked: false }
+              {
+                id: "ep2",
+                title: "EP_002 第2集",
+                checked: true,
+                script: {
+                  title: "EP_002 剧本",
+                  timestamp: "2024-03-20 14:30",
+                  content: "林星阑站在门口...",
+                },
+              },
+              { id: "ep3", title: "EP_003 第3集", checked: false },
             ],
             activeEpisodeId: "ep2",
-            ...getEpisodeHandlers(set)
-          }
-        }
+            ...getEpisodeHandlers(set),
+          },
+        },
       ] as Node[],
       edges: [] as Edge[],
       selectedNodeId: null,
@@ -443,5 +484,5 @@ export const useFlowStore = create<FlowState>()(
         });
       },
     };
-  })
+  }),
 );
