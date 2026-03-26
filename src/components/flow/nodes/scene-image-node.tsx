@@ -33,7 +33,7 @@ const SceneImageNode = ({ data }: SceneImageNodeProps) => {
       {/* Main Container */}
       <div className="flex flex-col bg-card border border-border rounded-xl shadow-sm overflow-hidden h-full">
         {/* Main Image Area */}
-        <div className="relative w-full h-full aspect-[4/3] bg-muted flex items-center justify-center group">
+        <div className="relative w-full h-full aspect-4/3 bg-muted flex items-center justify-center group">
           {data.imageUrl ? (
             <img src={data.imageUrl} alt={data.sceneId} className="w-full h-full object-cover" />
           ) : (
@@ -130,7 +130,7 @@ const SceneImageNode = ({ data }: SceneImageNodeProps) => {
                 value={data.outputFormat || "9grid"}
                 onValueChange={data.onOutputFormatChange}
               >
-                <SelectTrigger className="h-8 text-xs w-[90px] bg-muted/50 border-transparent hover:border-border">
+                <SelectTrigger className="h-8 text-xs w-22.5 bg-muted/50 border-transparent hover:border-border">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

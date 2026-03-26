@@ -103,7 +103,7 @@ const SceneVideoNode = ({ data }: SceneVideoNodeProps) => {
               {["single", "grid", "first", "last"].map((type, index) => {
                 const refImg = data.referenceImages?.[index];
                 return (
-                  <div key={index} className="flex flex-col gap-1 w-[100px]">
+                  <div key={index} className="flex flex-col gap-1 w-25">
                     <div className="aspect-square bg-muted/50 rounded-md border border-border border-dashed flex flex-col items-center justify-center text-muted-foreground hover:bg-muted transition-colors cursor-pointer relative overflow-hidden">
                       {refImg?.url ? (
                         <img src={refImg.url} alt={type} className="w-full h-full object-cover" />
@@ -183,7 +183,7 @@ const SceneVideoNode = ({ data }: SceneVideoNodeProps) => {
 
             {/* Row 3: Prompt Textarea */}
             <Textarea
-              className="min-h-[80px] text-sm resize-none bg-muted/30 border-transparent hover:border-border focus-visible:ring-1 focus-visible:border-border p-3 text-muted-foreground"
+              className="min-h-20 text-sm resize-none bg-muted/30 border-transparent hover:border-border focus-visible:ring-1 focus-visible:border-border p-3 text-muted-foreground"
               placeholder={tFlow("promptPlaceholder")}
               value={data.prompt}
               onChange={(e) => data.onPromptChange?.(e.target.value)}
@@ -196,14 +196,6 @@ const SceneVideoNode = ({ data }: SceneVideoNodeProps) => {
       <Handle
         type="target"
         position={Position.Left}
-        className="w-6! h-6! flex items-center justify-center bg-background! border border-border! hover:bg-primary/80! transition-colors group-hover/node"
-      >
-        <Plus className="size-4 m-auto text-muted-foreground group-hover/node:text-white!" />
-      </Handle>
-      <Handle
-        type="source"
-        id="main"
-        position={Position.Right}
         className="w-6! h-6! flex items-center justify-center bg-background! border border-border! hover:bg-primary/80! transition-colors group-hover/node"
       >
         <Plus className="size-4 m-auto text-muted-foreground group-hover/node:text-white!" />

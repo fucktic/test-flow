@@ -19,7 +19,7 @@ export const SceneNode = ({ data }: { data: SceneNodeData }) => {
         )}
       </div>
 
-      <div className="bg-card dark:bg-card rounded-xl shadow-lg border border-border p-4 text-card-foreground relative flex flex-col h-[500px] group/node">
+      <div className="bg-card dark:bg-card rounded-xl shadow-lg border border-border p-4 text-card-foreground relative flex flex-col h-125 group/node">
         {/* Input Handle */}
         <Handle
           type="target"
@@ -116,7 +116,7 @@ export const SceneNode = ({ data }: { data: SceneNodeData }) => {
 
                 {/* Add Scene Button (between items and at the end) */}
                 <div className="relative flex justify-center py-2 opacity-0 hover:opacity-100 transition-opacity group/add">
-                  <div className="absolute top-1/2 left-0 right-0 h-[1px] bg-border/50 -translate-y-1/2"></div>
+                  <div className="absolute top-1/2 left-0 right-0 h-px bg-border/50 -translate-y-1/2"></div>
                   <button
                     onClick={() => data.onSceneAdd?.(index + 1)}
                     className="relative z-10 w-5 h-5 bg-background border border-border rounded flex items-center justify-center text-muted-foreground hover:text-primary hover:border-primary transition-colors"

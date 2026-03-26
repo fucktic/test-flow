@@ -13,7 +13,7 @@ export const SkillNode = ({ data }: { data: SkillNodeData }) => {
   };
 
   return (
-    <div className="bg-background rounded-lg shadow-md border border-border p-4 min-w-[250px] text-foreground">
+    <div className="bg-background rounded-lg shadow-md border border-border p-4 min-w-62.5 text-foreground">
       <Handle type="target" position={Position.Top} className="w-3 h-3" />
       <div className="flex flex-col gap-2">
         <div className="flex justify-between items-center">

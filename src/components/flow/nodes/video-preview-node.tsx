@@ -118,14 +118,6 @@ const VideoPreviewNode = ({ data }: VideoPreviewNodeProps) => {
       >
         <Plus className="size-4 m-auto text-muted-foreground group-hover/node:text-white!" />
       </Handle>
-      <Handle
-        type="source"
-        id="main"
-        position={Position.Right}
-        className="w-6! h-6! flex items-center justify-center bg-background! border border-border! hover:bg-primary/80! transition-colors group-hover/node"
-      >
-        <Plus className="size-4 m-auto text-muted-foreground group-hover/node:text-white!" />
-      </Handle>
     </div>
   );
 };
