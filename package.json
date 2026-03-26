@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "oxlint",
-    "format": "oxfmt --write ."
+    "format": "oxfmt --write .",
+    "prepare": "husky"
   },
   "dependencies": {
     "@uidotdev/usehooks": "^2.4.1",
@@ -33,12 +34,23 @@
     "@xyflow/react": "^12.10.1",
     "eslint": "^9",
     "eslint-config-next": "16.2.1",
+    "husky": "^9.1.7",
     "immer": "^11.1.4",
+    "lint-staged": "^16.4.0",
     "oxfmt": "^0.42.0",
     "oxlint": "^1.57.0",
     "tailwindcss": "^4",
     "typescript": "^5",
     "uuid": "^13.0.0",
     "zustand": "^5.0.12"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx}": [
+      "oxlint",
+      "oxfmt --write"
+    ],
+    "*.{json,md,css}": [
+      "oxfmt --write"
+    ]
   }
 }
