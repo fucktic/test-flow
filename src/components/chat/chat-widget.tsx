@@ -91,12 +91,13 @@ export function ChatWidget() {
     fetchAgents();
   }, [fetchAgents]);
 
-  // 默认右上方位置初始化
+  // 组件挂载时设置初始位置
   useEffect(() => {
     if (position.x === -1) {
-      setPosition(window.innerWidth - 340, 80);
+      // 初始化到右上角，但为了动画效果或者初始默认位置，依然计算一个合理的值
+      setPosition(window.innerWidth - size.width - MARGIN, 80);
     }
-  }, [position.x, setPosition]);
+  }, [position.x, setPosition, size.width]);
 
   // 消息更新或展开时自动滚动到底部
   useEffect(() => {
@@ -316,37 +317,37 @@ export function ChatWidget() {
             <TooltipTrigger asChild>
               <div
                 className={cn(
-                  "fixed z-50 flex items-center justify-center w-10 h-10 rounded-full bg-muted/50 backdrop-blur-md  shadow-2xl cursor-grab active:cursor-grabbing hover:shadow-2xl transition-shadow border border-primary",
-                  isDragging && "opacity-90",
+                  "fixed top-20 right-5 z-50 flex items-center justify-center bg-background border border-primary shadow-lg cursor-pointer hover:bg-muted/50 transition-colors w-14 h-14 rounded-full",
+                  isExecuting && "shadow-primary/20",
                 )}
-                style={{ left: `${position.x}px`, top: `${position.y}px` }}
-                onMouseDown={handleMouseDown}
                 onClick={() => {
-                  // 如果只是点击而没有拖拽，则展开面板
-                  if (!dragInfoRef.current.hasMoved) {
-                    let newX = position.x;
+                  let newX = position.x;
 
-                    // 判断到右边框的距离是否小于对话框宽度，如果是，则向左平移
-                    if (position.x + size.width > window.innerWidth - MARGIN) {
-                      newX = Math.max(MARGIN, window.innerWidth - size.width - MARGIN);
-                    }
-
-                    if (newX !== position.x) {
-                      setPosition(newX, position.y);
-                    }
-
-                    setIsMinimized(false);
+                  // 首次展开或判断到右边框的距离是否小于对话框宽度，如果是，则向左平移
+                  if (position.x === -1 || position.x + size.width > window.innerWidth - MARGIN) {
+                    newX = Math.max(MARGIN, window.innerWidth - size.width - MARGIN);
                   }
+
+                  if (newX !== position.x) {
+                    setPosition(newX, position.y);
+                  }
+
+                  setIsMinimized(false);
                 }}
               >
-                <img
-                  src="/mantur-logo.svg"
-                  className={cn(
-                    "w-10 select-none pointer-events-none relative z-10",
-                    isExecuting && "animate-pulse",
+                <div className="relative">
+                  <img
+                    src="/mantur-logo.svg"
+                    className={cn(
+                      "w-8 select-none pointer-events-none relative z-10",
+                      isExecuting && "animate-pulse",
+                    )}
+                    style={{ objectFit: "contain" }}
+                  />
+                  {isExecuting && (
+                    <div className="absolute inset-0 bg-primary/20 blur-md rounded-full animate-ping z-0" />
                   )}
-                  style={{ objectFit: "contain" }}
-                />
+                </div>
               </div>
             </TooltipTrigger>
             <TooltipContent side="left">
