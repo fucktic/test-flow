@@ -2,7 +2,7 @@ import { memo, useState } from "react";
 import { Handle, Position } from "@xyflow/react";
 import { SceneImageNodeData } from "@/lib/types/flow.types";
 import { useTranslations } from "next-intl";
-import { Upload, Save, ChevronDown, ChevronUp, Plus } from "lucide-react";
+import { Upload, Save, ChevronDown, ChevronUp, Plus, Maximize2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { MediaPreviewModal } from "@/components/common/media-preview-modal";
 
 interface SceneImageNodeProps {
   data: SceneImageNodeData;
@@ -21,6 +22,14 @@ interface SceneImageNodeProps {
 const SceneImageNode = ({ data }: SceneImageNodeProps) => {
   const tFlow = useTranslations("flow.sceneImageNode");
   const [expanded, setExpanded] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+
+  const previewItems = data.images
+    ? data.images.map((img) => ({ id: img.id, url: img.url, type: "image" as const }))
+    : data.imageUrl
+      ? [{ id: data.sceneId || "image", url: data.imageUrl, type: "image" as const }]
+      : [];
+
   return (
     <div className="flex flex-col gap-2 w-100 h-100 relative group/node">
       {/* Header */}
@@ -34,13 +43,29 @@ const SceneImageNode = ({ data }: SceneImageNodeProps) => {
       <div className="flex flex-col bg-card border border-border rounded-xl shadow-sm overflow-hidden h-full">
         {/* Main Image Area */}
         <div className="relative w-full h-full aspect-4/3 bg-muted flex items-center justify-center group">
-          {data.imageUrl ? (
-            <img
-              src={data.imageUrl}
-              alt={data.sceneId}
-              className="w-full h-full object-cover"
-              loading="lazy"
-            />
+          {previewItems.length > 0 ? (
+            <>
+              <img
+                src={previewItems[0].url}
+                alt={data.sceneId}
+                className="w-full h-full object-cover cursor-pointer"
+                loading="lazy"
+                onClick={() => setPreviewOpen(true)}
+              />
+              <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-20">
+                <Button
+                  variant="secondary"
+                  size="icon"
+                  className="h-8 w-8 bg-black/40 hover:bg-black/60 text-white/80 hover:text-white rounded-md"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setPreviewOpen(true);
+                  }}
+                >
+                  <Maximize2 className="w-4 h-4" />
+                </Button>
+              </div>
+            </>
           ) : (
             <span className="text-muted-foreground/50 text-4xl font-bold tracking-widest">
               {tFlow("img")}
@@ -219,6 +244,8 @@ const SceneImageNode = ({ data }: SceneImageNodeProps) => {
       >
         <Plus className="size-4 m-auto text-muted-foreground group-hover/node:text-white!" />
       </Handle>
+
+      <MediaPreviewModal open={previewOpen} onOpenChange={setPreviewOpen} items={previewItems} />
     </div>
   );
 };

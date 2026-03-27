@@ -3,7 +3,7 @@ import { Handle, Position } from "@xyflow/react";
 import { SceneVideoNodeData } from "@/lib/types/flow.types";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
-import { Upload, Save, ChevronDown, ChevronUp, Plus } from "lucide-react";
+import { Upload, Save, ChevronDown, ChevronUp, Plus, Maximize2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { MediaPreviewModal, MediaItem } from "@/components/common/media-preview-modal";
 
 interface SceneVideoNodeProps {
   data: SceneVideoNodeData;
@@ -22,6 +23,16 @@ interface SceneVideoNodeProps {
 const SceneVideoNode = ({ data }: SceneVideoNodeProps) => {
   const tFlow = useTranslations("flow.sceneVideoNode");
   const [expanded, setExpanded] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewIndex, setPreviewIndex] = useState(0);
+
+  const previewItems: MediaItem[] =
+    data.videos?.map((v) => ({
+      id: v.id,
+      url: v.url,
+      type: v.url.endsWith(".mp4") ? "video" : "image",
+      poster: v.poster,
+    })) || [];
 
   return (
     <div className="flex flex-col gap-2 w-100 h-100 relative group/node">
@@ -36,11 +47,11 @@ const SceneVideoNode = ({ data }: SceneVideoNodeProps) => {
         <div className="relative w-full  h-full bg-muted flex items-center justify-center group p-4">
           {data.videos && data.videos.length > 0 ? (
             <div className="w-full h-full grid grid-cols-2 gap-4 ">
-              {data.videos.map((video) => (
+              {data.videos.map((video, index) => (
                 <div
                   key={video.id}
                   className={cn(
-                    "aspect-square relative rounded-lg overflow-hidden border-2 cursor-pointer transition-all",
+                    "aspect-square relative rounded-lg overflow-hidden border-2 cursor-pointer transition-all group/video",
                     video.selected
                       ? "border-primary shadow-[0_0_0_2px_rgba(0,163,255,0.3)]"
                       : "border-transparent hover:border-border",
@@ -64,6 +75,20 @@ const SceneVideoNode = ({ data }: SceneVideoNodeProps) => {
                       loading="lazy"
                     />
                   )}
+                  <div className="absolute top-2 right-2 opacity-0 group-hover/video:opacity-100 transition-opacity z-20">
+                    <Button
+                      variant="secondary"
+                      size="icon"
+                      className="h-8 w-8 bg-black/40 hover:bg-black/60 text-white/80 hover:text-white rounded-md"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPreviewIndex(index);
+                        setPreviewOpen(true);
+                      }}
+                    >
+                      <Maximize2 className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -221,6 +246,13 @@ const SceneVideoNode = ({ data }: SceneVideoNodeProps) => {
       >
         <Plus className="size-4 m-auto text-muted-foreground group-hover/node:text-white!" />
       </Handle>
+
+      <MediaPreviewModal
+        open={previewOpen}
+        onOpenChange={setPreviewOpen}
+        items={previewItems}
+        initialIndex={previewIndex}
+      />
     </div>
   );
 };

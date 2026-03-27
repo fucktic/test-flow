@@ -55,6 +55,11 @@
     "refresh": "刷新",
     "progress": "生成进度",
     "postEdit": "后期剪辑",
-    "pending": "未生成"
+    "pending": "未生成",
+    "noVideosToDownload": "暂无视频可下载",
+    "downloadSuccess": "成功下载 {count} 个文件",
+    "downloadFailed": "下载失败",
+    "directorySelectionFailed": "目录选择失败",
+    "downloadAll": "下载下面所有视频"
   }
 }

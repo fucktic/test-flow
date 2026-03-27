@@ -55,6 +55,11 @@
     "refresh": "Refresh",
     "progress": "Generation Progress",
     "postEdit": "Post-editing",
-    "pending": "Pending"
+    "pending": "Pending",
+    "noVideosToDownload": "No videos to download",
+    "downloadSuccess": "Successfully downloaded {count} files",
+    "downloadFailed": "Download failed",
+    "directorySelectionFailed": "Directory selection failed",
+    "downloadAll": "Download all videos below"
   }
 }

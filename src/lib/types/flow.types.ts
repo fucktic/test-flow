@@ -69,6 +69,7 @@ export interface ReferenceImage {
 export interface SceneImageNodeData {
   sceneId: string;
   imageUrl?: string;
+  images?: { id: string; url: string }[]; // multiple images support
   assetPath?: string;
   isExpanded?: boolean;
   referenceImages?: ReferenceImage[]; // max 3
