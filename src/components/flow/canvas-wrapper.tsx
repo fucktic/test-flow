@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { ReactFlow, Background, Controls, MiniMap } from "@xyflow/react";
+import { Loader2 } from "lucide-react";
 import "@xyflow/react/dist/style.css";
 import "@/styles/react-flow.css";
 import { useFlowStore } from "../../lib/store/use-flow";
@@ -14,6 +15,7 @@ import SceneVideoNode from "./nodes/scene-video-node";
 import VideoPreviewNode from "./nodes/video-preview-node";
 import { useTheme } from "next-themes";
 import { useProjectStore } from "@/lib/store/use-projects";
+import { useTranslations } from "next-intl";
 
 const nodeTypes = {
   textNode: TextNode,
@@ -36,16 +38,20 @@ const nodeTypes = {
 export const FlowCanvas = () => {
   const { nodes, edges, onNodesChange, onEdgesChange, onConnect, initFlow } = useFlowStore();
   const currentProject = useProjectStore((state) => state.currentProject);
+  const tCanvas = useTranslations("canvas");
   const [isMounted, setIsMounted] = useState(false);
+  const [isLoading, setIsLoading] = useState(true); // 添加画布加载状态
   const { theme, systemTheme } = useTheme();
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
-  // Load flow data when project changes
+  // 当项目切换时加载画布数据，并在加载期间显示 loading 过渡
   useEffect(() => {
     if (currentProject?.id) {
+      setIsLoading(true);
+
       fetch(`/api/projects/${currentProject.id}/flow`)
         .then((res) => {
           if (!res.ok) throw new Error("Not found");
@@ -57,8 +63,13 @@ export const FlowCanvas = () => {
           }
         })
         .catch(() => {
-          // Ignore error, might be a new project without saved flow
+          // 忽略错误，可能是新项目没有保存过 flow 数据
+        })
+        .finally(() => {
+          setIsLoading(false); // 请求结束（成功或失败）后关闭 loading
         });
+    } else {
+      setIsLoading(false);
     }
   }, [currentProject?.id, initFlow]);
 
@@ -98,7 +109,13 @@ export const FlowCanvas = () => {
   const colorMode = currentTheme === "dark" ? "dark" : "light";
 
   return (
-    <div className="w-full h-full min-h-150 border-none overflow-hidden bg-background">
+    <div className="w-full h-full min-h-150 border-none overflow-hidden bg-background relative">
+      {isLoading && (
+        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm transition-all duration-300">
+          <Loader2 className="w-8 h-8 animate-spin text-primary mb-4" />
+          <p className="text-sm text-muted-foreground">{tCanvas("loading")}</p>
+        </div>
+      )}
       <ReactFlow
         nodes={nodes}
         edges={edges}

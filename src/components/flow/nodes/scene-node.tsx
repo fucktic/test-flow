@@ -2,7 +2,7 @@ import { Handle, Position } from "@xyflow/react";
 import { SceneNodeData } from "../../../lib/types/flow.types";
 import { useTranslations } from "next-intl";
 import { ScrollArea } from "../../ui/scroll-area";
-import { Pencil, Trash2, Plus } from "lucide-react";
+import { Trash2, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export const SceneNode = ({ data }: { data: SceneNodeData }) => {
@@ -69,14 +69,31 @@ export const SceneNode = ({ data }: { data: SceneNodeData }) => {
                     </span>
                   </div>
                   <div className="pt-5">
-                    <div
+                    <textarea
+                      value={scene.content}
+                      onChange={(e) => {
+                        data.onSceneChange?.(scene.id, e.target.value);
+                      }}
                       className={cn(
-                        "",
-                        scene.selected ? "text-primary-foreground/90" : "text-muted-foreground",
+                        "w-full resize-none bg-transparent outline-none focus:ring-0 overflow-hidden nodrag",
+                        "text-muted-foreground",
+                        scene?.selected ? "text-white" : "",
                       )}
-                    >
-                      {scene.content}
-                    </div>
+                      rows={1}
+                      onClick={(e) => e.stopPropagation()}
+                      onKeyDown={(e) => e.stopPropagation()}
+                      onInput={(e) => {
+                        const target = e.target as HTMLTextAreaElement;
+                        target.style.height = "auto";
+                        target.style.height = `${target.scrollHeight}px`;
+                      }}
+                      ref={(el) => {
+                        if (el) {
+                          el.style.height = "auto";
+                          el.style.height = `${el.scrollHeight}px`;
+                        }
+                      }}
+                    />
                   </div>
 
                   {/* Actions (Always show on hover) */}
@@ -84,28 +101,11 @@ export const SceneNode = ({ data }: { data: SceneNodeData }) => {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        data.onSceneEdit?.(scene.id);
-                      }}
-                      className={cn(
-                        "p-1.5 rounded-md transition-colors",
-                        scene.selected
-                          ? "text-primary-foreground/70 hover:text-primary-foreground hover:bg-primary-foreground/20"
-                          : "text-muted-foreground hover:text-primary hover:bg-background/50",
-                      )}
-                      title={tFlow("edit")}
-                    >
-                      <Pencil className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
                         data.onSceneDelete?.(scene.id);
                       }}
                       className={cn(
-                        "p-1.5 rounded-md transition-colors",
-                        scene.selected
-                          ? "text-primary-foreground/70 hover:text-primary-foreground hover:bg-primary-foreground/20"
-                          : "text-muted-foreground hover:text-destructive hover:bg-background/50",
+                        "p-1.5 rounded-md transition-colors backdrop-blur-md hover:text-destructive",
+                        "text-muted-foreground bg-background/50  hover:bg-background/80",
                       )}
                       title={tFlow("delete")}
                     >

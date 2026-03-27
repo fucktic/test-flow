@@ -56,6 +56,7 @@ export interface SceneNodeData {
   scenes: SceneItem[];
   onSceneSelect?: (id: string) => void;
   onSceneEdit?: (id: string) => void;
+  onSceneChange?: (id: string, content: string) => void;
   onSceneDelete?: (id: string) => void;
   onSceneAdd?: (index: number) => void;
 }
@@ -89,6 +90,7 @@ export interface SceneImageNodeData {
 export interface VideoPreview {
   id: string;
   url: string;
+  poster?: string;
   selected?: boolean;
 }
 
@@ -115,6 +117,7 @@ export interface SceneVideoNodeData {
 export interface VideoPreviewItem {
   id: string; // e.g., S-1
   url?: string;
+  poster?: string;
   duration?: string; // e.g., 10s
   status: "generated" | "pending";
 }

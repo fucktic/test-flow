@@ -35,7 +35,12 @@ const SceneImageNode = ({ data }: SceneImageNodeProps) => {
         {/* Main Image Area */}
         <div className="relative w-full h-full aspect-4/3 bg-muted flex items-center justify-center group">
           {data.imageUrl ? (
-            <img src={data.imageUrl} alt={data.sceneId} className="w-full h-full object-cover" />
+            <img
+              src={data.imageUrl}
+              alt={data.sceneId}
+              className="w-full h-full object-cover"
+              loading="lazy"
+            />
           ) : (
             <span className="text-muted-foreground/50 text-4xl font-bold tracking-widest">
               {tFlow("img")}
@@ -95,6 +100,7 @@ const SceneImageNode = ({ data }: SceneImageNodeProps) => {
                           src={refImg.url}
                           alt={`Ref ${index + 1}`}
                           className="w-full h-full object-cover"
+                          loading="lazy"
                         />
                       ) : (
                         <>

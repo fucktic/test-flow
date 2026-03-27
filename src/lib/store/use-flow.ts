@@ -26,32 +26,58 @@ interface FlowState {
 }
 
 const syncGraph = (state: any, set: any) => {
-  const episodeNode = state.nodes.find((n: any) => n.id === "episode-1");
+  const episodeNode = state.nodes.find((n: any) => n.type === "episodeNode");
   if (!episodeNode) return;
 
+  const episodeNodeId = episodeNode.id;
   const checkedEpisodes = episodeNode.data.episodes.filter((ep: any) => ep.checked);
 
   const newNodes: Node[] = [];
   const newEdges: Edge[] = [];
 
-  const previewNode = state.nodes.find((n: any) => n.id === "video-preview-1");
-  if (previewNode) newNodes.push(previewNode);
   newNodes.push(episodeNode);
-
-  if (previewNode) {
-    newEdges.push({
-      id: "e-ep-vp",
-      source: "episode-1",
-      target: "video-preview-1",
-      sourceHandle: "main",
-      animated: true,
-      style: { stroke: "#6366f1", strokeWidth: 2 },
-    });
-  }
 
   let currentY = 0;
 
   checkedEpisodes.forEach((ep: any) => {
+    const epPrefix = ep.title.split(" ")[0]; // e.g. "EP_001"
+
+    // 1. Video Preview Node
+    let previewNode = state.nodes.find(
+      (n: any) => n.type === "videoPreviewNode" && n.data?.episodeId === epPrefix,
+    );
+    const previewNodeId = previewNode ? previewNode.id : `video-preview-${ep.id}`;
+
+    if (!previewNode) {
+      previewNode = {
+        id: previewNodeId,
+        type: "videoPreviewNode",
+        position: { x: 450, y: currentY },
+        data: {
+          episodeId: epPrefix,
+          progress: { current: 0, total: 0 },
+          vid: `VID_${ep.id}`,
+          items: [],
+        },
+      };
+    } else {
+      previewNode.position.y = currentY;
+      previewNode.position.x = 450; // enforce position
+    }
+
+    newNodes.push(previewNode);
+    newEdges.push({
+      id: `e-${episodeNodeId}-${previewNodeId}`,
+      source: episodeNodeId,
+      target: previewNodeId,
+      sourceHandle: "main",
+      animated: true,
+      style: { stroke: "#6366f1", strokeWidth: 2 },
+    });
+
+    currentY += 700; // Add space for the preview node
+
+    // 2. Scene Node
     const sceneNodeId = `scene-${ep.id}`;
     let sceneNode = state.nodes.find((n: any) => n.id === sceneNodeId);
 
@@ -61,20 +87,21 @@ const syncGraph = (state: any, set: any) => {
         type: "sceneNode",
         position: { x: 450, y: currentY },
         data: {
-          title: `分镜列表 ${ep.title.split(" ")[0]}`,
+          title: `分镜列表 ${epPrefix}`,
           scenes: JSON.parse(JSON.stringify(defaultScenes)),
           ...getSceneHandlers(set, sceneNodeId),
         },
       };
     } else {
       sceneNode.position.y = currentY;
+      sceneNode.position.x = 450; // enforce position
       sceneNode.data = { ...sceneNode.data, ...getSceneHandlers(set, sceneNodeId) };
     }
 
     newNodes.push(sceneNode);
     newEdges.push({
-      id: `e-ep-${sceneNodeId}`,
-      source: "episode-1",
+      id: `e-${episodeNodeId}-${sceneNodeId}`,
+      source: episodeNodeId,
       target: sceneNodeId,
       sourceHandle: "main",
       animated: true,
@@ -143,9 +170,6 @@ const syncGraph = (state: any, set: any) => {
   const centerY = Math.max(0, totalHeight / 2 - 200);
 
   episodeNode.position.y = centerY;
-  if (previewNode) {
-    previewNode.position.y = centerY - 350;
-  }
 
   state.nodes.forEach((n: any) => {
     if (
@@ -163,10 +187,10 @@ const syncGraph = (state: any, set: any) => {
   state.edges = newEdges;
 };
 
-const getEpisodeHandlers = (set: any) => ({
+const getEpisodeHandlers = (set: any, nodeId: string) => ({
   onEpisodeCheck: (id: string, checked: boolean) => {
     set((state: any) => {
-      const node = state.nodes.find((n: any) => n.id === "episode-1");
+      const node = state.nodes.find((n: any) => n.id === nodeId);
       if (node && node.type === "episodeNode") {
         const eps = (node.data as any).episodes;
 
@@ -185,7 +209,7 @@ const getEpisodeHandlers = (set: any) => ({
   },
   onEpisodeSelect: (id: string) => {
     set((state: any) => {
-      const node = state.nodes.find((n: any) => n.id === "episode-1");
+      const node = state.nodes.find((n: any) => n.id === nodeId);
       if (node && node.type === "episodeNode") {
         const data = node.data as any;
         data.activeEpisodeId = data.activeEpisodeId === id ? undefined : id;
@@ -214,6 +238,18 @@ const getSceneHandlers = (set: any, nodeId: string) => ({
   },
   onSceneEdit: (id: string) => {
     console.log("Edit scene", id);
+  },
+  onSceneChange: (id: string, content: string) => {
+    set((state: any) => {
+      const node = state.nodes.find((n: any) => n.id === nodeId);
+      if (node && node.type === "sceneNode") {
+        const scenes = (node.data as any).scenes;
+        const scene = scenes.find((s: any) => s.id === id);
+        if (scene) {
+          scene.content = content;
+        }
+      }
+    });
   },
   onSceneDelete: (id: string) => {
     set((state: any) => {
@@ -350,7 +386,10 @@ export const rehydrateNodes = (nodes: Node[], set: any) => {
     const normalizedNode = { ...node, type };
 
     if (type === "episodeNode") {
-      return { ...normalizedNode, data: { ...normalizedNode.data, ...getEpisodeHandlers(set) } };
+      return {
+        ...normalizedNode,
+        data: { ...normalizedNode.data, ...getEpisodeHandlers(set, normalizedNode.id) },
+      };
     }
     if (type === "sceneNode") {
       return {
@@ -400,57 +439,9 @@ const defaultScenes = [
 
 export const useFlowStore = create<FlowState>()(
   immer((set, _get) => {
+    // 初始化空的节点和连线状态，移除原有的 mock 数据
     const initialState = {
-      nodes: [
-        {
-          id: "video-preview-1",
-          type: "videoPreviewNode",
-          position: { x: 0, y: 0 },
-          data: {
-            episodeId: "EP_002",
-            progress: { current: 3, total: 12 },
-            vid: "VID_20260312",
-            items: [
-              {
-                id: "S-1",
-                status: "generated",
-                url: "https://images.unsplash.com/photo-1682687220742-aba13b6e50ba?q=80&w=200&h=200&auto=format&fit=crop",
-                duration: "10s",
-              },
-              { id: "S-2", status: "pending" },
-              {
-                id: "S-3",
-                status: "generated",
-                url: "https://images.unsplash.com/photo-1682687982501-1e5898cb8f4b?q=80&w=200&h=200&auto=format&fit=crop",
-                duration: "5s",
-              },
-            ],
-          },
-        },
-        {
-          id: "episode-1",
-          type: "episodeNode",
-          position: { x: 0, y: 350 },
-          data: {
-            episodes: [
-              { id: "ep1", title: "EP_001 第1集", checked: false },
-              {
-                id: "ep2",
-                title: "EP_002 第2集",
-                checked: true,
-                script: {
-                  title: "EP_002 剧本",
-                  timestamp: "2024-03-20 14:30",
-                  content: "林星阑站在门口...",
-                },
-              },
-              { id: "ep3", title: "EP_003 第3集", checked: false },
-            ],
-            activeEpisodeId: "ep2",
-            ...getEpisodeHandlers(set),
-          },
-        },
-      ] as Node[],
+      nodes: [] as Node[],
       edges: [] as Edge[],
       selectedNodeId: null,
     };

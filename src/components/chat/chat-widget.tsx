@@ -276,6 +276,7 @@ export function ChatWidget() {
                           src={agent.icon}
                           alt={agent.name}
                           className="w-full h-full object-cover"
+                          loading="lazy"
                         />
                       ) : (
                         <Orbit className="w-4 h-4" />
@@ -300,6 +301,7 @@ export function ChatWidget() {
                         src={agents.find((a) => a.id === selectedAgentId)?.icon}
                         alt="agent"
                         className="w-full h-full object-cover"
+                        loading="lazy"
                       />
                     ) : (
                       <Orbit className="w-4 h-4 animate-spin" />
@@ -359,6 +361,7 @@ export function ChatWidget() {
                                 src={agents.find((a) => a.id === selectedAgentId)?.icon}
                                 alt="icon"
                                 className="w-4 h-4 rounded-full object-cover"
+                                loading="lazy"
                               />
                             ) : (
                               <Orbit className="w-4 h-4" />
@@ -391,6 +394,7 @@ export function ChatWidget() {
                                     src={agent.icon}
                                     alt={agent.name}
                                     className="w-4 h-4 rounded-full object-cover"
+                                    loading="lazy"
                                   />
                                 ) : (
                                   <div className="w-4 h-4 rounded-full bg-primary/10 flex items-center justify-center text-primary text-[10px] font-bold">

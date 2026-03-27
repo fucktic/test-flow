@@ -47,7 +47,23 @@ const SceneVideoNode = ({ data }: SceneVideoNodeProps) => {
                   )}
                   onClick={() => data.onVideoSelect?.(video.id)}
                 >
-                  <img src={video.url} alt={video.id} className="w-full h-full object-cover " />
+                  {video.url.endsWith(".mp4") ? (
+                    <video
+                      src={video.url}
+                      poster={video.poster}
+                      className="w-full h-full object-cover"
+                      controls
+                      muted
+                      playsInline
+                    />
+                  ) : (
+                    <img
+                      src={video.url}
+                      alt={video.id}
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                    />
+                  )}
                 </div>
               ))}
             </div>
@@ -106,7 +122,12 @@ const SceneVideoNode = ({ data }: SceneVideoNodeProps) => {
                   <div key={index} className="flex flex-col gap-1 w-25">
                     <div className="aspect-square bg-muted/50 rounded-md border border-border border-dashed flex flex-col items-center justify-center text-muted-foreground hover:bg-muted transition-colors cursor-pointer relative overflow-hidden">
                       {refImg?.url ? (
-                        <img src={refImg.url} alt={type} className="w-full h-full object-cover" />
+                        <img
+                          src={refImg.url}
+                          alt={type}
+                          className="w-full h-full object-cover"
+                          loading="lazy"
+                        />
                       ) : (
                         <>
                           <span className="text-[10px] mb-1">

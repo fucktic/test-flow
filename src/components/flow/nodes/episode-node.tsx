@@ -27,31 +27,32 @@ export const EpisodeNode = ({ data }: { data: EpisodeNodeData }) => {
           />
         </div>
 
-        <ScrollArea className="flex-1 nodrag nowheel">
-          <div className="flex flex-col gap-2 mt-2">
+        <ScrollArea className="flex-1 nodrag nowheel [&_[data-slot=scroll-area-viewport]>div]:flex! [&_[data-slot=scroll-area-viewport]>div]:flex-col!">
+          <ul className="flex flex-col gap-2 mt-2 w-full max-w-full">
             {data.episodes?.map((ep) => (
-              <div key={ep.id} className="flex items-center justify-between group w-full">
-                <div className="flex items-center gap-3 overflow-hidden flex-1">
-                  <Checkbox
-                    checked={ep.checked}
-                    onCheckedChange={(checked) => data.onEpisodeCheck?.(ep.id, !!checked)}
-                    className="shrink-0"
-                  />
-                  <span
-                    className={cn(
-                      "text-sm  transition-colors truncate",
-                      ep.checked ? "text-foreground" : "text-muted-foreground",
-                    )}
-                    title={ep.title}
-                  >
-                    {ep.title}
-                  </span>
-                </div>
+              <li
+                key={ep.id}
+                className="flex items-center justify-between group w-full gap-2 relative overflow-hidden"
+              >
+                <Checkbox
+                  checked={ep.checked}
+                  onCheckedChange={(checked) => data.onEpisodeCheck?.(ep.id, !!checked)}
+                  className="shrink-0"
+                />
 
-                <div className="relative flex items-center h-full ml-2 shrink-0">
+                <div
+                  className={cn(
+                    "text-sm transition-colors flex-1  overflow-hidden",
+                    ep.checked ? "text-foreground" : "text-muted-foreground",
+                  )}
+                  title={ep.title}
+                >
+                  <div className="truncate">{ep.title}</div>
+                </div>
+                <div className="flex items-center h-full shrink-0">
                   <button
                     onClick={() => setActiveEpisode(activeEpisode?.id === ep.id ? null : ep)}
-                    className="p-1.5  rounded-md hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer"
+                    className="p-1.5 rounded-md hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer"
                   >
                     <Wand2
                       className={cn(
@@ -65,9 +66,9 @@ export const EpisodeNode = ({ data }: { data: EpisodeNodeData }) => {
                     />
                   </button>
                 </div>
-              </div>
+              </li>
             ))}
-          </div>
+          </ul>
         </ScrollArea>
 
         {/* Main output handle like a Plus button */}

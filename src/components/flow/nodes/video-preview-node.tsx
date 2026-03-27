@@ -91,7 +91,23 @@ const VideoPreviewNode = ({ data }: VideoPreviewNodeProps) => {
 
                 {item.status === "generated" && item.url ? (
                   <>
-                    <img src={item.url} alt={item.id} className="w-full h-full object-cover" />
+                    {item.url.endsWith(".mp4") ? (
+                      <video
+                        src={item.url}
+                        poster={item.poster}
+                        className="w-full h-full object-cover"
+                        controls
+                        muted
+                        playsInline
+                      />
+                    ) : (
+                      <img
+                        src={item.url}
+                        alt={item.id}
+                        className="w-full h-full object-cover"
+                        loading="lazy"
+                      />
+                    )}
                     {/* Bottom Right Duration Badge */}
                     {item.duration && (
                       <div className="absolute bottom-2 right-2 px-1.5 py-0.5 bg-black/60 backdrop-blur-sm text-white/90 rounded text-[10px] font-medium z-10">
