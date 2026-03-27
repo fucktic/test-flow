@@ -27,8 +27,9 @@ export function AgentManagerModal() {
     description: z.string().optional(),
     icon: z
       .string()
-      .min(1, { message: t("iconRequired") })
-      .url({ message: t("iconInvalid") }),
+      .optional()
+      .or(z.literal(""))
+      .refine((val) => !val || /^https?:\/\//.test(val), { message: t("iconInvalid") }),
   });
 
   type FormValues = z.infer<typeof formSchema>;
@@ -117,36 +118,55 @@ export function AgentManagerModal() {
                   agents.map((agent) => (
                     <div
                       key={agent.id}
-                      className="flex items-center justify-between p-3 border rounded-md"
+                      className="flex items-center justify-between p-3 border rounded-md bg-card hover:bg-accent/50 transition-colors"
                     >
-                      <div className="flex flex-col">
-                        <div className="flex items-center gap-2">
+                      <div className="flex flex-col min-w-0 flex-1 mr-4">
+                        <div className="flex items-center gap-2 mb-1">
                           {agent.icon ? (
                             <img
                               src={agent.icon}
                               alt={agent.name}
-                              className="w-5 h-5 rounded-full object-cover"
+                              className="w-6 h-6 rounded-full object-cover shrink-0 border border-border/50"
                               loading="lazy"
                             />
                           ) : (
-                            <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center text-primary text-[10px] font-bold">
+                            <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs font-bold shrink-0 border border-primary/20">
                               {agent.name.charAt(0).toUpperCase()}
                             </div>
                           )}
-                          <span className="font-medium text-sm">{agent.name}</span>
+                          <span className="font-semibold text-sm truncate">{agent.name}</span>
                         </div>
                         {agent.description && (
-                          <span className="text-xs text-muted-foreground mt-1">
+                          <span
+                            className="text-xs text-muted-foreground truncate"
+                            title={agent.description}
+                          >
                             {agent.description}
                           </span>
                         )}
+                        <span
+                          className="text-[10px] font-mono text-muted-foreground/60 truncate mt-0.5"
+                          title={agent.endpoint}
+                        >
+                          {agent.endpoint}
+                        </span>
                       </div>
-                      <div className="flex gap-2">
-                        <Button variant="ghost" size="icon" onClick={() => handleEdit(agent)}>
-                          <Edit2 className="w-4 h-4 text-muted-foreground" />
+                      <div className="flex gap-1 shrink-0">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 hover:text-primary hover:bg-primary/10"
+                          onClick={() => handleEdit(agent)}
+                        >
+                          <Edit2 className="w-4 h-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleDelete(agent.id)}>
-                          <Trash2 className="w-4 h-4 text-destructive" />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 hover:text-destructive hover:bg-destructive/10"
+                          onClick={() => handleDelete(agent.id)}
+                        >
+                          <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>
                     </div>

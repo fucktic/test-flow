@@ -12,6 +12,10 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
+    "@tiptap/extension-placeholder": "^3.20.5",
+    "@tiptap/pm": "^3.20.5",
+    "@tiptap/react": "^3.20.5",
+    "@tiptap/starter-kit": "^3.20.5",
     "@uidotdev/usehooks": "^2.4.1",
     "class-variance-authority": "^0.7.1",
     "classnames": "^2.5.1",

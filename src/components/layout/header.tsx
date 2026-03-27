@@ -20,12 +20,6 @@ export function Header({ isSkillsEmpty = false }: { isSkillsEmpty?: boolean }) {
             className="scale-125"
             xmlns="http://www.w3.org/2000/svg"
           >
-            <path
-              d="M10 5C7.23858 5 5 7.23858 5 10C5 12.7614 7.23858 15 10 15C11.5 15 13 14 15 10C17 6 18.5 5 20 5C22.7614 5 25 7.23858 25 10C25 12.7614 22.7614 15 20 15C18.5 15 17 14 15 10"
-              stroke="url(#brand-grad)"
-              strokeWidth="3.5"
-              strokeLinecap="round"
-            ></path>
             <defs>
               <linearGradient
                 id="brand-grad"
@@ -40,6 +34,12 @@ export function Header({ isSkillsEmpty = false }: { isSkillsEmpty?: boolean }) {
                 <stop offset="1" stopColor="#A855F7"></stop>
               </linearGradient>
             </defs>
+            <path
+              d="M10 5C7.23858 5 5 7.23858 5 10C5 12.7614 7.23858 15 10 15C11.5 15 13 14 15 10C17 6 18.5 5 20 5C22.7614 5 25 7.23858 25 10C25 12.7614 22.7614 15 20 15C18.5 15 17 14 15 10"
+              stroke="url(#brand-grad)"
+              strokeWidth="3.5"
+              strokeLinecap="round"
+            ></path>
           </svg>
           <span className="font-extrabold text-lg hidden sm:inline-block tracking-tight text-primary">
             Mantur Flow

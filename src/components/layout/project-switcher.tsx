@@ -69,7 +69,7 @@ export function ProjectSwitcher() {
     <div className="flex items-center gap-1 border-r pr-2 mr-2">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="sm" className="h-8 gap-2 px-2 max-w-[200px]">
+          <Button variant="ghost" size="sm" className="h-8 gap-2 px-2 max-w-50">
             <Folder className="h-4 w-4 text-muted-foreground shrink-0" />
             <span className="text-sm font-medium truncate">
               {currentProject ? currentProject.name : t("switchProject")}
@@ -77,7 +77,7 @@ export function ProjectSwitcher() {
             <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="w-[200px]">
+        <DropdownMenuContent align="start" className="w-50">
           {projects.length === 0 ? (
             <div className="p-2 text-sm text-muted-foreground text-center">No projects</div>
           ) : (

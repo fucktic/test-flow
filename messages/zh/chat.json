@@ -20,5 +20,6 @@
   "edit": "编辑",
   "delete": "删除",
   "inputPlaceholder": "输入消息...",
-  "send": "发送"
+  "send": "发送",
+  "chatWithAgent": "智能体对话"
 }

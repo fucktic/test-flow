@@ -1,37 +1,37 @@
 "use client";
 
-import { useEffect, useRef, useState, MouseEvent as ReactMouseEvent } from "react";
+import { useEffect, useRef, useState, useCallback, MouseEvent as ReactMouseEvent } from "react";
 import { useTranslations } from "next-intl";
 import { useChatStore } from "@/lib/store/use-chat";
 import { useProjectStore } from "@/lib/store/use-projects";
 import { useAgent } from "@/lib/hooks/use-agent";
 import { AgentManagerModal } from "./agent-manager-modal";
+import { ChatInput } from "./chat-input";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  SelectSeparator,
-} from "@/components/ui/select";
-import { Minus, Settings, Send, User, Sparkles, Orbit, Info } from "lucide-react";
+import { Minus, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useEditor } from "@tiptap/react";
+import StarterKit from "@tiptap/starter-kit";
+import Placeholder from "@tiptap/extension-placeholder";
+
+const MINIMIZED_SIZE = 56; // w-14/h-14 (14 * 4px = 56px)
+const MARGIN = 20;
 
 export function ChatWidget() {
   const t = useTranslations("chat");
   const {
     isMinimized,
     position,
+    size,
     agents,
     selectedAgentId,
     messages,
     setIsMinimized,
     setPosition,
+    setSize,
     fetchAgents,
     setSelectedAgentId,
     setAgentModalOpen,
@@ -40,12 +40,51 @@ export function ChatWidget() {
   } = useChatStore();
 
   const [input, setInput] = useState("");
-  const dragRef = useRef<HTMLDivElement>(null);
+  const dragInfoRef = useRef({ hasMoved: false, startX: 0, startY: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
-  const [hasMoved, setHasMoved] = useState(false);
+  const resizeInfoRef = useRef({ startX: 0, startY: 0, startWidth: 0, startHeight: 0 });
+  const [isResizing, setIsResizing] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { runCommand, isExecuting } = useAgent();
+
+  const handleSendRef = useRef<(() => void) | null>(null);
+
+  const currentAgent = agents.find((a) => a.id === selectedAgentId);
+
+  useEffect(() => {
+    handleSendRef.current = handleSend;
+  });
+
+  const editor = useEditor({
+    immediatelyRender: false,
+    extensions: [
+      StarterKit.configure({
+        heading: false,
+      }),
+      Placeholder.configure({
+        placeholder: t("inputPlaceholder"),
+      }),
+    ],
+    content: input,
+    onUpdate: ({ editor }) => {
+      setInput(editor.getText());
+    },
+    editorProps: {
+      attributes: {
+        class:
+          "w-full h-20 overflow-y-auto resize-none border-0 bg-transparent focus-visible:ring-0 p-1 text-sm outline-none",
+      },
+      handleKeyDown: (view, event) => {
+        if (event.key === "Enter" && !event.shiftKey) {
+          event.preventDefault();
+          handleSendRef.current?.();
+          return true;
+        }
+        return false;
+      },
+    },
+  });
 
   // 初始化加载智能体列表
   useEffect(() => {
@@ -67,26 +106,55 @@ export function ChatWidget() {
   }, [messages, isMinimized]);
 
   // 处理拖拽开始
-  const handleMouseDown = (e: ReactMouseEvent<HTMLDivElement>) => {
-    if ((e.target as HTMLElement).closest("button, input, select, textarea")) return;
-    setIsDragging(true);
-    setHasMoved(false);
-    setDragOffset({
-      x: e.clientX - position.x,
-      y: e.clientY - position.y,
-    });
-  };
+  const handleMouseDown = useCallback(
+    (e: ReactMouseEvent<HTMLDivElement>) => {
+      if ((e.target as HTMLElement).closest("button, input, select, textarea")) return;
+      setIsDragging(true);
+      dragInfoRef.current = { hasMoved: false, startX: e.clientX, startY: e.clientY };
+      setDragOffset({
+        x: e.clientX - position.x,
+        y: e.clientY - position.y,
+      });
+    },
+    [position.x, position.y],
+  );
+
+  // 处理调整大小开始
+  const handleResizeMouseDown = useCallback(
+    (e: ReactMouseEvent<HTMLDivElement>) => {
+      e.stopPropagation(); // 阻止事件冒泡到拖拽逻辑
+      setIsResizing(true);
+      resizeInfoRef.current = {
+        startX: e.clientX,
+        startY: e.clientY,
+        startWidth: size.width,
+        startHeight: size.height,
+      };
+    },
+    [size.width, size.height],
+  );
 
   // 处理拖拽过程
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (!isDragging) return;
-      setHasMoved(true);
+
+      if (!dragInfoRef.current.hasMoved) {
+        if (
+          Math.abs(e.clientX - dragInfoRef.current.startX) > 3 ||
+          Math.abs(e.clientY - dragInfoRef.current.startY) > 3
+        ) {
+          dragInfoRef.current.hasMoved = true;
+        } else {
+          return;
+        }
+      }
+
       let newX = e.clientX - dragOffset.x;
       let newY = e.clientY - dragOffset.y;
 
-      const width = isMinimized ? 56 : 320; // 56 = w-14, 320 = w-80
-      const height = isMinimized ? 56 : 600;
+      const width = isMinimized ? MINIMIZED_SIZE : size.width;
+      const height = isMinimized ? MINIMIZED_SIZE : size.height;
 
       // 限制拖拽范围在屏幕内
       newX = Math.max(0, Math.min(window.innerWidth - width, newX));
@@ -108,10 +176,50 @@ export function ChatWidget() {
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
     };
-  }, [isDragging, dragOffset, setPosition, isMinimized]);
+  }, [isDragging, dragOffset, setPosition, isMinimized, size]);
+
+  // 处理调整大小过程
+  useEffect(() => {
+    const handleResizeMouseMove = (e: MouseEvent) => {
+      if (!isResizing) return;
+
+      const deltaX = e.clientX - resizeInfoRef.current.startX;
+      const deltaY = e.clientY - resizeInfoRef.current.startY;
+
+      let newWidth = resizeInfoRef.current.startWidth + deltaX;
+      let newHeight = resizeInfoRef.current.startHeight + deltaY;
+
+      // 限制宽高
+      newWidth = Math.max(400, Math.min(800, newWidth));
+      // 高度最大为画布高度（屏幕高度减去一定的边距，比如上下各留 MARGIN）
+      const maxHeight = window.innerHeight - MARGIN * 2;
+      newHeight = Math.max(500, Math.min(maxHeight, newHeight));
+
+      setSize(newWidth, newHeight);
+    };
+
+    const handleResizeMouseUp = () => {
+      setIsResizing(false);
+    };
+
+    if (isResizing) {
+      window.addEventListener("mousemove", handleResizeMouseMove);
+      window.addEventListener("mouseup", handleResizeMouseUp);
+      // 可以在调整大小时禁用 body 的文本选择
+      document.body.style.userSelect = "none";
+    } else {
+      document.body.style.userSelect = "";
+    }
+
+    return () => {
+      window.removeEventListener("mousemove", handleResizeMouseMove);
+      window.removeEventListener("mouseup", handleResizeMouseUp);
+      document.body.style.userSelect = "";
+    };
+  }, [isResizing, setSize]);
 
   // 处理发送消息
-  const handleSend = async () => {
+  const handleSend = useCallback(async () => {
     if (!input.trim() || isExecuting) return;
     if (!selectedAgentId) {
       toast.error(t("selectAgentPrompt"));
@@ -121,8 +229,9 @@ export function ChatWidget() {
     const currentInput = input;
     addMessage({ role: "user", content: currentInput });
     setInput("");
+    editor?.commands.clearContent();
 
-    const agent = agents.find((a) => a.id === selectedAgentId);
+    const agent = currentAgent;
     if (!agent) return;
 
     try {
@@ -182,7 +291,18 @@ export function ChatWidget() {
         content: `执行失败: ${error.message || "未知错误"}`,
       });
     }
-  };
+  }, [
+    input,
+    isExecuting,
+    selectedAgentId,
+    t,
+    addMessage,
+    editor,
+    currentAgent,
+    messages.length,
+    runCommand,
+    updateMessage,
+  ]);
 
   // 如果未初始化完成位置，先不渲染以防闪烁
   if (position.x === -1) return null;
@@ -191,21 +311,49 @@ export function ChatWidget() {
   if (isMinimized) {
     return (
       <>
-        <div
-          className={cn(
-            "fixed z-50 flex items-center justify-center w-14 h-14 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-xl cursor-grab active:cursor-grabbing hover:shadow-2xl transition-shadow",
-            isDragging && "opacity-90",
-          )}
-          style={{ left: `${position.x}px`, top: `${position.y}px` }}
-          onMouseDown={handleMouseDown}
-          onClick={() => {
-            // 如果只是点击而没有拖拽，则展开面板
-            if (!hasMoved) setIsMinimized(false);
-          }}
-          title={t("maximize")}
-        >
-          <Orbit className="w-7 h-7" />
-        </div>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div
+                className={cn(
+                  "fixed z-50 flex items-center justify-center w-10 h-10 rounded-full bg-muted/50 backdrop-blur-md  shadow-2xl cursor-grab active:cursor-grabbing hover:shadow-2xl transition-shadow border border-primary",
+                  isDragging && "opacity-90",
+                )}
+                style={{ left: `${position.x}px`, top: `${position.y}px` }}
+                onMouseDown={handleMouseDown}
+                onClick={() => {
+                  // 如果只是点击而没有拖拽，则展开面板
+                  if (!dragInfoRef.current.hasMoved) {
+                    let newX = position.x;
+
+                    // 判断到右边框的距离是否小于对话框宽度，如果是，则向左平移
+                    if (position.x + size.width > window.innerWidth - MARGIN) {
+                      newX = Math.max(MARGIN, window.innerWidth - size.width - MARGIN);
+                    }
+
+                    if (newX !== position.x) {
+                      setPosition(newX, position.y);
+                    }
+
+                    setIsMinimized(false);
+                  }
+                }}
+              >
+                <img
+                  src="/mantur-logo.svg"
+                  className={cn(
+                    "w-10 select-none pointer-events-none relative z-10",
+                    isExecuting && "animate-pulse",
+                  )}
+                  style={{ objectFit: "contain" }}
+                />
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="left">
+              <p>{t("chatWithAgent")}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
         <AgentManagerModal />
       </>
     );
@@ -215,25 +363,32 @@ export function ChatWidget() {
   return (
     <>
       <div
-        ref={dragRef}
         className={cn(
-          "fixed z-50 flex flex-col w-200 h-150 bg-background/95 backdrop-blur-xl border border-border/50 rounded-2xl shadow-2xl overflow-hidden",
+          "fixed z-50 flex flex-col bg-background/95 backdrop-blur-xl border border-border/50 rounded-2xl shadow-2xl overflow-hidden transition-opacity",
           isDragging ? "opacity-90" : "opacity-100",
         )}
         style={{
           left: `${position.x}px`,
           top: `${position.y}px`,
-          // 移除位置相关的 CSS transition 保证拖拽完全跟随鼠标
+          width: `${size.width}px`,
+          height: `${size.height}px`,
         }}
       >
         {/* Header (Draggable) */}
         <div
-          className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-indigo-500/10 to-purple-500/10 border-b cursor-grab active:cursor-grabbing"
+          className="flex items-center justify-between px-4 py-3 bg-linear-to-r from-indigo-500/10 to-purple-500/10 border-b cursor-grab active:cursor-grabbing"
           onMouseDown={handleMouseDown}
         >
           <div className="flex items-center gap-2 font-semibold text-sm select-none text-foreground/90">
-            <div className="p-1.5 bg-primary/10 rounded-md text-primary">
-              <Sparkles className="w-4 h-4" />
+            <div className="p-1.5 bg-primary/10 rounded-md text-primary relative">
+              <img
+                src="/mantur-logo.svg"
+                className={cn(
+                  "w-6 select-none pointer-events-none relative z-10",
+                  isExecuting && "animate-pulse",
+                )}
+                style={{ objectFit: "contain" }}
+              />
             </div>
             {t("title")}
           </div>
@@ -255,7 +410,6 @@ export function ChatWidget() {
             <div className="space-y-5 p-4">
               {messages.map((msg) => {
                 const isUser = msg.role === "user";
-                const agent = !isUser ? agents.find((a) => a.id === selectedAgentId) : null;
                 return (
                   <div
                     key={msg.id}
@@ -271,15 +425,13 @@ export function ChatWidget() {
                     >
                       {isUser ? (
                         <User className="w-4 h-4" />
-                      ) : agent?.icon ? (
+                      ) : (
                         <img
-                          src={agent.icon}
-                          alt={agent.name}
+                          src={"/mantur-logo.svg"}
+                          alt={"mantur-logo"}
                           className="w-full h-full object-cover"
                           loading="lazy"
                         />
-                      ) : (
-                        <Orbit className="w-4 h-4" />
                       )}
                     </div>
                     <div
@@ -296,15 +448,15 @@ export function ChatWidget() {
               {isExecuting && (
                 <div className="flex gap-3 text-sm flex-row">
                   <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 shadow-sm overflow-hidden bg-muted border border-border/50 text-muted-foreground">
-                    {agents.find((a) => a.id === selectedAgentId)?.icon ? (
+                    {currentAgent?.icon ? (
                       <img
-                        src={agents.find((a) => a.id === selectedAgentId)?.icon}
+                        src={currentAgent.icon}
                         alt="agent"
                         className="w-full h-full object-cover"
                         loading="lazy"
                       />
                     ) : (
-                      <Orbit className="w-4 h-4 animate-spin" />
+                      <img src={"/mantur-logo.svg"} className="w-4 h-4 animate-spin" />
                     )}
                   </div>
                   <div className="px-4 py-2.5 rounded-2xl w-[75%]   rounded-tl-sm text-foreground/90 flex items-center gap-1">
@@ -325,129 +477,39 @@ export function ChatWidget() {
           </ScrollArea>
 
           {/* Input Area */}
-          <div className="p-3 border-t bg-background/80 backdrop-blur-sm">
-            <div className="bg-muted/30 p-2 rounded-xl border border-border/50 focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/20 transition-all flex flex-col gap-2">
-              <Textarea
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSend();
-                  }
-                }}
-                placeholder={t("inputPlaceholder")}
-                className="w-full h-20  resize-none border-0 bg-transparent focus-visible:ring-0 p-1 text-sm"
-              />
+          <ChatInput
+            editor={editor}
+            input={input}
+            isExecuting={isExecuting}
+            selectedAgentId={selectedAgentId}
+            agents={agents}
+            currentAgent={currentAgent}
+            setSelectedAgentId={setSelectedAgentId}
+            setAgentModalOpen={setAgentModalOpen}
+            onSend={handleSend}
+          />
+        </div>
 
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex-1 max-w-40">
-                  <Select
-                    value={selectedAgentId || ""}
-                    onValueChange={(val) => {
-                      if (val === "manage_agents_action") {
-                        setAgentModalOpen(true);
-                        return;
-                      }
-                      setSelectedAgentId(val);
-                    }}
-                  >
-                    <SelectTrigger className="w-full h-8 text-xs bg-background/50 border-muted-foreground/20 hover:bg-background/80 transition-colors">
-                      <SelectValue placeholder={t("selectAgentPrompt")}>
-                        {selectedAgentId && agents.find((a) => a.id === selectedAgentId) ? (
-                          <div className="flex items-center gap-2">
-                            {agents.find((a) => a.id === selectedAgentId)?.icon ? (
-                              <img
-                                src={agents.find((a) => a.id === selectedAgentId)?.icon}
-                                alt="icon"
-                                className="w-4 h-4 rounded-full object-cover"
-                                loading="lazy"
-                              />
-                            ) : (
-                              <Orbit className="w-4 h-4" />
-                            )}
-                            <span className="truncate">
-                              {agents.find((a) => a.id === selectedAgentId)?.name}
-                            </span>
-                          </div>
-                        ) : (
-                          t("selectAgentPrompt")
-                        )}
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {agents.length === 0 ? (
-                        <div className="p-2 text-sm text-center text-muted-foreground">
-                          {t("noAgentFound")}
-                        </div>
-                      ) : (
-                        agents.map((agent) => (
-                          <SelectItem
-                            key={agent.id}
-                            value={agent.id}
-                            className="text-xs w-full pr-8"
-                          >
-                            <div className="flex items-center justify-between w-full">
-                              <div className="flex items-center gap-2">
-                                {agent.icon ? (
-                                  <img
-                                    src={agent.icon}
-                                    alt={agent.name}
-                                    className="w-4 h-4 rounded-full object-cover"
-                                    loading="lazy"
-                                  />
-                                ) : (
-                                  <div className="w-4 h-4 rounded-full bg-primary/10 flex items-center justify-center text-primary text-[10px] font-bold">
-                                    {agent.name.charAt(0).toUpperCase()}
-                                  </div>
-                                )}
-                                {agent.name}
-                              </div>
-                              {agent.endpoint && (
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Info className="w-3.5 h-3.5 text-muted-foreground hover:text-primary cursor-help ml-2 shrink-0" />
-                                    </TooltipTrigger>
-                                    <TooltipContent side="right">
-                                      <p className="text-xs font-mono">{agent.endpoint}</p>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                              )}
-                            </div>
-                          </SelectItem>
-                        ))
-                      )}
-                      <SelectSeparator />
-                      <SelectItem
-                        value="manage_agents_action"
-                        className="text-primary text-xs font-medium cursor-pointer flex items-center justify-center py-2"
-                      >
-                        <div className="flex items-center gap-2">
-                          <Settings className="w-3.5 h-3.5" />
-                          {t("manageAgents")}
-                        </div>
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <Button
-                  size="icon"
-                  className="w-8 h-8 shrink-0 rounded-lg bg-primary hover:bg-primary/90 shadow-sm transition-transform active:scale-95 disabled:opacity-50"
-                  onClick={handleSend}
-                  disabled={!input.trim() || !selectedAgentId || isExecuting}
-                >
-                  <Send className={cn("w-3.5 h-3.5", isExecuting && "animate-pulse")} />
-                </Button>
-              </div>
-            </div>
-
-            <div className="text-[10px] text-muted-foreground/60 text-center mt-2 font-medium">
-              Press Enter to send, Shift + Enter for new line
-            </div>
-          </div>
+        {/* 调整大小手柄 */}
+        <div
+          className="absolute bottom-0 right-0 w-5 h-5 cursor-se-resize flex items-end justify-end p-1 text-muted-foreground/50 hover:text-muted-foreground transition-colors z-50"
+          onMouseDown={handleResizeMouseDown}
+        >
+          <svg
+            width="10"
+            height="10"
+            viewBox="0 0 10 10"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M9 1L9 9L1 9"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
         </div>
       </div>
 

@@ -20,5 +20,6 @@
   "edit": "Edit",
   "delete": "Delete",
   "inputPlaceholder": "Type a message...",
-  "send": "Send"
+  "send": "Send",
+  "chatWithAgent": "Chat with Agent"
 }

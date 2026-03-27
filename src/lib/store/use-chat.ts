@@ -19,6 +19,7 @@ interface ChatState {
   messages: ChatMessage[]; // 聊天记录
   isAgentModalOpen: boolean; // 智能体管理弹窗是否打开
   isChatOpen: boolean; // 聊天窗口是否打开（目前不可关闭，仅为保留字段）
+  size: { width: number; height: number }; // 悬浮窗尺寸
 
   // Actions
   setIsMinimized: (minimized: boolean) => void;
@@ -31,6 +32,7 @@ interface ChatState {
   setAgentModalOpen: (open: boolean) => void;
   fetchAgents: () => Promise<void>; // 获取智能体列表
   saveAgents: (agents: Agent[]) => Promise<void>; // 保存智能体列表
+  setSize: (width: number, height: number) => void;
 }
 
 export const useChatStore = create<ChatState>()(
@@ -42,6 +44,7 @@ export const useChatStore = create<ChatState>()(
     messages: [],
     isAgentModalOpen: false,
     isChatOpen: true,
+    size: { width: 400, height: 600 },
 
     setIsMinimized: (minimized) =>
       set((state) => {
@@ -61,6 +64,19 @@ export const useChatStore = create<ChatState>()(
     setSelectedAgentId: (id) =>
       set((state) => {
         state.selectedAgentId = id;
+        if (id) {
+          try {
+            localStorage.setItem("selectedAgentId", id);
+          } catch {
+            // ignore
+          }
+        } else {
+          try {
+            localStorage.removeItem("selectedAgentId");
+          } catch {
+            // ignore
+          }
+        }
       }),
 
     addMessage: (msg) => {
@@ -97,9 +113,29 @@ export const useChatStore = create<ChatState>()(
       try {
         const res = await fetch("/api/agents/manage");
         if (res.ok) {
-          const agents = await res.json();
+          const agents: Agent[] = await res.json();
           set((state) => {
             state.agents = agents;
+            try {
+              const savedId = localStorage.getItem("selectedAgentId");
+              if (savedId && agents.some((a) => a.id === savedId)) {
+                state.selectedAgentId = savedId;
+              }
+
+              const savedSize = localStorage.getItem("chatWidgetSize");
+              if (savedSize) {
+                const parsedSize = JSON.parse(savedSize);
+                if (
+                  parsedSize &&
+                  typeof parsedSize.width === "number" &&
+                  typeof parsedSize.height === "number"
+                ) {
+                  state.size = parsedSize;
+                }
+              }
+            } catch {
+              // ignore
+            }
           });
         }
       } catch (error) {
@@ -126,5 +162,15 @@ export const useChatStore = create<ChatState>()(
         console.error("Failed to save agents", error);
       }
     },
+
+    setSize: (width, height) =>
+      set((state) => {
+        state.size = { width, height };
+        try {
+          localStorage.setItem("chatWidgetSize", JSON.stringify({ width, height }));
+        } catch {
+          // ignore
+        }
+      }),
   })),
 );
