@@ -337,19 +337,40 @@ const getVideoHandlers = (set: any, nodeId: string) => ({
 
 export const rehydrateNodes = (nodes: Node[], set: any) => {
   return nodes.map((node) => {
-    if (node.type === "episodeNode") {
-      return { ...node, data: { ...node.data, ...getEpisodeHandlers(set) } };
+    // Normalize node types for backward compatibility
+    let type = node.type;
+    if (type === "episode-node") type = "episodeNode";
+    if (type === "scene-node") type = "sceneNode";
+    if (type === "scene-image-node") type = "sceneImageNode";
+    if (type === "scene-video-node") type = "sceneVideoNode";
+    if (type === "video-preview-node") type = "videoPreviewNode";
+    if (type === "result-node") type = "skillNode";
+    if (type === "command-node") type = "textNode";
+
+    const normalizedNode = { ...node, type };
+
+    if (type === "episodeNode") {
+      return { ...normalizedNode, data: { ...normalizedNode.data, ...getEpisodeHandlers(set) } };
     }
-    if (node.type === "sceneNode") {
-      return { ...node, data: { ...node.data, ...getSceneHandlers(set, node.id) } };
+    if (type === "sceneNode") {
+      return {
+        ...normalizedNode,
+        data: { ...normalizedNode.data, ...getSceneHandlers(set, normalizedNode.id) },
+      };
     }
-    if (node.type === "sceneImageNode") {
-      return { ...node, data: { ...node.data, ...getImageHandlers(set, node.id) } };
+    if (type === "sceneImageNode") {
+      return {
+        ...normalizedNode,
+        data: { ...normalizedNode.data, ...getImageHandlers(set, normalizedNode.id) },
+      };
     }
-    if (node.type === "sceneVideoNode") {
-      return { ...node, data: { ...node.data, ...getVideoHandlers(set, node.id) } };
+    if (type === "sceneVideoNode") {
+      return {
+        ...normalizedNode,
+        data: { ...normalizedNode.data, ...getVideoHandlers(set, normalizedNode.id) },
+      };
     }
-    return node;
+    return normalizedNode;
   });
 };
 

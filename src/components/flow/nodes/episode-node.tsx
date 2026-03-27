@@ -39,7 +39,7 @@ export const EpisodeNode = ({ data }: { data: EpisodeNodeData }) => {
                   />
                   <span
                     className={cn(
-                      "text-sm font-medium transition-colors truncate",
+                      "text-sm  transition-colors truncate",
                       ep.checked ? "text-foreground" : "text-muted-foreground",
                     )}
                     title={ep.title}

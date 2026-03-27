@@ -1,3 +1,11 @@
+export interface Agent {
+  id: string;
+  name: string;
+  description?: string;
+  endpoint?: string; // e.g. custom API endpoint or command
+  icon?: string; // URL of the agent's icon
+}
+
 export type SkillType = "script" | "asset" | "storyboard" | "video";
 
 export interface SkillDefinition {

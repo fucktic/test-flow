@@ -16,3 +16,27 @@ export async function loadFlow(projectId: string) {
     return null;
   }
 }
+
+// 服务端获取当前项目 ID
+export async function getCurrentProject() {
+  const currentFilePath = path.join(process.cwd(), "projects", ".current-project.json");
+  try {
+    const content = await fs.readFile(currentFilePath, "utf-8");
+    const data = JSON.parse(content);
+    return data.projectId || null;
+  } catch {
+    return null;
+  }
+}
+
+// 服务端保存当前项目 ID
+export async function setCurrentProject(projectId: string) {
+  const projectsDir = path.join(process.cwd(), "projects");
+  await fs.mkdir(projectsDir, { recursive: true });
+  const currentFilePath = path.join(projectsDir, ".current-project.json");
+  await fs.writeFile(
+    currentFilePath,
+    JSON.stringify({ projectId, updatedAt: Date.now() }, null, 2),
+    "utf-8",
+  );
+}

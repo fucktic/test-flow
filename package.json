@@ -11,6 +11,7 @@
     "prepare": "husky"
   },
   "dependencies": {
+    "@hookform/resolvers": "^5.2.2",
     "@uidotdev/usehooks": "^2.4.1",
     "class-variance-authority": "^0.7.1",
     "classnames": "^2.5.1",

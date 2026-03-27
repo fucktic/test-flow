@@ -34,7 +34,26 @@ export function ProjectSwitcher() {
 
       // If no project is currently selected but we have projects, select the first one
       if (!useProjectStore.getState().currentProject && formattedProjects.length > 0) {
-        setCurrentProject(formattedProjects[0]);
+        let restored = false;
+        if (typeof window !== "undefined") {
+          const saved = localStorage.getItem("current-project");
+          if (saved) {
+            try {
+              const parsed = JSON.parse(saved);
+              const exists = formattedProjects.find((p) => p.id === parsed.id);
+              if (exists) {
+                setCurrentProject(exists);
+                restored = true;
+              }
+            } catch {
+              // ignore parse error
+            }
+          }
+        }
+
+        if (!restored) {
+          setCurrentProject(formattedProjects[0]);
+        }
       }
     }
     fetchProjects();

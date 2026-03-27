@@ -5,6 +5,7 @@ import { NextIntlClientProvider } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 import { routing } from "@/i18n/routing";
 import { Header } from "@/components/layout/header";
+import { ChatWidget } from "@/components/chat/chat-widget";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
@@ -63,7 +64,10 @@ export default async function RootLayout({
             <Toaster />
             <TooltipProvider>
               <Header isSkillsEmpty={isSkillsEmpty} />
-              <div className="flex-1 w-full overflow-hidden">{children}</div>
+              <div className="flex-1 w-full overflow-hidden relative">
+                {children}
+                <ChatWidget />
+              </div>
             </TooltipProvider>
           </ThemeProvider>
         </NextIntlClientProvider>

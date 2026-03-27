@@ -23,6 +23,14 @@ const nodeTypes = {
   sceneImageNode: SceneImageNode,
   sceneVideoNode: SceneVideoNode,
   videoPreviewNode: VideoPreviewNode,
+  // Add aliases for backward compatibility
+  "command-node": TextNode,
+  "result-node": SkillNode,
+  "episode-node": EpisodeNode,
+  "scene-node": SceneNode,
+  "scene-image-node": SceneImageNode,
+  "scene-video-node": SceneVideoNode,
+  "video-preview-node": VideoPreviewNode,
 };
 
 export const FlowCanvas = () => {

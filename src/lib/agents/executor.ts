@@ -1,19 +1,53 @@
-export const executeAgentCommand = async (agentName: string, command: string, cwd: string) => {
-  // 这应该调用一个本地 API（例如 Next.js Route Handler）来执行命令
+export const executeAgentCommand = async (
+  agentName: string,
+  command: string,
+  cwd: string,
+  onProgress?: (chunk: string) => void,
+) => {
+  const abortController = new AbortController();
+
   try {
     const response = await fetch("/api/agents/execute", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ agentName, command, cwd }),
+      signal: abortController.signal,
     });
 
     if (!response.ok) {
-      throw new Error("Command execution failed");
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || "Command execution failed");
     }
 
-    return await response.json();
-  } catch (error) {
-    console.error("Error executing agent command:", error);
+    if (!response.body) {
+      throw new Error("No response body");
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder("utf-8");
+    let fullOutput = "";
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value, { stream: true });
+        fullOutput += chunk;
+        if (onProgress) {
+          onProgress(chunk);
+        }
+      }
+    } finally {
+      reader.releaseLock();
+    }
+
+    return { stdout: fullOutput, stderr: "" };
+  } catch (error: any) {
+    if (error.name === "AbortError") {
+      console.log("Fetch aborted");
+    } else {
+      console.error("Error executing agent command:", error);
+    }
     throw error;
   }
 };

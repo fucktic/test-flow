@@ -29,6 +29,15 @@ export const useProjectStore = create<ProjectState>()(
       set((state) => {
         state.currentProject = project;
       });
+      if (typeof window !== "undefined") {
+        localStorage.setItem("current-project", JSON.stringify(project));
+        // 同步到服务端，供 API 路由读取
+        fetch("/api/projects/current", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ projectId: project.id }),
+        }).catch((err) => console.error("Failed to sync current project to server:", err));
+      }
     },
 
     addProject: (project) => {
@@ -49,6 +58,15 @@ export const useProjectStore = create<ProjectState>()(
         state.projects.push(newProject);
         state.currentProject = newProject;
       });
+      if (typeof window !== "undefined") {
+        localStorage.setItem("current-project", JSON.stringify(newProject));
+        // 同步到服务端，供 API 路由读取
+        fetch("/api/projects/current", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ projectId: newProject.id }),
+        }).catch((err) => console.error("Failed to sync new project to server:", err));
+      }
     },
 
     addResource: (resource) => {

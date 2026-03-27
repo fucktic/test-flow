@@ -16,6 +16,7 @@ export default getRequestConfig(async ({ requestLocale }) => {
   const canvas = (await import(`../../messages/${locale}/canvas.json`)).default;
   const flow = (await import(`../../messages/${locale}/flow.json`)).default;
   const header = (await import(`../../messages/${locale}/header.json`)).default;
+  const chat = (await import(`../../messages/${locale}/chat.json`)).default;
 
   const messages = {
     common,
@@ -23,6 +24,7 @@ export default getRequestConfig(async ({ requestLocale }) => {
     canvas,
     flow,
     header,
+    chat,
   };
 
   return {
