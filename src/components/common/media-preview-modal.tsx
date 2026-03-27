@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -51,6 +51,8 @@ export function MediaPreviewModal({
         className="sm:max-w-[80vw]! w-[90vw] h-[80vh] bg-transparent! border-none ring-0! flex flex-col items-center justify-center overflow-hidden shadow-none p-0"
         showCloseButton={false}
       >
+        {/* 为屏幕阅读器提供不可见的标题，解决可访问性警告 */}
+        <DialogTitle className="sr-only">Media Preview</DialogTitle>
         <Button
           variant="secondary"
           size="icon"
