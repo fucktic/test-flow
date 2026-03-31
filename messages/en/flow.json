@@ -19,8 +19,12 @@
   "sceneNode": {
     "title": "Scenes",
     "edit": "Edit current scene",
+    "editScene": "Edit Scene",
+    "sceneName": "Scene Name",
+    "sceneNamePlaceholder": "Please enter a scene name",
     "delete": "Delete current scene",
-    "add": "Add scene at current position"
+    "add": "Add scene at current position",
+    "sceneList": "Scene List"
   },
   "sceneImageNode": {
     "title": "Generate Image",

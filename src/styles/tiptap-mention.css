@@ -1,0 +1,10 @@
+/* Tiptap Mention 插件的全局自定义样式 */
+.tippy-box[data-theme~="asset-mention"] {
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+}
+.tippy-box[data-theme~="asset-mention"] .tippy-content {
+  padding: 0 !important;
+}

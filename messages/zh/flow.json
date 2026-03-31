@@ -19,8 +19,12 @@
   "sceneNode": {
     "title": "分镜",
     "edit": "编辑当前分镜",
+    "editScene": "编辑分镜",
+    "sceneName": "分镜名称",
+    "sceneNamePlaceholder": "请输入分镜名称",
     "delete": "删除当前分镜",
-    "add": "当前位置手动增加分镜"
+    "add": "当前位置手动增加分镜",
+    "sceneList": "分镜列表"
   },
   "sceneImageNode": {
     "title": "生成图像",

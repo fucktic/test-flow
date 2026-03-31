@@ -18,5 +18,6 @@
   "cancel": "Cancel",
   "confirm": "Confirm",
   "creating": "Creating...",
-  "delete": "Delete"
+  "delete": "Delete",
+  "save": "Save"
 }

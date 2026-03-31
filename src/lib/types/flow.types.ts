@@ -56,7 +56,7 @@ export interface SceneNodeData {
   scenes: SceneItem[];
   onSceneSelect?: (id: string) => void;
   onSceneEdit?: (id: string) => void;
-  onSceneChange?: (id: string, content: string) => void;
+  onSceneChange?: (id: string, content: string, name?: string) => void;
   onSceneDelete?: (id: string) => void;
   onSceneAdd?: (index: number) => void;
 }

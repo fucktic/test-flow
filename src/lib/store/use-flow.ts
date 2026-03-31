@@ -245,7 +245,7 @@ const getSceneHandlers = (set: any, nodeId: string) => ({
   onSceneEdit: (id: string) => {
     console.log("Edit scene", id);
   },
-  onSceneChange: (id: string, content: string) => {
+  onSceneChange: (id: string, content: string, name?: string) => {
     set((state: any) => {
       const node = state.nodes.find((n: any) => n.id === nodeId);
       if (node && node.type === "sceneNode") {
@@ -253,6 +253,9 @@ const getSceneHandlers = (set: any, nodeId: string) => ({
         const scene = scenes.find((s: any) => s.id === id);
         if (scene) {
           scene.content = content;
+          if (name !== undefined) {
+            scene.name = name;
+          }
         }
       }
     });

@@ -1,21 +1,64 @@
 import { Handle, Position } from "@xyflow/react";
-import { SceneNodeData } from "../../../lib/types/flow.types";
+import { SceneNodeData, SceneItem } from "../../../lib/types/flow.types";
 import { useTranslations } from "next-intl";
 import { ScrollArea } from "../../ui/scroll-area";
-import { Trash2, Plus } from "lucide-react";
+import { Trash2, Plus, Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getNodeWrapperClassName } from "./utils";
+import { useState, useEffect } from "react";
+import { SceneEditDialog } from "./scene-edit-dialog";
+
+import { useEditor, EditorContent } from "@tiptap/react";
+import StarterKit from "@tiptap/starter-kit";
+import { AssetMention } from "./scene-edit-dialog";
+
+const SceneContent = ({ content, selected }: { content: string; selected?: boolean }) => {
+  const editor = useEditor({
+    editable: false,
+    content: content || "",
+    extensions: [
+      StarterKit,
+      AssetMention.configure({
+        HTMLAttributes: {
+          class: "asset-mention",
+        },
+      }),
+    ],
+    immediatelyRender: false,
+  });
+
+  useEffect(() => {
+    if (editor && content !== editor.getHTML()) {
+      editor.commands.setContent(content || "");
+    }
+  }, [content, editor]);
+
+  return (
+    <div
+      className={cn(
+        "w-full bg-transparent overflow-hidden nodrag text-sm min-h-6 prose-sm prose-p:my-1 prose-span:text-primary",
+        "text-muted-foreground",
+        selected ? "text-white prose-span:text-white" : "",
+      )}
+      onClick={(e) => e.stopPropagation()}
+      onKeyDown={(e) => e.stopPropagation()}
+    >
+      <EditorContent editor={editor} />
+    </div>
+  );
+};
 
 export const SceneNode = ({ data, selected }: { data: SceneNodeData; selected?: boolean }) => {
   const tFlow = useTranslations("flow.sceneNode");
+  const [editingScene, setEditingScene] = useState<SceneItem | null>(null);
 
   return (
     <div className="flex flex-col gap-2 w-100 relative">
       <div className="flex items-center gap-2 px-1">
-        <span className="text-sm font-semibold text-foreground">{data.title}</span>
-        {data.subtitle && (
-          <span className="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded-sm">
-            {data.subtitle}
+        <span className="text-sm font-semibold text-foreground">{tFlow("sceneList")}</span>
+        {data.title && (
+          <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-sm">
+            {data.title}
           </span>
         )}
       </div>
@@ -65,36 +108,25 @@ export const SceneNode = ({ data, selected }: { data: SceneNodeData; selected?: 
                         {`S-${index + 1}`}
                       </span>
                     </div>
-                    <div className="pt-5">
-                      <textarea
-                        value={scene.content}
-                        onChange={(e) => {
-                          data.onSceneChange?.(scene.id, e.target.value);
-                        }}
-                        className={cn(
-                          "w-full resize-none bg-transparent outline-none focus:ring-0 overflow-hidden nodrag",
-                          "text-muted-foreground",
-                          scene?.selected ? "text-white" : "",
-                        )}
-                        rows={1}
-                        onClick={(e) => e.stopPropagation()}
-                        onKeyDown={(e) => e.stopPropagation()}
-                        onInput={(e) => {
-                          const target = e.target as HTMLTextAreaElement;
-                          target.style.height = "auto";
-                          target.style.height = `${target.scrollHeight}px`;
-                        }}
-                        ref={(el) => {
-                          if (el) {
-                            el.style.height = "auto";
-                            el.style.height = `${el.scrollHeight}px`;
-                          }
-                        }}
-                      />
+                    <div className="pt-5 pb-2">
+                      <SceneContent content={scene.content || ""} selected={scene.selected} />
                     </div>
 
                     {/* Actions (Always show on hover) */}
                     <div className="absolute bottom-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingScene(scene);
+                        }}
+                        className={cn(
+                          "p-1.5 rounded-md transition-colors backdrop-blur-md hover:text-primary",
+                          "text-muted-foreground bg-background/50 hover:bg-background/80",
+                        )}
+                        title={tFlow("edit") || "Edit"}
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -144,6 +176,21 @@ export const SceneNode = ({ data, selected }: { data: SceneNodeData; selected?: 
           className="w-4! h-4! rounded-full flex items-center justify-center bg-background border border-border hover:bg-primary/80 transition-colors group-hover/node z-10"
         ></Handle>
       </div>
+
+      {editingScene && (
+        <SceneEditDialog
+          scene={editingScene}
+          onOpenChange={(open: boolean) => {
+            if (!open) setEditingScene(null);
+          }}
+          onSave={(id: string, name: string, content: string) => {
+            if (data.onSceneChange) {
+              data.onSceneChange(id, content, name);
+            }
+            setEditingScene(null);
+          }}
+        />
+      )}
     </div>
   );
 };
