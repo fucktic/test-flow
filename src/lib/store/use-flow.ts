@@ -39,43 +39,14 @@ const syncGraph = (state: any, set: any) => {
 
   let currentY = 0;
 
+  // 1. Create single Video Preview Node
+  let previewNode = state.nodes.find((n: any) => n.type === "videoPreviewNode");
+  const previewNodeId = previewNode ? previewNode.id : `video-preview-main`;
+
+  const episodesData: any[] = [];
+
   checkedEpisodes.forEach((ep: any) => {
     const epPrefix = ep.title.split(" ")[0]; // e.g. "EP_001"
-
-    // 1. Video Preview Node
-    let previewNode = state.nodes.find(
-      (n: any) => n.type === "videoPreviewNode" && n.data?.episodeId === epPrefix,
-    );
-    const previewNodeId = previewNode ? previewNode.id : `video-preview-${ep.id}`;
-
-    if (!previewNode) {
-      previewNode = {
-        id: previewNodeId,
-        type: "videoPreviewNode",
-        position: { x: 450, y: currentY },
-        data: {
-          episodeId: epPrefix,
-          progress: { current: 0, total: 0 },
-          vid: `VID_${ep.id}`,
-          items: [],
-        },
-      };
-    } else {
-      previewNode.position.y = currentY;
-      previewNode.position.x = 450; // enforce position
-    }
-
-    newNodes.push(previewNode);
-    newEdges.push({
-      id: `e-${episodeNodeId}-${previewNodeId}`,
-      source: episodeNodeId,
-      target: previewNodeId,
-      sourceHandle: "main",
-      animated: true,
-      style: { stroke: "#6366f1", strokeWidth: 2 },
-    });
-
-    currentY += 700; // Add space for the preview node
 
     // 2. Scene Node
     const sceneNodeId = `scene-${ep.id}`;
@@ -85,7 +56,7 @@ const syncGraph = (state: any, set: any) => {
       sceneNode = {
         id: sceneNodeId,
         type: "sceneNode",
-        position: { x: 450, y: currentY },
+        position: { x: episodeNode.position.x + 1000, y: currentY },
         data: {
           title: `分镜列表 ${epPrefix}`,
           scenes: JSON.parse(JSON.stringify(defaultScenes)),
@@ -93,8 +64,6 @@ const syncGraph = (state: any, set: any) => {
         },
       };
     } else {
-      sceneNode.position.y = currentY;
-      sceneNode.position.x = 450; // enforce position
       sceneNode.data = { ...sceneNode.data, ...getSceneHandlers(set, sceneNodeId) };
     }
 
@@ -111,6 +80,9 @@ const syncGraph = (state: any, set: any) => {
     const selectedScenes = sceneNode.data.scenes.filter((s: any) => s.selected);
     let sceneY = currentY;
 
+    let selectedVideosCount = 0;
+    const episodeItems: any[] = [];
+
     selectedScenes.forEach((scene: any) => {
       const imgNodeId = `scene-image-${ep.id}-${scene.id}`;
       const vidNodeId = `scene-video-${ep.id}-${scene.id}`;
@@ -120,11 +92,10 @@ const syncGraph = (state: any, set: any) => {
         imgNode = {
           id: imgNodeId,
           type: "sceneImageNode",
-          position: { x: 950, y: sceneY },
+          position: { x: episodeNode.position.x + 1500, y: sceneY },
           data: { sceneId: scene.name, isExpanded: true, ...getImageHandlers(set, imgNodeId) },
         };
       } else {
-        imgNode.position.y = sceneY;
         imgNode.data = { ...imgNode.data, ...getImageHandlers(set, imgNodeId) };
       }
 
@@ -133,11 +104,10 @@ const syncGraph = (state: any, set: any) => {
         vidNode = {
           id: vidNodeId,
           type: "sceneVideoNode",
-          position: { x: 1350, y: sceneY },
+          position: { x: episodeNode.position.x + 1900, y: sceneY },
           data: { sceneId: scene.name, isExpanded: true, ...getVideoHandlers(set, vidNodeId) },
         };
       } else {
-        vidNode.position.y = sceneY;
         vidNode.data = { ...vidNode.data, ...getVideoHandlers(set, vidNodeId) };
       }
 
@@ -160,16 +130,52 @@ const syncGraph = (state: any, set: any) => {
         style: { stroke: "#10b981", strokeWidth: 2 },
       });
 
+      if (vidNode && vidNode.data && vidNode.data.videos) {
+        vidNode.data.videos.forEach((v: any) => {
+          if (v.selected) {
+            selectedVideosCount++;
+            episodeItems.push({
+              id: v.id,
+              url: v.url,
+              poster: v.poster,
+              duration: v.duration || "10s",
+              status: v.url ? "generated" : "pending",
+            });
+          }
+        });
+      }
+
       sceneY += 450;
+    });
+
+    episodesData.push({
+      episodeId: epPrefix,
+      episodeName: ep.title,
+      totalScenes: sceneNode.data.scenes.length,
+      selectedVideos: selectedVideosCount,
+      vid: `VID_${ep.id}`,
+      items: episodeItems,
     });
 
     currentY += Math.max(450, selectedScenes.length * 450);
   });
 
-  const totalHeight = currentY;
-  const centerY = Math.max(0, totalHeight / 2 - 200);
-
-  episodeNode.position.y = centerY;
+  if (!previewNode) {
+    previewNode = {
+      id: previewNodeId,
+      type: "videoPreviewNode",
+      position: { x: episodeNode.position.x - 450, y: episodeNode.position.y },
+      selectable: false,
+      data: {
+        episodes: episodesData,
+      },
+    };
+  } else {
+    // Also prevent previewNode position from jumping
+    previewNode.selectable = false;
+    previewNode.data = { ...previewNode.data, episodes: episodesData };
+  }
+  newNodes.push(previewNode);
 
   state.nodes.forEach((n: any) => {
     if (
@@ -371,6 +377,17 @@ const getVideoHandlers = (set: any, nodeId: string) => ({
   },
 });
 
+const getAssetHandlers = (set: any, nodeId: string) => ({
+  onTabChange: (tab: string) => {
+    set((state: any) => {
+      const node = state.nodes.find((n: any) => n.id === nodeId);
+      if (node && node.type === "assetNode") {
+        (node.data as any).activeTab = tab;
+      }
+    });
+  },
+});
+
 export const rehydrateNodes = (nodes: Node[], set: any) => {
   return nodes.map((node) => {
     // Normalize node types for backward compatibility
@@ -380,6 +397,7 @@ export const rehydrateNodes = (nodes: Node[], set: any) => {
     if (type === "scene-image-node") type = "sceneImageNode";
     if (type === "scene-video-node") type = "sceneVideoNode";
     if (type === "video-preview-node") type = "videoPreviewNode";
+    if (type === "asset-node") type = "assetNode";
     if (type === "result-node") type = "skillNode";
     if (type === "command-node") type = "textNode";
 
@@ -407,6 +425,12 @@ export const rehydrateNodes = (nodes: Node[], set: any) => {
       return {
         ...normalizedNode,
         data: { ...normalizedNode.data, ...getVideoHandlers(set, normalizedNode.id) },
+      };
+    }
+    if (type === "assetNode") {
+      return {
+        ...normalizedNode,
+        data: { ...normalizedNode.data, ...getAssetHandlers(set, normalizedNode.id) },
       };
     }
     return normalizedNode;

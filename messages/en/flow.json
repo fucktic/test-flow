@@ -51,15 +51,21 @@
     "img": "+ IMG"
   },
   "videoPreviewNode": {
-    "title": "Storyboard Video Preview",
+    "title": "Episode Videos",
     "refresh": "Refresh",
-    "progress": "Generation Progress",
-    "postEdit": "Post-editing",
     "pending": "Pending",
     "noVideosToDownload": "No videos to download",
     "downloadSuccess": "Successfully downloaded {count} files",
     "downloadFailed": "Download failed",
     "directorySelectionFailed": "Directory selection failed",
-    "downloadAll": "Download all videos below"
+    "downloadEpisode": "Download Episode"
+  },
+  "assetNode": {
+    "title": "Project Assets",
+    "characters": "Characters",
+    "scenes": "Scenes",
+    "props": "Props",
+    "audio": "Audio",
+    "empty": "No assets available"
   }
 }

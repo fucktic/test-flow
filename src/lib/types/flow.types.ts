@@ -123,15 +123,39 @@ export interface VideoPreviewItem {
   status: "generated" | "pending";
 }
 
-export interface VideoPreviewNodeData {
-  episodeId: string; // e.g., EP_002
-  progress: {
-    current: number;
-    total: number;
-  };
+export interface EpisodeVideoData {
+  episodeId: string;
+  episodeName: string;
+  totalScenes: number;
+  selectedVideos: number;
   vid: string; // e.g., VID_20260312
   items: VideoPreviewItem[];
+}
+
+export interface VideoPreviewNodeData {
+  episodes: EpisodeVideoData[];
   onRefresh?: () => void;
-  onDownload?: () => void;
-  onPostEdit?: () => void;
+  onDownloadEpisode?: (episodeId: string) => void;
+}
+
+export type AssetCategory = "characters" | "scenes" | "props" | "audio";
+
+export interface AssetItem {
+  id: string;
+  name: string;
+  type: "image" | "audio" | "video";
+  url: string;
+  poster?: string;
+}
+
+export interface AssetNodeData {
+  projectId: string;
+  assets: {
+    characters: AssetItem[];
+    scenes: AssetItem[];
+    props: AssetItem[];
+    audio: AssetItem[];
+  };
+  activeTab?: AssetCategory;
+  onTabChange?: (tab: AssetCategory) => void;
 }

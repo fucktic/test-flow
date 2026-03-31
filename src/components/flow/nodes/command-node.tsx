@@ -1,12 +1,13 @@
 import { Handle, Position } from "@xyflow/react";
 import { TextNodeData } from "../../../lib/types/flow.types";
 import { useTranslations } from "next-intl";
+import { getNodeWrapperClassName } from "./utils";
 
-export const TextNode = ({ data }: { data: TextNodeData }) => {
+export const TextNode = ({ data, selected }: { data: TextNodeData; selected?: boolean }) => {
   const tFlow = useTranslations("flow.commandNode");
 
   return (
-    <div className="bg-background rounded-lg shadow-md border border-border p-4 min-w-50 text-foreground">
+    <div className={getNodeWrapperClassName(selected, "p-4 min-w-50 text-foreground")}>
       <Handle type="target" position={Position.Top} className="w-3 h-3" />
       <div className="flex flex-col gap-2">
         <h3 className="text-sm font-semibold">{data.title || tFlow("textCommand")}</h3>

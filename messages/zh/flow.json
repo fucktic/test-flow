@@ -51,15 +51,21 @@
     "img": "+ IMG"
   },
   "videoPreviewNode": {
-    "title": "分镜视频预览",
+    "title": "分集视频",
     "refresh": "刷新",
-    "progress": "生成进度",
-    "postEdit": "后期剪辑",
     "pending": "未生成",
     "noVideosToDownload": "暂无视频可下载",
     "downloadSuccess": "成功下载 {count} 个文件",
     "downloadFailed": "下载失败",
     "directorySelectionFailed": "目录选择失败",
-    "downloadAll": "下载下面所有视频"
+    "downloadEpisode": "分集下载"
+  },
+  "assetNode": {
+    "title": "项目资产",
+    "characters": "角色",
+    "scenes": "场景",
+    "props": "道具",
+    "audio": "音频",
+    "empty": "暂无资产"
   }
 }

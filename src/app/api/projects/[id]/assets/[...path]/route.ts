@@ -10,10 +10,10 @@ export async function GET(
   const { id, path: pathArray } = await params;
 
   try {
-    const filePath = path.join(process.cwd(), "projects", id, ...pathArray);
+    const filePath = path.join(process.cwd(), "projects", id, "assets", ...pathArray);
 
     // Check path traversal
-    if (!filePath.startsWith(path.join(process.cwd(), "projects", id))) {
+    if (!filePath.startsWith(path.join(process.cwd(), "projects", id, "assets"))) {
       return NextResponse.json({ error: "Invalid path" }, { status: 400 });
     }
 

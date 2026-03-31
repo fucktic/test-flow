@@ -13,6 +13,7 @@ import { SceneNode } from "./nodes/scene-node";
 import SceneImageNode from "./nodes/scene-image-node";
 import SceneVideoNode from "./nodes/scene-video-node";
 import VideoPreviewNode from "./nodes/video-preview-node";
+import AssetNode from "./nodes/asset-node";
 import { useTheme } from "next-themes";
 import { useProjectStore } from "@/lib/store/use-projects";
 import { useTranslations } from "next-intl";
@@ -25,6 +26,7 @@ const nodeTypes = {
   sceneImageNode: SceneImageNode,
   sceneVideoNode: SceneVideoNode,
   videoPreviewNode: VideoPreviewNode,
+  assetNode: AssetNode,
   // Add aliases for backward compatibility
   "command-node": TextNode,
   "result-node": SkillNode,
@@ -33,6 +35,7 @@ const nodeTypes = {
   "scene-image-node": SceneImageNode,
   "scene-video-node": SceneVideoNode,
   "video-preview-node": VideoPreviewNode,
+  "asset-node": AssetNode,
 };
 
 export const FlowCanvas = () => {
