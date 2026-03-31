@@ -4,7 +4,6 @@ import { useTranslations } from "next-intl";
 import { Download, Film, Maximize2 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { MediaPreviewModal, MediaItem } from "@/components/common/media-preview-modal";
 import { toast } from "sonner";
 import { getNodeWrapperClassName } from "./utils";
@@ -116,27 +115,19 @@ const VideoPreviewNode = ({ data }: VideoPreviewNodeProps) => {
                     <div className="truncate font-medium">{episode.episodeName}</div>
                   </div>
                   <div className="flex items-center h-full shrink-0 gap-x-2">
-                    <div className="text-xs text-muted-foreground mt-1 bg-muted/30 w-fit px-2 py-0.5 rounded-md border border-border/50">
+                    <div className="text-xs text-muted-foreground   w-fit px-2 py-1 ">
                       {episode.selectedVideos} / {episode.totalScenes}
                     </div>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 px-3 text-xs hover:bg-background border border-border/50"
-                            onClick={() => handleDownloadEpisode(episode)}
-                          >
-                            <Download className="w-3.5 h-3.5 mr-1.5" />
-                            {tFlow("downloadEpisode") || "分集下载"}
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>{tFlow("downloadEpisode") || "分集下载"}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
+
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 px-3 text-xs hover:bg-background border border-border/50"
+                      onClick={() => handleDownloadEpisode(episode)}
+                    >
+                      <Download className="w-3.5 h-3.5 mr-1.5" />
+                      {tFlow("downloadEpisode") || "分集下载"}
+                    </Button>
                   </div>
                 </div>
 
