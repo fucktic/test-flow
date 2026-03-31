@@ -1,10 +1,14 @@
-import { memo, useMemo, useRef, useState } from "react";
+import { memo, useMemo, useState } from "react";
+import { useForm, Controller } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { AssetNodeData, AssetCategory, AssetItem } from "@/lib/types/flow.types";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Image as ImageIcon, Music, Maximize2, Pencil, Plus, Trash2, Upload } from "lucide-react";
+import { Image as ImageIcon, Music, Maximize2, Pencil, Plus, Trash2 } from "lucide-react";
 import { MediaPreviewModal, MediaItem } from "@/components/common/media-preview-modal";
+import { FileUpload } from "@/components/common/file-upload";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -40,17 +44,36 @@ const AssetNode = ({ data, selected }: AssetNodeProps) => {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [editingAssetId, setEditingAssetId] = useState<string | null>(null);
   const [deleteAssetId, setDeleteAssetId] = useState<string | null>(null);
-  const [assetName, setAssetName] = useState("");
-  const [assetCategory, setAssetCategory] = useState<AssetCategory>("characters");
-  const [assetDescription, setAssetDescription] = useState("");
   const [uploadedFileName, setUploadedFileName] = useState("");
+
+  const formSchema = useMemo(
+    () =>
+      z.object({
+        name: z.string().trim().min(1, tFlow("nameRequired")),
+        category: z.enum(["characters", "scenes", "props", "audio"]),
+        description: z.string(),
+      }),
+    [tFlow],
+  );
+
+  type FormValues = z.infer<typeof formSchema>;
+
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      name: "",
+      category: activeTab,
+      description: "",
+    },
+  });
+
+  const assetCategory = form.watch("category");
+
   const [uploadedFileUrl, setUploadedFileUrl] = useState("");
   const [uploadedMediaType, setUploadedMediaType] = useState<AssetItem["type"] | undefined>(
     undefined,
   );
-  const [isDragOver, setIsDragOver] = useState(false);
   const [uploadError, setUploadError] = useState("");
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const tabs: { id: AssetCategory; label: string }[] = [
     { id: "characters", label: tFlow("characters") },
@@ -129,46 +152,42 @@ const AssetNode = ({ data, selected }: AssetNodeProps) => {
     }
   };
 
-  const handleSaveAsset = () => {
-    const trimmedName = assetName.trim();
-    if (!trimmedName) {
-      return;
-    }
+  const handleSaveAsset = form.handleSubmit((values: FormValues) => {
     if (editingAssetId) {
       data.onAssetUpdate?.(activeTab, editingAssetId, {
-        name: trimmedName,
-        category: assetCategory,
-        description: assetDescription.trim(),
+        name: values.name,
+        category: values.category,
+        description: values.description,
         fileUrl: uploadedFileUrl || undefined,
         mediaType: uploadedMediaType,
       });
     } else {
       data.onAssetAdd?.(activeTab, {
-        name: trimmedName,
-        category: assetCategory,
-        description: assetDescription.trim(),
+        name: values.name,
+        category: values.category,
+        description: values.description,
         fileUrl: uploadedFileUrl || undefined,
         mediaType: uploadedMediaType,
       });
     }
     setFormDialogOpen(false);
-    setActiveTab(assetCategory);
-    data.onTabChange?.(assetCategory);
+    setActiveTab(values.category);
+    data.onTabChange?.(values.category);
     setEditingAssetId(null);
-    setAssetName("");
-    setAssetCategory("characters");
-    setAssetDescription("");
+    form.reset();
     setUploadedFileName("");
     setUploadedFileUrl("");
     setUploadedMediaType(undefined);
     setUploadError("");
-  };
+  });
 
   const openCreateDialog = () => {
     setEditingAssetId(null);
-    setAssetName("");
-    setAssetCategory(activeTab);
-    setAssetDescription("");
+    form.reset({
+      name: "",
+      category: activeTab,
+      description: "",
+    });
     setUploadedFileName("");
     setUploadedFileUrl("");
     setUploadedMediaType(undefined);
@@ -178,9 +197,11 @@ const AssetNode = ({ data, selected }: AssetNodeProps) => {
 
   const openEditDialog = (item: AssetItem) => {
     setEditingAssetId(item.id);
-    setAssetName(item.name);
-    setAssetCategory(activeTab);
-    setAssetDescription(item.description || "");
+    form.reset({
+      name: item.name,
+      category: activeTab,
+      description: item.description || "",
+    });
     setUploadedFileName("");
     setUploadedFileUrl(item.url || "");
     setUploadedMediaType(item.type);
@@ -304,11 +325,11 @@ const AssetNode = ({ data, selected }: AssetNodeProps) => {
                         </Tooltip>
                       </div>
                     )}
-                    <div className="absolute top-1 right-1 flex items-center gap-1 opacity-0 group-hover/asset:opacity-100 transition-opacity">
+                    <div className="absolute -top-1 -right-1 flex items-center gap-1 opacity-0 group-hover/asset:opacity-100 transition-opacity">
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <button
-                            className="h-7 w-7 rounded-md bg-background/90 border border-border/60 text-destructive flex items-center justify-center hover:bg-background"
+                            className="h-7 w-7 rounded-bl-xl bg-background/90 border border-border/60 text-destructive flex items-center justify-center hover:bg-background"
                             onClick={(event) => {
                               event.stopPropagation();
                               openDeleteDialog(item);
@@ -335,6 +356,7 @@ const AssetNode = ({ data, selected }: AssetNodeProps) => {
       </div>
 
       <Dialog
+        aria-describedby
         open={formDialogOpen}
         onOpenChange={(open) => {
           setFormDialogOpen(open);
@@ -350,87 +372,59 @@ const AssetNode = ({ data, selected }: AssetNodeProps) => {
           <div className="space-y-3">
             <div className="space-y-1.5">
               <Label>{tFlow("nameLabel")}</Label>
-              <Input value={assetName} onChange={(event) => setAssetName(event.target.value)} />
+              <Input {...form.register("name")} />
+              {form.formState.errors.name && (
+                <div className="text-xs text-destructive">{form.formState.errors.name.message}</div>
+              )}
             </div>
             <div className="space-y-1.5">
               <Label>{tFlow("categoryLabel")}</Label>
-              <Select
-                value={assetCategory}
-                onValueChange={(value) => {
-                  setAssetCategory(value as AssetCategory);
-                  setUploadError("");
-                }}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="characters">{tFlow("characters")}</SelectItem>
-                  <SelectItem value="scenes">{tFlow("scenes")}</SelectItem>
-                  <SelectItem value="props">{tFlow("props")}</SelectItem>
-                  <SelectItem value="audio">{tFlow("audio")}</SelectItem>
-                </SelectContent>
-              </Select>
+              <Controller
+                control={form.control}
+                name="category"
+                render={({ field }) => (
+                  <Select
+                    value={field.value}
+                    onValueChange={(value) => {
+                      field.onChange(value);
+                      setUploadError("");
+                    }}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {tabs.map((tab) => (
+                        <SelectItem value={tab.id}>{tFlow(tab.label)}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
             </div>
             <div className="space-y-1.5">
               <Label>{tFlow("descriptionLabel")}</Label>
-              <Textarea
-                value={assetDescription}
-                onChange={(event) => setAssetDescription(event.target.value)}
-              />
+              <Textarea {...form.register("description")} />
             </div>
             <div className="space-y-1.5">
               <Label>{tFlow("uploadLabel")}</Label>
-              <input
-                ref={fileInputRef}
-                type="file"
-                className="hidden"
+              <FileUpload
                 accept={getAcceptMime(assetCategory)}
-                onChange={(event) => {
-                  const file = event.target.files?.[0];
-                  if (file) {
-                    void handleFileUpload(file);
-                  }
-                  event.currentTarget.value = "";
+                onFileSelect={(file) => void handleFileUpload(file)}
+                fileUrl={uploadedFileUrl}
+                fileName={uploadedFileName}
+                mediaType={uploadedMediaType}
+                onClear={() => {
+                  setUploadedFileUrl("");
+                  setUploadedFileName("");
+                  setUploadedMediaType(undefined);
                 }}
+                hint={tFlow("uploadHint")}
+                subHint={assetCategory === "audio" ? tFlow("typeAudio") : tFlow("typeImage")}
+                error={uploadError}
+                replaceText={tFlow("replaceFile")}
+                clearText={tFlow("clearFile")}
               />
-              <button
-                className={cn(
-                  "w-full rounded-lg border border-dashed px-3 py-4 flex flex-col items-center justify-center gap-2 transition-colors",
-                  isDragOver
-                    ? "border-primary bg-primary/5"
-                    : "border-border/60 hover:border-primary/50 hover:bg-muted/30",
-                )}
-                onClick={() => fileInputRef.current?.click()}
-                onDragOver={(event) => {
-                  event.preventDefault();
-                  setIsDragOver(true);
-                }}
-                onDragLeave={(event) => {
-                  event.preventDefault();
-                  setIsDragOver(false);
-                }}
-                onDrop={(event) => {
-                  event.preventDefault();
-                  setIsDragOver(false);
-                  const file = event.dataTransfer.files?.[0];
-                  if (file) {
-                    void handleFileUpload(file);
-                  }
-                }}
-              >
-                <Upload className="w-5 h-5 text-muted-foreground" />
-                <span className="text-xs text-muted-foreground">{tFlow("uploadHint")}</span>
-                <span className="text-[10px] text-muted-foreground/70">
-                  {assetCategory === "audio" ? tFlow("typeAudio") : tFlow("typeImage")}
-                </span>
-              </button>
-              {uploadedFileName ? (
-                <div className="text-xs text-muted-foreground truncate" title={uploadedFileName}>
-                  {tFlow("uploadSelected", { name: uploadedFileName })}
-                </div>
-              ) : null}
-              {uploadError ? <div className="text-xs text-destructive">{uploadError}</div> : null}
             </div>
           </div>
           <DialogFooter>
@@ -443,7 +437,7 @@ const AssetNode = ({ data, selected }: AssetNodeProps) => {
             >
               {tFlow("cancel")}
             </Button>
-            <Button onClick={handleSaveAsset} disabled={!assetName.trim()}>
+            <Button onClick={handleSaveAsset} disabled={!form.watch("name")?.trim()}>
               {isEditMode ? tFlow("save") : tFlow("create")}
             </Button>
           </DialogFooter>
