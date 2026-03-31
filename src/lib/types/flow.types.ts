@@ -146,6 +146,7 @@ export interface AssetItem {
   type: "image" | "audio" | "video";
   url: string;
   poster?: string;
+  description?: string;
 }
 
 export interface AssetNodeData {
@@ -157,5 +158,29 @@ export interface AssetNodeData {
     audio: AssetItem[];
   };
   activeTab?: AssetCategory;
+  selectedAssetId?: string;
   onTabChange?: (tab: AssetCategory) => void;
+  onAssetAdd?: (
+    tab: AssetCategory,
+    payload: {
+      name: string;
+      category: AssetCategory;
+      description: string;
+      fileUrl?: string;
+      mediaType?: AssetItem["type"];
+    },
+  ) => void;
+  onAssetUpdate?: (
+    tab: AssetCategory,
+    assetId: string,
+    payload: {
+      name: string;
+      category: AssetCategory;
+      description: string;
+      fileUrl?: string;
+      mediaType?: AssetItem["type"];
+    },
+  ) => void;
+  onAssetSelect?: (assetId?: string) => void;
+  onAssetDelete?: (assetId: string) => void;
 }

@@ -386,6 +386,104 @@ const getAssetHandlers = (set: any, nodeId: string) => ({
       }
     });
   },
+  onAssetAdd: (
+    tab: string,
+    payload: {
+      name: string;
+      category: string;
+      description: string;
+      fileUrl?: string;
+      mediaType?: "image" | "audio" | "video";
+    },
+  ) => {
+    set((state: any) => {
+      const node = state.nodes.find((n: any) => n.id === nodeId);
+      if (node && node.type === "assetNode") {
+        const data = node.data as any;
+        const assetId = `asset-${Date.now()}`;
+        if (!data.assets?.[payload.category]) {
+          return;
+        }
+        data.assets[payload.category].push({
+          id: assetId,
+          name: payload.name,
+          type: payload.mediaType || (payload.category === "audio" ? "audio" : "image"),
+          url: payload.fileUrl || "",
+          description: payload.description,
+        });
+        data.selectedAssetId = assetId;
+        data.activeTab = payload.category;
+      }
+    });
+  },
+  onAssetUpdate: (
+    tab: string,
+    assetId: string,
+    payload: {
+      name: string;
+      category: string;
+      description: string;
+      fileUrl?: string;
+      mediaType?: "image" | "audio" | "video";
+    },
+  ) => {
+    set((state: any) => {
+      const node = state.nodes.find((n: any) => n.id === nodeId);
+      if (node && node.type === "assetNode") {
+        const data = node.data as any;
+        const targetAsset = data.assets?.[tab]?.find((item: any) => item.id === assetId);
+        if (!targetAsset) {
+          return;
+        }
+        const nextType =
+          payload.mediaType ||
+          (payload.category === "audio"
+            ? "audio"
+            : targetAsset.type === "audio"
+              ? "image"
+              : targetAsset.type);
+        const updatedAsset = {
+          ...targetAsset,
+          name: payload.name,
+          type: nextType,
+          url: payload.fileUrl || targetAsset.url,
+          description: payload.description,
+        };
+        if (payload.category === tab) {
+          Object.assign(targetAsset, updatedAsset);
+        } else {
+          data.assets[tab] = data.assets[tab].filter((item: any) => item.id !== assetId);
+          if (!data.assets?.[payload.category]) {
+            return;
+          }
+          data.assets[payload.category].push(updatedAsset);
+          data.activeTab = payload.category;
+        }
+      }
+    });
+  },
+  onAssetSelect: (assetId?: string) => {
+    set((state: any) => {
+      const node = state.nodes.find((n: any) => n.id === nodeId);
+      if (node && node.type === "assetNode") {
+        (node.data as any).selectedAssetId = assetId;
+      }
+    });
+  },
+  onAssetDelete: (assetId: string) => {
+    set((state: any) => {
+      const node = state.nodes.find((n: any) => n.id === nodeId);
+      if (node && node.type === "assetNode") {
+        const data = node.data as any;
+        Object.keys(data.assets).forEach((key) => {
+          data.assets[key] = data.assets[key].filter((item: any) => item.id !== assetId);
+        });
+        if (data.selectedAssetId === assetId) {
+          data.selectedAssetId = undefined;
+        }
+      }
+    });
+  },
 });
 
 export const rehydrateNodes = (nodes: Node[], set: any) => {
