@@ -38,7 +38,9 @@
       "single": "单帧图",
       "first": "首帧",
       "last": "尾帧"
-    }
+    },
+    "deleteConfirmTitle": "确认删除图像",
+    "deleteConfirmDescription": "确认删除当前图像吗？"
   },
   "sceneVideoNode": {
     "title": "生成视频",
@@ -52,7 +54,9 @@
       "first": "首帧",
       "last": "尾帧"
     },
-    "img": "+ IMG"
+    "img": "+ IMG",
+    "deleteConfirmTitle": "确认删除视频",
+    "deleteConfirmDescription": "确认删除当前视频吗？"
   },
   "videoPreviewNode": {
     "title": "分集视频",

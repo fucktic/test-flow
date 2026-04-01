@@ -38,7 +38,9 @@
       "single": "Single",
       "first": "First",
       "last": "Last"
-    }
+    },
+    "deleteConfirmTitle": "Delete Image",
+    "deleteConfirmDescription": "Are you sure you want to delete the current image?"
   },
   "sceneVideoNode": {
     "title": "Generate Video",
@@ -52,7 +54,9 @@
       "first": "First",
       "last": "Last"
     },
-    "img": "+ IMG"
+    "img": "+ IMG",
+    "deleteConfirmTitle": "Delete Video",
+    "deleteConfirmDescription": "Are you sure you want to delete the current video?"
   },
   "videoPreviewNode": {
     "title": "Episode Videos",

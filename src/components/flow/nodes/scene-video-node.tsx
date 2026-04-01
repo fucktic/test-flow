@@ -1,30 +1,125 @@
-import { memo, useState } from "react";
+import { memo, useState, useRef } from "react";
 import { Handle, Position } from "@xyflow/react";
 import { SceneVideoNodeData } from "@/lib/types/flow.types";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
-import { Upload, Save, Maximize2 } from "lucide-react";
+import { Upload, Save, Maximize2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { MediaPreviewModal, MediaItem } from "@/components/common/media-preview-modal";
 import { getNodeWrapperClassName } from "./utils";
+import { useFlowStore } from "@/lib/store/use-flow";
 
 interface SceneVideoNodeProps {
+  id: string;
   data: SceneVideoNodeData;
   selected?: boolean;
 }
 
-const SceneVideoNode = ({ data, selected }: SceneVideoNodeProps) => {
+const SceneVideoNode = ({ id, data, selected }: SceneVideoNodeProps) => {
   const tFlow = useTranslations("flow.sceneVideoNode");
+  const tCommon = useTranslations("common");
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewIndex, setPreviewIndex] = useState(0);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const updateNodeData = useFlowStore((state) => state.updateNodeData);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // 读取用户选择的视频或图片文件
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        const fileUrl = reader.result;
+
+        // 如果是视频文件，提取首帧作为封面
+        if (file.type.startsWith("video/")) {
+          const video = document.createElement("video");
+          video.src = fileUrl;
+          video.crossOrigin = "anonymous";
+          video.muted = true;
+          video.playsInline = true;
+
+          video.onloadeddata = () => {
+            // 定位到第一帧
+            video.currentTime = 0.1; // 使用 0.1s 避免某些视频第一帧为空白
+          };
+
+          video.onseeked = () => {
+            const canvas = document.createElement("canvas");
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext("2d");
+            if (ctx) {
+              ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+              const posterUrl = canvas.toDataURL("image/jpeg", 0.8);
+
+              const newVideo = {
+                id: "custom-" + Date.now(),
+                url: fileUrl,
+                poster: posterUrl,
+                selected: true,
+              };
+              const existingVideos = data.videos
+                ? data.videos.map((v) => ({ ...v, selected: false }))
+                : [];
+              updateNodeData(id, {
+                videos: [...existingVideos, newVideo],
+              });
+            }
+          };
+        } else {
+          // 如果是图片，直接添加
+          const newVideo = { id: "custom-" + Date.now(), url: fileUrl, selected: true };
+          const existingVideos = data.videos
+            ? data.videos.map((v) => ({ ...v, selected: false }))
+            : [];
+          updateNodeData(id, {
+            videos: [...existingVideos, newVideo],
+          });
+        }
+      }
+    };
+    reader.readAsDataURL(file);
+    e.target.value = ""; // 重置 input 状态
+  };
+
+  const handleDeleteVideo = () => {
+    if (!deleteId) return;
+
+    if (data.videos && data.videos.length > 0) {
+      const newVideos = data.videos.filter((v) => v.id !== deleteId);
+      // Ensure one video is selected if the selected one was deleted
+      if (newVideos.length > 0 && !newVideos.some((v) => v.selected)) {
+        newVideos[0].selected = true;
+      }
+      updateNodeData(id, { videos: newVideos });
+    }
+
+    setDeleteOpen(false);
+    setDeleteId(null);
+  };
 
   const previewItems: MediaItem[] =
-    data.videos?.map((v) => ({
-      id: v.id,
-      url: v.url,
-      type: v.url.endsWith(".mp4") ? "video" : "image",
-      poster: v.poster,
-    })) || [];
+    data.videos?.map((v) => {
+      const isVideo = v.url.match(/\.(mp4|webm|mov)$/i) || v.url.startsWith("data:video/");
+      return {
+        id: v.id,
+        url: v.url,
+        type: isVideo ? "video" : "image",
+        poster: v.poster,
+      };
+    }) || [];
 
   return (
     <div className="flex flex-col gap-2 w-100 h-100 relative group/node">
@@ -53,12 +148,18 @@ const SceneVideoNode = ({ data, selected }: SceneVideoNodeProps) => {
                   )}
                   onClick={() => data.onVideoSelect?.(video.id)}
                 >
-                  {video.url.endsWith(".mp4") ? (
+                  {video.poster ? (
+                    <img
+                      src={video.poster}
+                      alt={video.id}
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                    />
+                  ) : video.url.match(/\.(mp4|webm|mov)$/i) ||
+                    video.url.startsWith("data:video/") ? (
                     <video
                       src={video.url}
-                      poster={video.poster}
                       className="w-full h-full object-cover"
-                      controls
                       muted
                       playsInline
                     />
@@ -70,18 +171,30 @@ const SceneVideoNode = ({ data, selected }: SceneVideoNodeProps) => {
                       loading="lazy"
                     />
                   )}
-                  <div className="absolute top-2 right-2 opacity-0 group-hover/video:opacity-100 transition-opacity z-20">
+                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/video:opacity-100 transition-opacity z-20">
                     <Button
                       variant="secondary"
                       size="icon"
-                      className="h-8 w-8 bg-black/40 hover:bg-black/60 text-white/80 hover:text-white rounded-md"
+                      className="h-10 w-10 bg-black/40 hover:bg-black/60 text-white/80 hover:text-white rounded-md"
                       onClick={(e) => {
                         e.stopPropagation();
                         setPreviewIndex(index);
                         setPreviewOpen(true);
                       }}
                     >
-                      <Maximize2 className="w-4 h-4" />
+                      <Maximize2 className="w-5 h-5" />
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="icon"
+                      className="absolute -top-1 -right-1 h-8 w-8 bg-muted hover:bg-destructive text-destructive/80 hover:text-white rounded-none rounded-bl-xl"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDeleteId(video.id);
+                        setDeleteOpen(true);
+                      }}
+                    >
+                      <Trash2 className="w-4 h-4" />
                     </Button>
                   </div>
                 </div>
@@ -95,8 +208,18 @@ const SceneVideoNode = ({ data, selected }: SceneVideoNodeProps) => {
 
           {/* Bottom Left: Upload & Save to Asset */}
           <div className="absolute bottom-3 left-3 flex items-center gap-3">
+            <input
+              type="file"
+              ref={fileInputRef}
+              className="hidden"
+              accept="video/*,image/*"
+              onChange={handleFileChange}
+            />
             <button
-              onClick={data.onUploadCustom}
+              onClick={() => {
+                fileInputRef.current?.click();
+                data.onUploadCustom?.();
+              }}
               className="p-1.5 bg-black/40 hover:bg-black/60 text-white/80 hover:text-white rounded-md transition-colors"
               title="Upload Custom"
             >
@@ -131,6 +254,25 @@ const SceneVideoNode = ({ data, selected }: SceneVideoNodeProps) => {
         items={previewItems}
         initialIndex={previewIndex}
       />
+
+      <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{tFlow("deleteConfirmTitle")}</DialogTitle>
+          </DialogHeader>
+          <div className="py-4 text-sm text-muted-foreground">
+            {tFlow("deleteConfirmDescription")}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteOpen(false)}>
+              {tCommon("cancel")}
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteVideo}>
+              {tCommon("delete")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

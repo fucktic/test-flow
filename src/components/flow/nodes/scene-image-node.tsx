@@ -1,20 +1,73 @@
-import { memo, useState } from "react";
+import { memo, useState, useRef } from "react";
 import { Handle, Position } from "@xyflow/react";
 import { SceneImageNodeData } from "@/lib/types/flow.types";
 import { useTranslations } from "next-intl";
-import { Upload, Save, Maximize2 } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Upload, Save, Maximize2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { MediaPreviewModal } from "@/components/common/media-preview-modal";
 import { getNodeWrapperClassName } from "./utils";
+import { useFlowStore } from "@/lib/store/use-flow";
 
 interface SceneImageNodeProps {
+  id: string;
   data: SceneImageNodeData;
   selected?: boolean;
 }
 
-const SceneImageNode = ({ data, selected }: SceneImageNodeProps) => {
+const SceneImageNode = ({ id, data, selected }: SceneImageNodeProps) => {
   const tFlow = useTranslations("flow.sceneImageNode");
+  const tCommon = useTranslations("common");
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewIndex, setPreviewIndex] = useState(0);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const updateNodeData = useFlowStore((state) => state.updateNodeData);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // 读取用户选择的文件并转为 base64 格式，更新到节点数据中
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        const newImage = { id: "custom-" + Date.now(), url: reader.result };
+        const existingImages = data.images ? [...data.images] : [];
+        updateNodeData(id, {
+          images: [...existingImages, newImage],
+          imageUrl: reader.result,
+        });
+      }
+    };
+    reader.readAsDataURL(file);
+    e.target.value = ""; // 重置 input 状态，允许重复上传同一个文件
+  };
+
+  const handleDeleteImage = () => {
+    if (!deleteId) return;
+
+    if (data.images && data.images.length > 0) {
+      const newImages = data.images.filter((img) => img.id !== deleteId);
+      const deletedImg = data.images.find((img) => img.id === deleteId);
+      const newImageUrl =
+        data.imageUrl === deletedImg?.url ? newImages[0]?.url || undefined : data.imageUrl;
+      updateNodeData(id, { images: newImages, imageUrl: newImageUrl });
+    } else if (data.imageUrl && (deleteId === data.sceneId || deleteId === "image")) {
+      updateNodeData(id, { imageUrl: undefined });
+    }
+
+    setDeleteOpen(false);
+    setDeleteId(null);
+  };
 
   const previewItems = data.images
     ? data.images.map((img) => ({ id: img.id, url: img.url, type: "image" as const }))
@@ -34,30 +87,58 @@ const SceneImageNode = ({ data, selected }: SceneImageNodeProps) => {
       {/* Main Container */}
       <div className={getNodeWrapperClassName(selected, "flex-col h-full")}>
         {/* Main Image Area */}
-        <div className="relative w-full h-full aspect-4/3 bg-muted flex items-center justify-center group">
+        <div className="relative w-full h-full bg-muted flex items-center justify-center group p-4">
           {previewItems.length > 0 ? (
-            <>
-              <img
-                src={previewItems[0].url}
-                alt={data.sceneId}
-                className="w-full h-full object-cover cursor-pointer"
-                loading="lazy"
-                onClick={() => setPreviewOpen(true)}
-              />
-              <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-20">
-                <Button
-                  variant="secondary"
-                  size="icon"
-                  className="h-8 w-8 bg-black/40 hover:bg-black/60 text-white/80 hover:text-white rounded-md"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setPreviewOpen(true);
+            <div className="w-full h-full grid grid-cols-2 gap-4">
+              {previewItems.map((img, index) => (
+                <div
+                  key={img.id}
+                  className={cn(
+                    "aspect-square relative rounded-lg overflow-hidden border-2 cursor-pointer transition-all group/image",
+                    img.url === data.imageUrl
+                      ? "border-primary shadow-[0_0_0_2px_rgba(0,163,255,0.3)]"
+                      : "border-transparent hover:border-border",
+                  )}
+                  onClick={() => {
+                    // Update main imageUrl when clicking an image in the grid
+                    updateNodeData(id, { imageUrl: img.url });
                   }}
                 >
-                  <Maximize2 className="w-4 h-4" />
-                </Button>
-              </div>
-            </>
+                  <img
+                    src={img.url}
+                    alt={img.id}
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                  />
+                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/image:opacity-100 transition-opacity z-20">
+                    <Button
+                      variant="secondary"
+                      size="icon"
+                      className="h-10 w-10 bg-black/40 hover:bg-black/60 text-white/80 hover:text-white rounded-md"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPreviewIndex(index);
+                        setPreviewOpen(true);
+                      }}
+                    >
+                      <Maximize2 className="w-5 h-5" />
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="icon"
+                      className="absolute -top-1 -right-1 h-8 w-8 bg-muted hover:bg-destructive text-destructive/80 hover:text-white rounded-none rounded-bl-xl"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDeleteId(img.id);
+                        setDeleteOpen(true);
+                      }}
+                    >
+                      <Trash2 className="w-4 h-4 " />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
           ) : (
             <span className="text-muted-foreground/50 text-4xl font-bold tracking-widest">
               {tFlow("img")}
@@ -66,8 +147,18 @@ const SceneImageNode = ({ data, selected }: SceneImageNodeProps) => {
 
           {/* Bottom Left: Upload & Save to Asset */}
           <div className="absolute bottom-3 left-3 flex items-center gap-3">
+            <input
+              type="file"
+              ref={fileInputRef}
+              className="hidden"
+              accept="image/*"
+              onChange={handleFileChange}
+            />
             <button
-              onClick={data.onUploadCustom}
+              onClick={() => {
+                fileInputRef.current?.click();
+                data.onUploadCustom?.();
+              }}
               className="p-1.5 bg-black/40 hover:bg-black/60 text-white/80 hover:text-white rounded-md transition-colors"
               title="Upload Custom Image"
             >
@@ -93,19 +184,39 @@ const SceneImageNode = ({ data, selected }: SceneImageNodeProps) => {
         type="target"
         position={Position.Left}
         className="w-4! h-4! flex items-center justify-center bg-background border border-border hover:bg-primary/80 transition-colors group-hover/node z-10"
-      >
-        {/* <Plus className="size-4 m-auto text-muted-foreground group-hover/node:text-white" /> */}
-      </Handle>
+      ></Handle>
       <Handle
         type="source"
         id="main"
         position={Position.Right}
         className="w-4! h-4! flex items-center justify-center bg-background border border-border hover:bg-primary/80 transition-colors group-hover/node z-10"
-      >
-        {/* <Plus className="size-4 m-auto text-muted-foreground group-hover/node:text-white" /> */}
-      </Handle>
+      ></Handle>
 
-      <MediaPreviewModal open={previewOpen} onOpenChange={setPreviewOpen} items={previewItems} />
+      <MediaPreviewModal
+        open={previewOpen}
+        onOpenChange={setPreviewOpen}
+        items={previewItems}
+        initialIndex={previewIndex}
+      />
+
+      <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{tFlow("deleteConfirmTitle")}</DialogTitle>
+          </DialogHeader>
+          <div className="py-4 text-sm text-muted-foreground">
+            {tFlow("deleteConfirmDescription")}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteOpen(false)}>
+              {tCommon("cancel")}
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteImage}>
+              {tCommon("delete")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

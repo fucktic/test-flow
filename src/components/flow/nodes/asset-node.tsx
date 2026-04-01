@@ -37,6 +37,7 @@ interface AssetNodeProps {
 
 const AssetNode = ({ data, selected }: AssetNodeProps) => {
   const tFlow = useTranslations("flow.assetNode");
+  const tCommon = useTranslations("common");
   const [activeTab, setActiveTab] = useState<AssetCategory>(data.activeTab || "characters");
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewIndex, setPreviewIndex] = useState(0);
@@ -464,10 +465,10 @@ const AssetNode = ({ data, selected }: AssetNodeProps) => {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteOpen(false)}>
-              {tFlow("cancel")}
+              {tCommon("cancel")}
             </Button>
             <Button variant="destructive" onClick={handleDeleteAsset}>
-              {tFlow("delete")}
+              {tCommon("delete")}
             </Button>
           </DialogFooter>
         </DialogContent>
