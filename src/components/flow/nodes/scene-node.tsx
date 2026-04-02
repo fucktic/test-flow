@@ -105,7 +105,7 @@ export const SceneNode = ({ data, selected }: { data: SceneNodeData; selected?: 
                             : "bg-muted text-muted-foreground group-hover:bg-muted-foreground/20",
                         )}
                       >
-                        {`S-${index + 1}`}
+                        {`${scene.name}`}
                       </span>
                     </div>
                     <div className="pt-5 pb-2">

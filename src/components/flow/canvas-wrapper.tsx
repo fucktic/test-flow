@@ -6,8 +6,7 @@ import { Loader2 } from "lucide-react";
 import "@xyflow/react/dist/style.css";
 import "@/styles/react-flow.css";
 import { useFlowStore } from "../../lib/store/use-flow";
-import { TextNode } from "./nodes/command-node";
-import { SkillNode } from "./nodes/result-node";
+
 import { EpisodeNode } from "./nodes/episode-node";
 import { SceneNode } from "./nodes/scene-node";
 import SceneImageNode from "./nodes/scene-image-node";
@@ -19,8 +18,6 @@ import { useProjectStore } from "@/lib/store/use-projects";
 import { useTranslations } from "next-intl";
 
 const nodeTypes = {
-  textNode: TextNode,
-  skillNode: SkillNode,
   episodeNode: EpisodeNode,
   sceneNode: SceneNode,
   sceneImageNode: SceneImageNode,
@@ -28,8 +25,7 @@ const nodeTypes = {
   videoPreviewNode: VideoPreviewNode,
   assetNode: AssetNode,
   // Add aliases for backward compatibility
-  "command-node": TextNode,
-  "result-node": SkillNode,
+
   "episode-node": EpisodeNode,
   "scene-node": SceneNode,
   "scene-image-node": SceneImageNode,
@@ -54,7 +50,6 @@ export const FlowCanvas = () => {
   useEffect(() => {
     if (currentProject?.id) {
       setIsLoading(true);
-
       fetch(`/api/projects/${currentProject.id}/flow`)
         .then((res) => {
           if (!res.ok) throw new Error("Not found");

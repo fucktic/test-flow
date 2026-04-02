@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { getNodeWrapperClassName } from "./utils";
+import { useProjectStore } from "@/lib/store/use-projects";
 
 interface AssetNodeProps {
   data: AssetNodeData;
@@ -38,6 +39,7 @@ interface AssetNodeProps {
 const AssetNode = ({ data, selected }: AssetNodeProps) => {
   const tFlow = useTranslations("flow.assetNode");
   const tCommon = useTranslations("common");
+  const currentProject = useProjectStore((state) => state.currentProject);
   const [activeTab, setActiveTab] = useState<AssetCategory>(data.activeTab || "characters");
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewIndex, setPreviewIndex] = useState(0);
@@ -118,20 +120,6 @@ const AssetNode = ({ data, selected }: AssetNodeProps) => {
     return category === "audio" ? "audio/*" : "image/*";
   };
 
-  const readFileAsDataUrl = (file: File) =>
-    new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        if (typeof reader.result === "string") {
-          resolve(reader.result);
-        } else {
-          reject(new Error());
-        }
-      };
-      reader.onerror = () => reject(new Error());
-      reader.readAsDataURL(file);
-    });
-
   const handleFileUpload = async (file: File) => {
     const isAudioCategory = assetCategory === "audio";
     const isAudioFile = file.type.startsWith("audio/");
@@ -142,10 +130,30 @@ const AssetNode = ({ data, selected }: AssetNodeProps) => {
       );
       return;
     }
+
+    if (!currentProject) {
+      setUploadError("No project selected");
+      return;
+    }
+
     try {
-      const dataUrl = await readFileAsDataUrl(file);
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("type", isAudioFile ? "audio" : "image");
+      formData.append("source", "asset");
+      formData.append("category", assetCategory);
+
+      const res = await fetch(`/api/projects/${currentProject.id}/upload`, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!res.ok) throw new Error("Upload failed");
+
+      const { url } = await res.json();
+
       setUploadedFileName(file.name);
-      setUploadedFileUrl(dataUrl);
+      setUploadedFileUrl(url);
       setUploadedMediaType(isAudioFile ? "audio" : "image");
       setUploadError("");
     } catch {

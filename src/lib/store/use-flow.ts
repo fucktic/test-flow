@@ -30,7 +30,6 @@ const syncGraph = (state: any, set: any) => {
   if (!episodeNode) return;
 
   const episodeNodeId = episodeNode.id;
-  const checkedEpisodes = episodeNode.data.episodes.filter((ep: any) => ep.checked);
 
   const newNodes: Node[] = [];
   const newEdges: Edge[] = [];
@@ -45,119 +44,167 @@ const syncGraph = (state: any, set: any) => {
 
   const episodesData: any[] = [];
 
-  checkedEpisodes.forEach((ep: any) => {
+  episodeNode.data.episodes.forEach((ep: any) => {
     const epPrefix = ep.title.split(" ")[0]; // e.g. "EP_001"
+    const isChecked = ep.checked;
 
     // 2. Scene Node
     const sceneNodeId = `scene-${ep.id}`;
     let sceneNode = state.nodes.find((n: any) => n.id === sceneNodeId);
 
     if (!sceneNode) {
-      sceneNode = {
-        id: sceneNodeId,
-        type: "sceneNode",
-        position: { x: episodeNode.position.x + 1000, y: currentY },
-        data: {
-          title: `分镜列表 ${epPrefix}`,
-          scenes: JSON.parse(JSON.stringify(defaultScenes)),
-          ...getSceneHandlers(set, sceneNodeId),
-        },
-      };
+      if (isChecked) {
+        sceneNode = {
+          id: sceneNodeId,
+          type: "sceneNode",
+          position: { x: episodeNode.position.x + 1000, y: currentY },
+          data: {
+            title: `分镜列表 ${epPrefix}`,
+            scenes: [],
+            ...getSceneHandlers(set, sceneNodeId),
+          },
+        };
+      }
     } else {
       sceneNode.data = { ...sceneNode.data, ...getSceneHandlers(set, sceneNodeId) };
+      if (!Array.isArray(sceneNode.data.scenes)) {
+        sceneNode.data.scenes = [];
+      }
     }
 
-    newNodes.push(sceneNode);
-    newEdges.push({
-      id: `e-${episodeNodeId}-${sceneNodeId}`,
-      source: episodeNodeId,
-      target: sceneNodeId,
-      sourceHandle: "main",
-      animated: true,
-      style: { stroke: "#6366f1", strokeWidth: 2 },
-    });
-
-    const selectedScenes = sceneNode.data.scenes.filter((s: any) => s.selected);
-    let sceneY = currentY;
-
-    let selectedVideosCount = 0;
-    const episodeItems: any[] = [];
-
-    selectedScenes.forEach((scene: any) => {
-      const imgNodeId = `scene-image-${ep.id}-${scene.id}`;
-      const vidNodeId = `scene-video-${ep.id}-${scene.id}`;
-
-      let imgNode = state.nodes.find((n: any) => n.id === imgNodeId);
-      if (!imgNode) {
-        imgNode = {
-          id: imgNodeId,
-          type: "sceneImageNode",
-          position: { x: episodeNode.position.x + 1500, y: sceneY },
-          data: { sceneId: scene.name, isExpanded: true, ...getImageHandlers(set, imgNodeId) },
-        };
-      } else {
-        imgNode.data = { ...imgNode.data, ...getImageHandlers(set, imgNodeId) };
+    if (sceneNode) {
+      const wasHidden = sceneNode.hidden !== false;
+      sceneNode.hidden = !isChecked;
+      if (isChecked && wasHidden) {
+        sceneNode.position = { x: episodeNode.position.x + 1000, y: currentY };
       }
+      newNodes.push(sceneNode);
 
-      let vidNode = state.nodes.find((n: any) => n.id === vidNodeId);
-      if (!vidNode) {
-        vidNode = {
-          id: vidNodeId,
-          type: "sceneVideoNode",
-          position: { x: episodeNode.position.x + 1900, y: sceneY },
-          data: { sceneId: scene.name, isExpanded: true, ...getVideoHandlers(set, vidNodeId) },
-        };
-      } else {
-        vidNode.data = { ...vidNode.data, ...getVideoHandlers(set, vidNodeId) };
-      }
-
-      newNodes.push(imgNode, vidNode);
-
-      newEdges.push({
-        id: `e-${sceneNodeId}-${imgNodeId}`,
-        source: sceneNodeId,
-        target: imgNodeId,
-        sourceHandle: "main",
-        animated: true,
-        style: { stroke: "#3b82f6", strokeWidth: 2 },
-      });
-      newEdges.push({
-        id: `e-${imgNodeId}-${vidNodeId}`,
-        source: imgNodeId,
-        target: vidNodeId,
-        sourceHandle: "main",
-        animated: true,
-        style: { stroke: "#10b981", strokeWidth: 2 },
-      });
-
-      if (vidNode && vidNode.data && vidNode.data.videos) {
-        vidNode.data.videos.forEach((v: any) => {
-          if (v.selected) {
-            selectedVideosCount++;
-            episodeItems.push({
-              id: v.id,
-              url: v.url,
-              poster: v.poster,
-              duration: v.duration || "10s",
-              status: v.url ? "generated" : "pending",
-            });
-          }
+      if (isChecked) {
+        newEdges.push({
+          id: `e-${episodeNodeId}-${sceneNodeId}`,
+          source: episodeNodeId,
+          target: sceneNodeId,
+          sourceHandle: "main",
+          targetHandle: "in",
+          animated: true,
+          style: { stroke: "#6366f1", strokeWidth: 2 },
         });
       }
 
-      sceneY += 450;
-    });
+      let sceneY = currentY;
+      let selectedVideosCount = 0;
+      const episodeItems: any[] = [];
 
-    episodesData.push({
-      episodeId: epPrefix,
-      episodeName: ep.title,
-      totalScenes: sceneNode.data.scenes.length,
-      selectedVideos: selectedVideosCount,
-      vid: `VID_${ep.id}`,
-      items: episodeItems,
-    });
+      sceneNode.data.scenes.forEach((scene: any) => {
+        const isSceneSelected = scene.selected;
+        const imgNodeId = `scene-image-${ep.id}-${scene.id}`;
+        const vidNodeId = `scene-video-${ep.id}-${scene.id}`;
 
-    currentY += Math.max(450, selectedScenes.length * 450);
+        let imgNode = state.nodes.find((n: any) => n.id === imgNodeId);
+        if (!imgNode) {
+          if (isChecked && isSceneSelected) {
+            imgNode = {
+              id: imgNodeId,
+              type: "sceneImageNode",
+              position: { x: episodeNode.position.x + 1500, y: sceneY },
+              data: { sceneId: scene.name, isExpanded: true, ...getImageHandlers(set, imgNodeId) },
+            };
+          }
+        } else {
+          imgNode.data = { ...imgNode.data, ...getImageHandlers(set, imgNodeId) };
+        }
+
+        if (imgNode) {
+          const wasImgHidden = imgNode.hidden !== false;
+          imgNode.hidden = !(isChecked && isSceneSelected);
+          if (isChecked && isSceneSelected && wasImgHidden) {
+            imgNode.position = { x: episodeNode.position.x + 1500, y: sceneY };
+          }
+          newNodes.push(imgNode);
+
+          if (isChecked && isSceneSelected) {
+            newEdges.push({
+              id: `e-${sceneNodeId}-${imgNodeId}`,
+              source: sceneNodeId,
+              target: imgNodeId,
+              sourceHandle: "main",
+              targetHandle: "in",
+              animated: true,
+              style: { stroke: "#3b82f6", strokeWidth: 2 },
+            });
+          }
+        }
+
+        let vidNode = state.nodes.find((n: any) => n.id === vidNodeId);
+        if (!vidNode) {
+          if (isChecked && isSceneSelected) {
+            vidNode = {
+              id: vidNodeId,
+              type: "sceneVideoNode",
+              position: { x: episodeNode.position.x + 1900, y: sceneY },
+              data: { sceneId: scene.name, isExpanded: true, ...getVideoHandlers(set, vidNodeId) },
+            };
+          }
+        } else {
+          vidNode.data = { ...vidNode.data, ...getVideoHandlers(set, vidNodeId) };
+        }
+
+        if (vidNode) {
+          const wasVidHidden = vidNode.hidden !== false;
+          vidNode.hidden = !(isChecked && isSceneSelected);
+          if (isChecked && isSceneSelected && wasVidHidden) {
+            vidNode.position = { x: episodeNode.position.x + 1900, y: sceneY };
+          }
+          newNodes.push(vidNode);
+
+          if (isChecked && isSceneSelected) {
+            newEdges.push({
+              id: `e-${imgNodeId}-${vidNodeId}`,
+              source: imgNodeId,
+              target: vidNodeId,
+              sourceHandle: "main",
+              targetHandle: "in",
+              animated: true,
+              style: { stroke: "#10b981", strokeWidth: 2 },
+            });
+
+            if (vidNode.data && vidNode.data.videos) {
+              vidNode.data.videos.forEach((v: any) => {
+                if (v.selected) {
+                  selectedVideosCount++;
+                  episodeItems.push({
+                    id: v.id,
+                    url: v.url,
+                    poster: v.poster,
+                    duration: v.duration || "10s",
+                    status: v.url ? "generated" : "pending",
+                  });
+                }
+              });
+            }
+          }
+        }
+
+        if (isChecked && isSceneSelected) {
+          sceneY += 450;
+        }
+      });
+
+      if (isChecked) {
+        episodesData.push({
+          episodeId: epPrefix,
+          episodeName: ep.title,
+          totalScenes: sceneNode.data.scenes.length,
+          selectedVideos: selectedVideosCount,
+          vid: `VID_${ep.id}`,
+          items: episodeItems,
+        });
+
+        const selectedScenesCount = sceneNode.data.scenes.filter((s: any) => s.selected).length;
+        currentY += Math.max(450, selectedScenesCount * 450);
+      }
+    }
   });
 
   if (!previewNode) {
@@ -538,30 +585,6 @@ export const rehydrateNodes = (nodes: Node[], set: any) => {
   });
 };
 
-const defaultScenes = [
-  {
-    id: "s1",
-    name: "S-1",
-    content:
-      "门被推开，林星阑站在门口。她的衣服被雨水打湿，发丝紧贴脸颊，眼神中带着一丝不甘与决绝。光线从她身后映入，勾勒出她的轮廓。",
-    selected: false,
-  },
-  {
-    id: "s2",
-    name: "S-2",
-    content:
-      "门被推开，林星阑站在门口。她的衣服被雨水打湿，发丝紧贴脸颊，眼神中带着一丝不甘与决绝。光线从她身后映入，勾勒出她的轮廓。",
-    selected: true,
-  },
-  {
-    id: "s3",
-    name: "S-3",
-    content:
-      "门被推开，林星阑站在门口。她的衣服被雨水打湿，发丝紧贴脸颊，眼神中带着一丝不甘与决绝。光线从她身后映入，勾勒出她的轮廓。",
-    selected: true,
-  },
-];
-
 export const useFlowStore = create<FlowState>()(
   immer((set, _get) => {
     // 初始化空的节点和连线状态，移除原有的 mock 数据
@@ -618,6 +641,7 @@ export const useFlowStore = create<FlowState>()(
         set((state) => {
           state.nodes = rehydrateNodes(nodes, set);
           state.edges = edges;
+          syncGraph(state, set);
         });
       },
     };

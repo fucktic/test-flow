@@ -10,10 +10,10 @@ export async function GET(
   const { id, path: pathArray } = await params;
 
   try {
-    const filePath = path.join(process.cwd(), "projects", id, "assets", ...pathArray);
+    const filePath = path.join(process.cwd(), "projects", id, "episode", ...pathArray);
 
     // Check path traversal
-    if (!filePath.startsWith(path.join(process.cwd(), "projects", id, "assets"))) {
+    if (!filePath.startsWith(path.join(process.cwd(), "projects", id, "episode"))) {
       return NextResponse.json({ error: "Invalid path" }, { status: 400 });
     }
 
@@ -32,10 +32,11 @@ export async function GET(
       ".gif": "image/gif",
       ".webp": "image/webp",
       ".svg": "image/svg+xml",
+      ".webm": "video/webm",
+      ".mov": "video/quicktime",
       ".mp3": "audio/mpeg",
       ".wav": "audio/wav",
       ".ogg": "audio/ogg",
-      ".webm": "video/webm",
     };
 
     const contentType = mimeTypes[ext] || "application/octet-stream";

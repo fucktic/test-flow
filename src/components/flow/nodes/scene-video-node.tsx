@@ -15,6 +15,7 @@ import {
 import { MediaPreviewModal, MediaItem } from "@/components/common/media-preview-modal";
 import { getNodeWrapperClassName } from "./utils";
 import { useFlowStore } from "@/lib/store/use-flow";
+import { useProjectStore } from "@/lib/store/use-projects";
 
 interface SceneVideoNodeProps {
   id: string;
@@ -30,67 +31,77 @@ const SceneVideoNode = ({ id, data, selected }: SceneVideoNodeProps) => {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const updateNodeData = useFlowStore((state) => state.updateNodeData);
+  const currentProject = useProjectStore((state) => state.currentProject);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file || !currentProject) return;
 
-    // 读取用户选择的视频或图片文件
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === "string") {
-        const fileUrl = reader.result;
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("type", file.type.startsWith("video/") ? "video" : "image");
+      formData.append("sceneId", data.sceneId || "S-x");
 
-        // 如果是视频文件，提取首帧作为封面
-        if (file.type.startsWith("video/")) {
-          const video = document.createElement("video");
-          video.src = fileUrl;
-          video.crossOrigin = "anonymous";
-          video.muted = true;
-          video.playsInline = true;
+      const res = await fetch(`/api/projects/${currentProject.id}/upload`, {
+        method: "POST",
+        body: formData,
+      });
 
-          video.onloadeddata = () => {
-            // 定位到第一帧
-            video.currentTime = 0.1; // 使用 0.1s 避免某些视频第一帧为空白
-          };
+      if (!res.ok) throw new Error("Upload failed");
 
-          video.onseeked = () => {
-            const canvas = document.createElement("canvas");
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            const ctx = canvas.getContext("2d");
-            if (ctx) {
-              ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-              const posterUrl = canvas.toDataURL("image/jpeg", 0.8);
+      const { url } = await res.json();
 
-              const newVideo = {
-                id: "custom-" + Date.now(),
-                url: fileUrl,
-                poster: posterUrl,
-                selected: true,
-              };
-              const existingVideos = data.videos
-                ? data.videos.map((v) => ({ ...v, selected: false }))
-                : [];
-              updateNodeData(id, {
-                videos: [...existingVideos, newVideo],
-              });
-            }
-          };
-        } else {
-          // 如果是图片，直接添加
-          const newVideo = { id: "custom-" + Date.now(), url: fileUrl, selected: true };
-          const existingVideos = data.videos
-            ? data.videos.map((v) => ({ ...v, selected: false }))
-            : [];
-          updateNodeData(id, {
-            videos: [...existingVideos, newVideo],
-          });
-        }
+      // 如果是视频文件，提取首帧作为封面
+      if (file.type.startsWith("video/")) {
+        const video = document.createElement("video");
+        video.src = url;
+        video.crossOrigin = "anonymous";
+        video.muted = true;
+        video.playsInline = true;
+
+        video.onloadeddata = () => {
+          // 定位到第一帧
+          video.currentTime = 0.1; // 使用 0.1s 避免某些视频第一帧为空白
+        };
+
+        video.onseeked = () => {
+          const canvas = document.createElement("canvas");
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          const ctx = canvas.getContext("2d");
+          if (ctx) {
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const posterUrl = canvas.toDataURL("image/jpeg", 0.8);
+
+            const newVideo = {
+              id: "custom-" + Date.now(),
+              url: url,
+              poster: posterUrl,
+              selected: true,
+            };
+            const existingVideos = data.videos
+              ? data.videos.map((v) => ({ ...v, selected: false }))
+              : [];
+            updateNodeData(id, {
+              videos: [...existingVideos, newVideo],
+            });
+          }
+        };
+      } else {
+        // 如果是图片，直接添加
+        const newVideo = { id: "custom-" + Date.now(), url: url, selected: true };
+        const existingVideos = data.videos
+          ? data.videos.map((v) => ({ ...v, selected: false }))
+          : [];
+        updateNodeData(id, {
+          videos: [...existingVideos, newVideo],
+        });
       }
-    };
-    reader.readAsDataURL(file);
+    } catch (error) {
+      console.error("Failed to upload video/image:", error);
+    }
     e.target.value = ""; // 重置 input 状态
   };
 
@@ -244,6 +255,7 @@ const SceneVideoNode = ({ id, data, selected }: SceneVideoNodeProps) => {
       {/* Connection Handles */}
       <Handle
         type="target"
+        id="in"
         position={Position.Left}
         className="w-4! h-4! flex items-center justify-center bg-background border border-border hover:bg-primary/80 transition-colors group-hover/node z-10"
       ></Handle>

@@ -15,6 +15,7 @@ import {
 import { MediaPreviewModal } from "@/components/common/media-preview-modal";
 import { getNodeWrapperClassName } from "./utils";
 import { useFlowStore } from "@/lib/store/use-flow";
+import { useProjectStore } from "@/lib/store/use-projects";
 
 interface SceneImageNodeProps {
   id: string;
@@ -30,25 +31,38 @@ const SceneImageNode = ({ id, data, selected }: SceneImageNodeProps) => {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const updateNodeData = useFlowStore((state) => state.updateNodeData);
+  const currentProject = useProjectStore((state) => state.currentProject);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file || !currentProject) return;
 
-    // 读取用户选择的文件并转为 base64 格式，更新到节点数据中
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === "string") {
-        const newImage = { id: "custom-" + Date.now(), url: reader.result };
-        const existingImages = data.images ? [...data.images] : [];
-        updateNodeData(id, {
-          images: [...existingImages, newImage],
-          imageUrl: reader.result,
-        });
-      }
-    };
-    reader.readAsDataURL(file);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("type", "image");
+      formData.append("sceneId", data.sceneId || "S-x");
+
+      const res = await fetch(`/api/projects/${currentProject.id}/upload`, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!res.ok) throw new Error("Upload failed");
+
+      const { url } = await res.json();
+
+      const newImage = { id: "custom-" + Date.now(), url };
+      const existingImages = data.images ? [...data.images] : [];
+      updateNodeData(id, {
+        images: [...existingImages, newImage],
+        imageUrl: url,
+      });
+    } catch (error) {
+      console.error("Failed to upload image:", error);
+    }
+
     e.target.value = ""; // 重置 input 状态，允许重复上传同一个文件
   };
 
@@ -182,6 +196,7 @@ const SceneImageNode = ({ id, data, selected }: SceneImageNodeProps) => {
       {/* Connection Handles */}
       <Handle
         type="target"
+        id="in"
         position={Position.Left}
         className="w-4! h-4! flex items-center justify-center bg-background border border-border hover:bg-primary/80 transition-colors group-hover/node z-10"
       ></Handle>
