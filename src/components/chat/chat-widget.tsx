@@ -1,9 +1,17 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback, MouseEvent as ReactMouseEvent } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  useCallback,
+  useMemo,
+  MouseEvent as ReactMouseEvent,
+} from "react";
 import { useTranslations } from "next-intl";
 import { useChatStore } from "@/lib/store/use-chat";
 import { useProjectStore } from "@/lib/store/use-projects";
+import { useFlowStore } from "@/lib/store/use-flow";
 import { useAgent } from "@/lib/hooks/use-agent";
 import { AgentManagerModal } from "./agent-manager-modal";
 import { ChatInput } from "./chat-input";
@@ -13,9 +21,15 @@ import { Minus, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { useEditor } from "@tiptap/react";
+import { useEditor, ReactRenderer } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
+import tippy, { Instance as TippyInstance } from "tippy.js";
+import {
+  AssetMention,
+  MentionList,
+} from "@/components/flow/nodes/scene-node/components/scene-edit-dialog";
+import { UploadedFile } from "./chat-upload";
 
 const MINIMIZED_SIZE = 56; // w-14/h-14 (14 * 4px = 56px)
 const MARGIN = 20;
@@ -40,6 +54,7 @@ export function ChatWidget() {
   } = useChatStore();
 
   const [input, setInput] = useState("");
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const dragInfoRef = useRef({ hasMoved: false, startX: 0, startY: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
@@ -47,6 +62,8 @@ export function ChatWidget() {
   const [isResizing, setIsResizing] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { runCommand, isExecuting } = useAgent();
+  const currentProject = useProjectStore((state) => state.currentProject);
+  const { initFlow } = useFlowStore();
 
   const handleSendRef = useRef<(() => void) | null>(null);
 
@@ -56,6 +73,79 @@ export function ChatWidget() {
     handleSendRef.current = handleSend;
   });
 
+  const prevIsExecutingRef = useRef(isExecuting);
+
+  const nodes = useFlowStore((state) => state.nodes);
+
+  const allAssets = useMemo(() => {
+    const assetNodes = nodes.filter((n) => n.type === "assetNode" || n.type === "asset-node");
+    const list: any[] = [];
+    assetNodes.forEach((n) => {
+      const assetsData = n.data.assets as any;
+      if (assetsData) {
+        Object.keys(assetsData).forEach((cat) => {
+          if (Array.isArray(assetsData[cat])) {
+            list.push(...assetsData[cat].map((a: any) => ({ ...a, category: cat })));
+          }
+        });
+      }
+    });
+    return list;
+  }, [nodes]);
+
+  const mentionItems = useMemo(() => {
+    let imageIndex = 1;
+    let fileIndex = 1;
+    const fileItems = uploadedFiles.map((f) => {
+      const isImage = f.type === "image";
+      const name = isImage ? `图片${imageIndex++}` : `文件${fileIndex++}`;
+      return {
+        id: f.id,
+        name,
+        category: f.type,
+        url: f.previewUrl || f.file.name,
+      };
+    });
+    return [...allAssets, ...fileItems];
+  }, [allAssets, uploadedFiles]);
+
+  const mentionItemsRef = useRef(mentionItems);
+  useEffect(() => {
+    mentionItemsRef.current = mentionItems;
+  }, [mentionItems]);
+
+  // 定时刷新画布或在执行结束时刷新
+  useEffect(() => {
+    let intervalId: NodeJS.Timeout;
+
+    const refreshCanvas = async () => {
+      if (!currentProject?.id) return;
+      try {
+        const res = await fetch(`/api/projects/${currentProject.id}/flow`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data && data.nodes && data.edges) {
+          initFlow(data.nodes, data.edges);
+        }
+      } catch (err) {
+        console.error("Failed to refresh canvas:", err);
+      }
+    };
+
+    if (isExecuting) {
+      intervalId = setInterval(refreshCanvas, 30000);
+    } else if (prevIsExecutingRef.current) {
+      // 仅当从 true 变为 false 时刷新
+      refreshCanvas();
+    }
+
+    prevIsExecutingRef.current = isExecuting;
+
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [isExecuting, currentProject?.id, initFlow]);
+
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
@@ -64,6 +154,114 @@ export function ChatWidget() {
       }),
       Placeholder.configure({
         placeholder: t("inputPlaceholder"),
+      }),
+      AssetMention.configure({
+        HTMLAttributes: {
+          class: "asset-mention",
+        },
+        suggestion: {
+          char: "@",
+          // 使用自定义的匹配逻辑，完全覆盖默认规则，支持任何字符后直接触发 @
+          findSuggestionMatch: ({ char, $position }: any) => {
+            const text = $position.nodeBefore?.isText && $position.nodeBefore.text;
+            if (!text) return null;
+
+            const escapedChar = char.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+            // 匹配文本末尾的 @ 及其后的非空白字符
+            const regexp = new RegExp(`${escapedChar}([^\\s${escapedChar}]*)$`);
+            const match = regexp.exec(text);
+
+            if (!match) return null;
+
+            const textFrom = $position.pos - text.length;
+            const from = textFrom + match.index;
+            const to = from + match[0].length;
+
+            return {
+              range: { from, to },
+              query: match[1],
+              text: match[0],
+            };
+          },
+          items: ({ query }: { query: string }) => {
+            const list = mentionItemsRef.current
+              .filter((item) =>
+                (item.name || "").toLowerCase().includes((query || "").toLowerCase()),
+              )
+              .sort((a, b) => {
+                const typeA = a.category || a.type || "";
+                const typeB = b.category || b.type || "";
+                if (typeA !== typeB) {
+                  return typeA.localeCompare(typeB);
+                }
+                return (a.name || "").localeCompare(b.name || "");
+              })
+              .slice(0, 10);
+            return list;
+          },
+          render: () => {
+            let component: any;
+            let popup: TippyInstance<any>[];
+
+            return {
+              onStart: (props: any) => {
+                component = new ReactRenderer(MentionList, {
+                  props,
+                  editor: props.editor,
+                });
+
+                if (!props.clientRect) {
+                  return;
+                }
+
+                requestAnimationFrame(() => {
+                  popup = tippy("body", {
+                    getReferenceClientRect: props.clientRect,
+                    appendTo: () => document.body,
+                    content: component.element,
+                    showOnCreate: true,
+                    interactive: true,
+                    trigger: "manual",
+                    placement: "bottom-start",
+                    zIndex: 99999,
+                    allowHTML: true,
+                    arrow: false,
+                    offset: [0, 8],
+                    theme: "asset-mention",
+                  });
+                });
+              },
+              onUpdate(props: any) {
+                component?.updateProps(props);
+
+                if (!props.clientRect) {
+                  return;
+                }
+
+                requestAnimationFrame(() => {
+                  popup?.[0]?.setProps({
+                    getReferenceClientRect: props.clientRect,
+                  });
+                });
+              },
+              onKeyDown(props: any) {
+                if (props.event.key === "Escape") {
+                  popup?.[0]?.hide();
+                  return true;
+                }
+                return component?.ref?.onKeyDown(props) || false;
+              },
+              onExit() {
+                requestAnimationFrame(() => {
+                  if (popup?.[0] && !popup[0].state.isDestroyed) {
+                    popup[0].destroy();
+                  }
+                  component?.destroy();
+                });
+              },
+            };
+          },
+        },
       }),
     ],
     content: input,
@@ -76,7 +274,14 @@ export function ChatWidget() {
           "w-full h-20 overflow-y-auto resize-none border-0 bg-transparent focus-visible:ring-0 p-1 text-sm outline-none",
       },
       handleKeyDown: (view, event) => {
-        if (event.key === "Enter" && !event.shiftKey) {
+        // 如果当前有提及下拉框正在显示，不触发发送消息逻辑
+        // Tiptap 的 Mention 插件会在文档中插入一个特殊的类，但更稳妥的方式是
+        // 检查是否有 popup 存在且可见，这里我们通过检查 DOM 中的 tippy 元素来判断
+        const isMentionPopupVisible = document.querySelector(
+          '.tippy-box[data-theme="asset-mention"]',
+        );
+
+        if (event.key === "Enter" && !event.shiftKey && !isMentionPopupVisible) {
           event.preventDefault();
           handleSendRef.current?.();
           return true;
@@ -221,7 +426,7 @@ export function ChatWidget() {
 
   // 处理发送消息
   const handleSend = useCallback(async () => {
-    if (!input.trim() || isExecuting) return;
+    if (!input.trim()) return;
     if (!selectedAgentId) {
       toast.error(t("selectAgentPrompt"));
       return;
@@ -238,7 +443,6 @@ export function ChatWidget() {
     try {
       // 构建包含 skills 文件夹上下文的命令提示
       // 添加系统提示：强制让 opencode 主动寻找技能，而不是依赖用户提供确切文件夹名
-      const currentProject = useProjectStore.getState().currentProject;
       const idContext = currentProject ? `\n当前选中的项目ID为: ${currentProject.id}。` : "";
       const systemPrompt = `【系统指令】你当前所在的目录为项目根目录，包含 projects 和 skills 文件夹。技能存放在 skills/ 目录下。在回答用户之前，请务必主动使用 ls 查看 skills/ 下的所有子目录，并读取各个子目录中的 SKILL.md 或相关文件来匹配用户的意图。请自行找到最匹配的技能并执行，绝对不要要求用户提供具体的技能文件夹名！在读写项目文件时，请直接访问根目录下的 projects/ 文件夹，不要在 skills/ 目录下新建 projects 文件夹！注意：任何 skill 生成节点时，必须先生成 episode-node 节点（需包含标题、核心情节点、情绪节奏、主要角色等核心字段，具体参考 skills/episode-plan/SKILL.md 第22行及相关定义）。${idContext}\n`;
 
@@ -484,6 +688,8 @@ export function ChatWidget() {
             selectedAgentId={selectedAgentId}
             agents={agents}
             currentAgent={currentAgent}
+            uploadedFiles={uploadedFiles}
+            setUploadedFiles={setUploadedFiles}
             setSelectedAgentId={setSelectedAgentId}
             setAgentModalOpen={setAgentModalOpen}
             onSend={handleSend}

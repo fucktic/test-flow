@@ -21,5 +21,7 @@
   "delete": "Delete",
   "inputPlaceholder": "Type a message...",
   "send": "Send",
-  "chatWithAgent": "Chat with Agent"
+  "chatWithAgent": "Chat with Agent",
+  "uploadImage": "Upload Image",
+  "uploadFile": "Upload File"
 }

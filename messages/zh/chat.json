@@ -21,5 +21,7 @@
   "delete": "删除",
   "inputPlaceholder": "输入消息...",
   "send": "发送",
-  "chatWithAgent": "智能体对话"
+  "chatWithAgent": "智能体对话",
+  "uploadImage": "上传图片",
+  "uploadFile": "上传文件"
 }

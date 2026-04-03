@@ -2,7 +2,7 @@ import { useState } from "react";
 import { executeAgentCommand } from "../agents/executor";
 
 export const useAgent = () => {
-  const [isExecuting, setIsExecuting] = useState(false);
+  const [executingCount, setExecutingCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
   const runCommand = async (
@@ -11,7 +11,7 @@ export const useAgent = () => {
     cwd: string,
     onProgress?: (chunk: string) => void,
   ) => {
-    setIsExecuting(true);
+    setExecutingCount((prev) => prev + 1);
     setError(null);
     try {
       const result = await executeAgentCommand(agentName, command, cwd, onProgress);
@@ -20,9 +20,9 @@ export const useAgent = () => {
       setError(err.message || "Unknown error");
       throw err;
     } finally {
-      setIsExecuting(false);
+      setExecutingCount((prev) => prev - 1);
     }
   };
 
-  return { runCommand, isExecuting, error };
+  return { runCommand, isExecuting: executingCount > 0, error };
 };

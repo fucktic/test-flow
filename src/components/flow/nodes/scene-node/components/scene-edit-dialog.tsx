@@ -25,7 +25,7 @@ import tippy, { Instance as TippyInstance } from "tippy.js";
 import "tippy.js/dist/tippy.css";
 import "@/styles/tiptap-mention.css";
 import { cn } from "@/lib/utils";
-import { Music, Image as ImageIcon, Video, Box, Users, FileVideo } from "lucide-react";
+import { Music, Image as ImageIcon, Video, Box, Users, FileVideo, Paperclip } from "lucide-react";
 
 // --- Custom Asset Mention Node View ---
 const AssetNodeView = (props: any) => {
@@ -127,7 +127,7 @@ export const AssetMention = Mention.extend({
 });
 
 // --- Mention List Component ---
-const MentionList = forwardRef((props: any, ref) => {
+export const MentionList = forwardRef((props: any, ref) => {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const tFlow = useTranslations("flow.sceneNode");
 
@@ -138,6 +138,7 @@ const MentionList = forwardRef((props: any, ref) => {
     audio: "音频",
     image: "图片",
     video: "视频",
+    file: "文件",
   };
 
   const getIcon = (type: string) => {
@@ -154,6 +155,8 @@ const MentionList = forwardRef((props: any, ref) => {
         return <ImageIcon className="w-4 h-4" />;
       case "video":
         return <Video className="w-4 h-4" />;
+      case "file":
+        return <Paperclip className="w-4 h-4" />;
       default:
         return null;
     }
@@ -187,11 +190,11 @@ const MentionList = forwardRef((props: any, ref) => {
 
   useImperativeHandle(ref, () => ({
     onKeyDown: ({ event }: any) => {
-      if (event.key === "ArrowUp" || event.key === "ArrowLeft") {
+      if (event.key === "ArrowUp") {
         upHandler();
         return true;
       }
-      if (event.key === "ArrowDown" || event.key === "ArrowRight") {
+      if (event.key === "ArrowDown") {
         downHandler();
         return true;
       }
@@ -217,43 +220,60 @@ const MentionList = forwardRef((props: any, ref) => {
         const itemType = item.category || item.type;
         const typeText = categoryMap[itemType] || itemType;
 
+        const prevItem = index > 0 ? props.items[index - 1] : null;
+        const prevItemType = prevItem ? prevItem.category || prevItem.type : null;
+        const isFirstOfGroup = itemType !== prevItemType;
+
         return (
-          <button
-            key={index}
-            className={cn(
-              "flex items-center gap-3 w-full text-left px-2 py-1.5 text-sm transition-all rounded-md outline-none select-none",
-              index === selectedIndex
-                ? "bg-accent/80 text-accent-foreground"
-                : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
-            )}
-            onClick={() => selectItem(index)}
-          >
-            <div className="w-8 h-8 rounded-md shrink-0 bg-muted border border-border/50 flex items-center justify-center overflow-hidden">
-              {item.url ? (
-                itemType === "audio" ? (
-                  <div className="w-full h-full bg-purple-500/10 text-purple-500 flex items-center justify-center">
-                    <Music className="w-4 h-4" />
-                  </div>
-                ) : (
-                  <img src={item.url} alt={item.name} className="w-full h-full object-cover" />
-                )
-              ) : (
-                <div className="w-full h-full bg-primary/5 text-primary flex items-center justify-center">
-                  {getIcon(itemType) || (
-                    <span className="text-xs font-medium">
-                      {itemType?.charAt(0).toUpperCase() || "?"}
-                    </span>
-                  )}
-                </div>
-              )}
-            </div>
-            <div className="flex flex-col overflow-hidden gap-0.5">
-              <span className="truncate font-medium text-foreground leading-none">{item.name}</span>
-              <span className="text-[10px] opacity-80 truncate uppercase tracking-wider">
+          <div key={index} className="flex flex-col w-full">
+            {isFirstOfGroup && (
+              <div
+                className={cn(
+                  "px-2 py-1 text-xs font-semibold text-muted-foreground bg-muted/30 sticky top-0 backdrop-blur-sm z-10 mb-1 rounded-sm",
+                  index > 0 ? "mt-2" : "",
+                )}
+              >
                 {typeText}
-              </span>
-            </div>
-          </button>
+              </div>
+            )}
+            <button
+              className={cn(
+                "flex items-center gap-3 w-full text-left px-2 py-1.5 text-sm transition-all rounded-md outline-none select-none",
+                index === selectedIndex
+                  ? "bg-accent/80 text-accent-foreground"
+                  : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
+              )}
+              onClick={() => selectItem(index)}
+            >
+              <div className="w-8 h-8 rounded-md shrink-0 bg-muted border border-border/50 flex items-center justify-center overflow-hidden">
+                {item.url ? (
+                  itemType === "audio" ? (
+                    <div className="w-full h-full bg-purple-500/10 text-purple-500 flex items-center justify-center">
+                      <Music className="w-4 h-4" />
+                    </div>
+                  ) : (
+                    <img src={item.url} alt={item.name} className="w-full h-full object-cover" />
+                  )
+                ) : (
+                  <div className="w-full h-full bg-primary/5 text-primary flex items-center justify-center">
+                    {getIcon(itemType) || (
+                      <span className="text-xs font-medium">
+                        {itemType?.charAt(0).toUpperCase() || "?"}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+              <div className="flex flex-col overflow-hidden gap-0.5">
+                <span className="truncate font-medium text-foreground leading-none">
+                  {item.name}
+                </span>
+                <span className="text-[10px] opacity-80 truncate uppercase tracking-wider">
+                  {typeText}
+                </span>
+              </div>
+            </button>
+          </div>
         );
       })}
     </div>
@@ -333,6 +353,14 @@ export function SceneEditDialog({ scene, onOpenChange, onSave }: SceneEditDialog
               .filter((item) =>
                 (item.name || "").toLowerCase().includes((query || "").toLowerCase()),
               )
+              .sort((a, b) => {
+                const typeA = a.category || a.type || "";
+                const typeB = b.category || b.type || "";
+                if (typeA !== typeB) {
+                  return typeA.localeCompare(typeB);
+                }
+                return (a.name || "").localeCompare(b.name || "");
+              })
               .slice(0, 10);
             return list;
           },
