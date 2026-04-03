@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
+import { v4 as uuidv4 } from "uuid";
 import { Project, Resource } from "../types/project.types";
 
 interface ProjectState {
@@ -48,7 +49,7 @@ export const useProjectStore = create<ProjectState>()(
 
     createProject: (name) => {
       const newProject: Project = {
-        id: crypto.randomUUID(),
+        id: uuidv4(),
         name,
         createdAt: Date.now(),
         updatedAt: Date.now(),

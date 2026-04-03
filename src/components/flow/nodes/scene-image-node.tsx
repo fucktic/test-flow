@@ -1,4 +1,5 @@
 import { memo, useState, useRef } from "react";
+import { v4 as uuidv4 } from "uuid";
 import { Handle, Position } from "@xyflow/react";
 import { SceneImageNodeData } from "@/lib/types/flow.types";
 import { useTranslations } from "next-intl";
@@ -53,7 +54,7 @@ const SceneImageNode = ({ id, data, selected }: SceneImageNodeProps) => {
 
       const { url } = await res.json();
 
-      const newImage = { id: "custom-" + Date.now(), url };
+      const newImage = { id: uuidv4(), url };
       const existingImages = data.images ? [...data.images] : [];
       updateNodeData(id, {
         images: [...existingImages, newImage],

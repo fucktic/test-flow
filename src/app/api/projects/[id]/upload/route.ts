@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import fs from "fs/promises";
 import path from "path";
+import { v4 as uuidv4 } from "uuid";
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -8,9 +9,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     const formData = await request.formData();
     const file = formData.get("file") as File;
     const type = formData.get("type") as string; // 'image' or 'video' or 'audio'
-    const sceneId = formData.get("sceneId") as string;
     const source = formData.get("source") as string; // 'asset' or 'episode' (default)
-    const category = formData.get("category") as string; // for assets: 'characters', 'scenes', 'props', 'audio'
+    const category = formData.get("category") as string; // 'characters', 'scenes', 'props', 'audio'
 
     if (!file) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
@@ -36,8 +36,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     // Generate file name
     const ext =
       path.extname(file.name) || (type === "video" ? ".mp4" : type === "audio" ? ".mp3" : ".png");
-    const prefix = source === "asset" ? "asset" : sceneId || "S-x";
-    const fileName = `${prefix}-${Date.now()}${ext}`;
+    const fileName = `${uuidv4()}${ext}`;
     const filePath = path.join(dirPath, fileName);
 
     await fs.writeFile(filePath, buffer);

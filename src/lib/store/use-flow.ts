@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
+import { v4 as uuidv4 } from "uuid";
 import {
   Node,
   Edge,
@@ -323,7 +324,7 @@ const getSceneHandlers = (set: any, nodeId: string) => ({
     set((state: any) => {
       const node = state.nodes.find((n: any) => n.id === nodeId);
       if (node && node.type === "sceneNode") {
-        const newId = `s${Date.now()}`;
+        const newId = uuidv4();
         const newScene = {
           id: newId,
           name: `S-New`,
@@ -454,7 +455,7 @@ const getAssetHandlers = (set: any, nodeId: string) => ({
       const node = state.nodes.find((n: any) => n.id === nodeId);
       if (node && node.type === "assetNode") {
         const data = node.data as any;
-        const assetId = `asset-${Date.now()}`;
+        const assetId = uuidv4();
         if (!data.assets?.[payload.category]) {
           return;
         }

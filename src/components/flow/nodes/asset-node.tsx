@@ -410,7 +410,9 @@ const AssetNode = ({ data, selected }: AssetNodeProps) => {
                     </SelectTrigger>
                     <SelectContent>
                       {tabs.map((tab) => (
-                        <SelectItem value={tab.id}>{tab.label}</SelectItem>
+                        <SelectItem key={tab.id} value={tab.id}>
+                          {tab.label}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>

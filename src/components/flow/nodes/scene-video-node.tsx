@@ -1,4 +1,5 @@
 import { memo, useState, useRef } from "react";
+import { v4 as uuidv4 } from "uuid";
 import { Handle, Position } from "@xyflow/react";
 import { SceneVideoNodeData } from "@/lib/types/flow.types";
 import { useTranslations } from "next-intl";
@@ -85,7 +86,7 @@ const SceneVideoNode = ({ id, data, selected }: SceneVideoNodeProps) => {
             // 将 base64 转换为 blob 并作为封面上传到服务器保存至文件夹
             const fetchRes = await fetch(base64Url);
             const blob = await fetchRes.blob();
-            const posterFile = new File([blob], `poster-${Date.now()}.jpg`, {
+            const posterFile = new File([blob], `${uuidv4()}.jpg`, {
               type: "image/jpeg",
             });
 
@@ -110,7 +111,7 @@ const SceneVideoNode = ({ id, data, selected }: SceneVideoNodeProps) => {
           }
 
           const newVideo = {
-            id: "custom-" + Date.now(),
+            id: uuidv4(),
             url: url,
             poster: finalPosterUrl,
             selected: true,

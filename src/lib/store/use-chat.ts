@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
+import { v4 as uuidv4 } from "uuid";
 import { Agent } from "@/lib/types/agent.types";
 
 // 聊天消息类型定义
@@ -80,7 +81,7 @@ export const useChatStore = create<ChatState>()(
       }),
 
     addMessage: (msg) => {
-      const id = crypto.randomUUID();
+      const id = uuidv4();
       set((state) => {
         state.messages.push({
           ...msg,
