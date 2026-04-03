@@ -22,9 +22,12 @@
     "editScene": "编辑分镜",
     "sceneName": "分镜名称",
     "sceneNamePlaceholder": "请输入分镜名称",
+    "promptLabel": "提示词",
+    "promptPlaceholder": "请输入提示词",
     "delete": "删除当前分镜",
     "add": "当前位置手动增加分镜",
-    "sceneList": "分镜列表"
+    "sceneList": "分镜列表",
+    "noMatchedAssets": "无匹配资产"
   },
   "sceneImageNode": {
     "title": "生成图像",
@@ -81,6 +84,8 @@
     "categoryLabel": "资产分类",
     "typeLabel": "资产类型",
     "descriptionLabel": "描述",
+    "promptLabel": "提示词",
+    "promptPlaceholder": "请输入提示词",
     "uploadLabel": "上传文件",
     "uploadHint": "点击或拖拽文件到此处上传",
     "replaceFile": "替换",

@@ -57,7 +57,7 @@ const syncGraph = (state: any, set: any) => {
         sceneNode = {
           id: sceneNodeId,
           type: "sceneNode",
-          position: { x: episodeNode.position.x + 1000, y: currentY },
+          position: { x: episodeNode.position.x + 400, y: currentY },
           data: {
             title: `分镜列表 ${epPrefix}`,
             scenes: [],
@@ -76,7 +76,7 @@ const syncGraph = (state: any, set: any) => {
       const wasHidden = sceneNode.hidden !== false;
       sceneNode.hidden = !isChecked;
       if (isChecked && wasHidden) {
-        sceneNode.position = { x: episodeNode.position.x + 1000, y: currentY };
+        sceneNode.position = { x: episodeNode.position.x + 400, y: currentY };
       }
       newNodes.push(sceneNode);
 
@@ -107,7 +107,7 @@ const syncGraph = (state: any, set: any) => {
             imgNode = {
               id: imgNodeId,
               type: "sceneImageNode",
-              position: { x: episodeNode.position.x + 1500, y: sceneY },
+              position: { x: episodeNode.position.x + 900, y: sceneY },
               data: { sceneId: scene.name, isExpanded: true, ...getImageHandlers(set, imgNodeId) },
             };
           }
@@ -119,7 +119,7 @@ const syncGraph = (state: any, set: any) => {
           const wasImgHidden = imgNode.hidden !== false;
           imgNode.hidden = !(isChecked && isSceneSelected);
           if (isChecked && isSceneSelected && wasImgHidden) {
-            imgNode.position = { x: episodeNode.position.x + 1500, y: sceneY };
+            imgNode.position = { x: episodeNode.position.x + 900, y: sceneY };
           }
           newNodes.push(imgNode);
 
@@ -142,7 +142,7 @@ const syncGraph = (state: any, set: any) => {
             vidNode = {
               id: vidNodeId,
               type: "sceneVideoNode",
-              position: { x: episodeNode.position.x + 1900, y: sceneY },
+              position: { x: episodeNode.position.x + 1400, y: sceneY },
               data: { sceneId: scene.name, isExpanded: true, ...getVideoHandlers(set, vidNodeId) },
             };
           }
@@ -154,7 +154,7 @@ const syncGraph = (state: any, set: any) => {
           const wasVidHidden = vidNode.hidden !== false;
           vidNode.hidden = !(isChecked && isSceneSelected);
           if (isChecked && isSceneSelected && wasVidHidden) {
-            vidNode.position = { x: episodeNode.position.x + 1900, y: sceneY };
+            vidNode.position = { x: episodeNode.position.x + 1400, y: sceneY };
           }
           newNodes.push(vidNode);
 
@@ -292,7 +292,7 @@ const getSceneHandlers = (set: any, nodeId: string) => ({
   onSceneEdit: (id: string) => {
     console.log("Edit scene", id);
   },
-  onSceneChange: (id: string, content: string, name?: string) => {
+  onSceneChange: (id: string, content: string, name?: string, prompt?: string) => {
     set((state: any) => {
       const node = state.nodes.find((n: any) => n.id === nodeId);
       if (node && node.type === "sceneNode") {
@@ -302,6 +302,9 @@ const getSceneHandlers = (set: any, nodeId: string) => ({
           scene.content = content;
           if (name !== undefined) {
             scene.name = name;
+          }
+          if (prompt !== undefined) {
+            scene.prompt = prompt;
           }
         }
       }
@@ -444,6 +447,7 @@ const getAssetHandlers = (set: any, nodeId: string) => ({
       description: string;
       fileUrl?: string;
       mediaType?: "image" | "audio" | "video";
+      prompt?: string;
     },
   ) => {
     set((state: any) => {
@@ -460,6 +464,7 @@ const getAssetHandlers = (set: any, nodeId: string) => ({
           type: payload.mediaType || (payload.category === "audio" ? "audio" : "image"),
           url: payload.fileUrl || "",
           description: payload.description,
+          prompt: payload.prompt,
         });
         data.selectedAssetId = assetId;
         data.activeTab = payload.category;
@@ -475,6 +480,7 @@ const getAssetHandlers = (set: any, nodeId: string) => ({
       description: string;
       fileUrl?: string;
       mediaType?: "image" | "audio" | "video";
+      prompt?: string;
     },
   ) => {
     set((state: any) => {
@@ -498,6 +504,7 @@ const getAssetHandlers = (set: any, nodeId: string) => ({
           type: nextType,
           url: payload.fileUrl || targetAsset.url,
           description: payload.description,
+          prompt: payload.prompt !== undefined ? payload.prompt : targetAsset.prompt,
         };
         if (payload.category === tab) {
           Object.assign(targetAsset, updatedAsset);

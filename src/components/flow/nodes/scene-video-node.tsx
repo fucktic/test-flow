@@ -39,9 +39,14 @@ const SceneVideoNode = ({ id, data, selected }: SceneVideoNodeProps) => {
     if (!file || !currentProject) return;
 
     try {
+      if (!file.type.startsWith("video/")) {
+        console.error("Only video files are allowed");
+        return;
+      }
+
       const formData = new FormData();
       formData.append("file", file);
-      formData.append("type", file.type.startsWith("video/") ? "video" : "image");
+      formData.append("type", "video");
       formData.append("sceneId", data.sceneId || "S-x");
 
       const res = await fetch(`/api/projects/${currentProject.id}/upload`, {
@@ -53,54 +58,73 @@ const SceneVideoNode = ({ id, data, selected }: SceneVideoNodeProps) => {
 
       const { url } = await res.json();
 
-      // 如果是视频文件，提取首帧作为封面
-      if (file.type.startsWith("video/")) {
-        const video = document.createElement("video");
-        video.src = url;
-        video.crossOrigin = "anonymous";
-        video.muted = true;
-        video.playsInline = true;
+      // 提取视频首帧作为封面
+      const video = document.createElement("video");
+      video.src = url;
+      video.crossOrigin = "anonymous";
+      video.muted = true;
+      video.playsInline = true;
 
-        video.onloadeddata = () => {
-          // 定位到第一帧
-          video.currentTime = 0.1; // 使用 0.1s 避免某些视频第一帧为空白
-        };
+      video.onloadeddata = () => {
+        // 定位到第一帧
+        video.currentTime = 0.1; // 使用 0.1s 避免某些视频第一帧为空白
+      };
 
-        video.onseeked = () => {
-          const canvas = document.createElement("canvas");
-          canvas.width = video.videoWidth;
-          canvas.height = video.videoHeight;
-          const ctx = canvas.getContext("2d");
-          if (ctx) {
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            const posterUrl = canvas.toDataURL("image/jpeg", 0.8);
+      video.onseeked = async () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          // 获取 base64 用于回退或直接转换为 blob
+          const base64Url = canvas.toDataURL("image/jpeg", 0.8);
+          let finalPosterUrl = base64Url;
 
-            const newVideo = {
-              id: "custom-" + Date.now(),
-              url: url,
-              poster: posterUrl,
-              selected: true,
-            };
-            const existingVideos = data.videos
-              ? data.videos.map((v) => ({ ...v, selected: false }))
-              : [];
-            updateNodeData(id, {
-              videos: [...existingVideos, newVideo],
+          try {
+            // 将 base64 转换为 blob 并作为封面上传到服务器保存至文件夹
+            const fetchRes = await fetch(base64Url);
+            const blob = await fetchRes.blob();
+            const posterFile = new File([blob], `poster-${Date.now()}.jpg`, {
+              type: "image/jpeg",
             });
+
+            const posterFormData = new FormData();
+            posterFormData.append("file", posterFile);
+            posterFormData.append("type", "image");
+            posterFormData.append("sceneId", data.sceneId || "S-x");
+
+            const uploadRes = await fetch(`/api/projects/${currentProject.id}/upload`, {
+              method: "POST",
+              body: posterFormData,
+            });
+
+            if (uploadRes.ok) {
+              const uploadData = await uploadRes.json();
+              finalPosterUrl = uploadData.url;
+            } else {
+              console.error("Failed to upload poster, falling back to base64");
+            }
+          } catch (error) {
+            console.error("Error uploading poster:", error);
           }
-        };
-      } else {
-        // 如果是图片，直接添加
-        const newVideo = { id: "custom-" + Date.now(), url: url, selected: true };
-        const existingVideos = data.videos
-          ? data.videos.map((v) => ({ ...v, selected: false }))
-          : [];
-        updateNodeData(id, {
-          videos: [...existingVideos, newVideo],
-        });
-      }
+
+          const newVideo = {
+            id: "custom-" + Date.now(),
+            url: url,
+            poster: finalPosterUrl,
+            selected: true,
+          };
+          const existingVideos = data.videos
+            ? data.videos.map((v) => ({ ...v, selected: false }))
+            : [];
+          updateNodeData(id, {
+            videos: [...existingVideos, newVideo],
+          });
+        }
+      };
     } catch (error) {
-      console.error("Failed to upload video/image:", error);
+      console.error("Failed to upload video:", error);
     }
     e.target.value = ""; // 重置 input 状态
   };
@@ -223,7 +247,7 @@ const SceneVideoNode = ({ id, data, selected }: SceneVideoNodeProps) => {
               type="file"
               ref={fileInputRef}
               className="hidden"
-              accept="video/*,image/*"
+              accept="video/*"
               onChange={handleFileChange}
             />
             <button

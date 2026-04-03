@@ -126,6 +126,7 @@ export const AssetMention = Mention.extend({
 // --- Mention List Component ---
 const MentionList = forwardRef((props: any, ref) => {
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const tFlow = useTranslations("flow.sceneNode");
 
   const categoryMap: Record<string, string> = {
     characters: "角色",
@@ -202,7 +203,7 @@ const MentionList = forwardRef((props: any, ref) => {
   if (!props.items || props.items.length === 0) {
     return (
       <div className="bg-popover text-popover-foreground border border-border shadow-lg rounded-xl p-3 text-sm w-64 text-center z-[999999]">
-        无匹配资产
+        {tFlow("noMatchedAssets")}
       </div>
     );
   }
@@ -262,7 +263,7 @@ MentionList.displayName = "MentionList";
 interface SceneEditDialogProps {
   scene: SceneItem;
   onOpenChange: (open: boolean) => void;
-  onSave: (id: string, name: string, content: string) => void;
+  onSave: (id: string, name: string, content: string, prompt?: string) => void;
 }
 
 export function SceneEditDialog({ scene, onOpenChange, onSave }: SceneEditDialogProps) {

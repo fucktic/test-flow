@@ -55,6 +55,7 @@ const AssetNode = ({ data, selected }: AssetNodeProps) => {
         name: z.string().trim().min(1, tFlow("nameRequired")),
         category: z.enum(["characters", "scenes", "props", "audio"]),
         description: z.string(),
+        prompt: z.string().optional(),
       }),
     [tFlow],
   );
@@ -67,6 +68,7 @@ const AssetNode = ({ data, selected }: AssetNodeProps) => {
       name: "",
       category: activeTab,
       description: "",
+      prompt: "",
     },
   });
 
@@ -169,6 +171,7 @@ const AssetNode = ({ data, selected }: AssetNodeProps) => {
         description: values.description,
         fileUrl: uploadedFileUrl || undefined,
         mediaType: uploadedMediaType,
+        prompt: values.prompt,
       });
     } else {
       data.onAssetAdd?.(activeTab, {
@@ -177,6 +180,7 @@ const AssetNode = ({ data, selected }: AssetNodeProps) => {
         description: values.description,
         fileUrl: uploadedFileUrl || undefined,
         mediaType: uploadedMediaType,
+        prompt: values.prompt,
       });
     }
     setFormDialogOpen(false);
@@ -196,6 +200,7 @@ const AssetNode = ({ data, selected }: AssetNodeProps) => {
       name: "",
       category: activeTab,
       description: "",
+      prompt: "",
     });
     setUploadedFileName("");
     setUploadedFileUrl("");
@@ -210,6 +215,7 @@ const AssetNode = ({ data, selected }: AssetNodeProps) => {
       name: item.name,
       category: activeTab,
       description: item.description || "",
+      prompt: item.prompt || "",
     });
     setUploadedFileName("");
     setUploadedFileUrl(item.url || "");
@@ -404,7 +410,7 @@ const AssetNode = ({ data, selected }: AssetNodeProps) => {
                     </SelectTrigger>
                     <SelectContent>
                       {tabs.map((tab) => (
-                        <SelectItem value={tab.id}>{tFlow(tab.label)}</SelectItem>
+                        <SelectItem value={tab.id}>{tab.label}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>

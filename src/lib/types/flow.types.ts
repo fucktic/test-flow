@@ -47,6 +47,7 @@ export interface SceneItem {
   id: string;
   name: string;
   content: string;
+  prompt?: string;
   selected?: boolean;
 }
 
@@ -56,7 +57,7 @@ export interface SceneNodeData {
   scenes: SceneItem[];
   onSceneSelect?: (id: string) => void;
   onSceneEdit?: (id: string) => void;
-  onSceneChange?: (id: string, content: string, name?: string) => void;
+  onSceneChange?: (id: string, content: string, name?: string, prompt?: string) => void;
   onSceneDelete?: (id: string) => void;
   onSceneAdd?: (index: number) => void;
 }
@@ -147,6 +148,7 @@ export interface AssetItem {
   url: string;
   poster?: string;
   description?: string;
+  prompt?: string;
 }
 
 export interface AssetNodeData {
@@ -168,6 +170,7 @@ export interface AssetNodeData {
       description: string;
       fileUrl?: string;
       mediaType?: AssetItem["type"];
+      prompt?: string;
     },
   ) => void;
   onAssetUpdate?: (
@@ -179,6 +182,7 @@ export interface AssetNodeData {
       description: string;
       fileUrl?: string;
       mediaType?: AssetItem["type"];
+      prompt?: string;
     },
   ) => void;
   onAssetSelect?: (assetId?: string) => void;

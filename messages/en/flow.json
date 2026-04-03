@@ -22,9 +22,12 @@
     "editScene": "Edit Scene",
     "sceneName": "Scene Name",
     "sceneNamePlaceholder": "Please enter a scene name",
+    "promptLabel": "Prompt",
+    "promptPlaceholder": "Please enter prompt",
     "delete": "Delete current scene",
     "add": "Add scene at current position",
-    "sceneList": "Scene List"
+    "sceneList": "Scene List",
+    "noMatchedAssets": "No matched assets"
   },
   "sceneImageNode": {
     "title": "Generate Image",
@@ -81,6 +84,8 @@
     "categoryLabel": "Asset Category",
     "typeLabel": "Asset Type",
     "descriptionLabel": "Description",
+    "promptLabel": "Prompt",
+    "promptPlaceholder": "Please enter prompt",
     "uploadLabel": "Upload File",
     "uploadHint": "Click or drag file here to upload",
     "replaceFile": "Replace",

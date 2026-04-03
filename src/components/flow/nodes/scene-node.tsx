@@ -183,9 +183,9 @@ export const SceneNode = ({ data, selected }: { data: SceneNodeData; selected?: 
           onOpenChange={(open: boolean) => {
             if (!open) setEditingScene(null);
           }}
-          onSave={(id: string, name: string, content: string) => {
+          onSave={(id: string, name: string, content: string, prompt?: string) => {
             if (data.onSceneChange) {
-              data.onSceneChange(id, content, name);
+              data.onSceneChange(id, content, name, prompt);
             }
             setEditingScene(null);
           }}
