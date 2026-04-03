@@ -239,9 +239,8 @@ export function ChatWidget() {
       // 构建包含 skills 文件夹上下文的命令提示
       // 添加系统提示：强制让 opencode 主动寻找技能，而不是依赖用户提供确切文件夹名
       const currentProject = useProjectStore.getState().currentProject;
-      const projectIdContext = currentProject ? `\n当前选中的项目ID为: ${currentProject.id}。` : "";
-
-      const systemPrompt = `【系统指令】你当前所在的目录为项目根目录，包含 projects 和 skills 文件夹。技能存放在 skills/ 目录下。在回答用户之前，请务必主动使用 ls 查看 skills/ 下的所有子目录，并读取各个子目录中的 SKILL.md 或相关文件来匹配用户的意图。请自行找到最匹配的技能并执行，绝对不要要求用户提供具体的技能文件夹名！在读写项目文件时，请直接访问根目录下的 projects/ 文件夹，不要在 skills/ 目录下新建 projects 文件夹！注意：任何 skill 生成节点时，必须先生成 episode-node 节点（需包含标题、核心情节点、情绪节奏、主要角色等核心字段，具体参考 skills/episode-plan/SKILL.md 第22行及相关定义）。${projectIdContext}\n`;
+      const idContext = currentProject ? `\n当前选中的项目ID为: ${currentProject.id}。` : "";
+      const systemPrompt = `【系统指令】你当前所在的目录为项目根目录，包含 projects 和 skills 文件夹。技能存放在 skills/ 目录下。在回答用户之前，请务必主动使用 ls 查看 skills/ 下的所有子目录，并读取各个子目录中的 SKILL.md 或相关文件来匹配用户的意图。请自行找到最匹配的技能并执行，绝对不要要求用户提供具体的技能文件夹名！在读写项目文件时，请直接访问根目录下的 projects/ 文件夹，不要在 skills/ 目录下新建 projects 文件夹！注意：任何 skill 生成节点时，必须先生成 episode-node 节点（需包含标题、核心情节点、情绪节奏、主要角色等核心字段，具体参考 skills/episode-plan/SKILL.md 第22行及相关定义）。${idContext}\n`;
 
       const commandText = `${systemPrompt}\n【最新指令】\nUser: ${currentInput}`;
 

@@ -1,5 +1,5 @@
 import { memo, useMemo, useState } from "react";
-import { useForm, Controller } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { AssetNodeData, AssetCategory, AssetItem } from "@/lib/types/flow.types";
@@ -8,28 +8,13 @@ import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Image as ImageIcon, Music, Maximize2, Pencil, Plus, Trash2 } from "lucide-react";
 import { MediaPreviewModal, MediaItem } from "@/components/common/media-preview-modal";
-import { FileUpload } from "@/components/common/file-upload";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { getNodeWrapperClassName } from "./utils";
+import { getNodeWrapperClassName } from "../utils";
 import { useProjectStore } from "@/lib/store/use-projects";
+
+import { AssetFormDialog } from "./components/asset-form-dialog";
+import { AssetDeleteDialog } from "./components/asset-delete-dialog";
 
 interface AssetNodeProps {
   data: AssetNodeData;
@@ -38,15 +23,14 @@ interface AssetNodeProps {
 
 const AssetNode = ({ data, selected }: AssetNodeProps) => {
   const tFlow = useTranslations("flow.assetNode");
-  const tCommon = useTranslations("common");
   const currentProject = useProjectStore((state) => state.currentProject);
   const [activeTab, setActiveTab] = useState<AssetCategory>(data.activeTab || "characters");
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewIndex, setPreviewIndex] = useState(0);
   const [formDialogOpen, setFormDialogOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const [editingAssetId, setEditingAssetId] = useState<string | null>(null);
-  const [deleteAssetId, setDeleteAssetId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const [uploadedFileName, setUploadedFileName] = useState("");
 
   const formSchema = useMemo(
@@ -89,10 +73,10 @@ const AssetNode = ({ data, selected }: AssetNodeProps) => {
 
   const currentAssets = data.assets?.[activeTab] || [];
   const deleteAsset = useMemo(
-    () => currentAssets.find((item) => item.id === deleteAssetId),
-    [currentAssets, deleteAssetId],
+    () => currentAssets.find((item) => item.id === deleteId),
+    [currentAssets, deleteId],
   );
-  const isEditMode = editingAssetId !== null;
+  const isEditMode = editingId !== null;
 
   const previewItems: MediaItem[] = currentAssets
     .filter((item: AssetItem) => (item.type === "image" || item.type === "video") && !!item.url)
@@ -113,13 +97,10 @@ const AssetNode = ({ data, selected }: AssetNodeProps) => {
       }
     } else if (item.type === "audio") {
       if (!item.url) return;
-      const audio = new Audio(item.url);
+      const audioUrl = item.url;
+      const audio = new Audio(audioUrl);
       audio.play().catch((e) => console.error(e));
     }
-  };
-
-  const getAcceptMime = (category: AssetCategory) => {
-    return category === "audio" ? "audio/*" : "image/*";
   };
 
   const handleFileUpload = async (file: File) => {
@@ -164,8 +145,8 @@ const AssetNode = ({ data, selected }: AssetNodeProps) => {
   };
 
   const handleSaveAsset = form.handleSubmit((values: FormValues) => {
-    if (editingAssetId) {
-      data.onAssetUpdate?.(activeTab, editingAssetId, {
+    if (editingId) {
+      data.onAssetUpdate?.(activeTab, editingId, {
         name: values.name,
         category: values.category,
         description: values.description,
@@ -186,7 +167,7 @@ const AssetNode = ({ data, selected }: AssetNodeProps) => {
     setFormDialogOpen(false);
     setActiveTab(values.category);
     data.onTabChange?.(values.category);
-    setEditingAssetId(null);
+    setEditingId(null);
     form.reset();
     setUploadedFileName("");
     setUploadedFileUrl("");
@@ -195,7 +176,7 @@ const AssetNode = ({ data, selected }: AssetNodeProps) => {
   });
 
   const openCreateDialog = () => {
-    setEditingAssetId(null);
+    setEditingId(null);
     form.reset({
       name: "",
       category: activeTab,
@@ -210,7 +191,7 @@ const AssetNode = ({ data, selected }: AssetNodeProps) => {
   };
 
   const openEditDialog = (item: AssetItem) => {
-    setEditingAssetId(item.id);
+    setEditingId(item.id);
     form.reset({
       name: item.name,
       category: activeTab,
@@ -225,7 +206,7 @@ const AssetNode = ({ data, selected }: AssetNodeProps) => {
   };
 
   const openDeleteDialog = (item: AssetItem) => {
-    setDeleteAssetId(item.id);
+    setDeleteId(item.id);
     setDeleteOpen(true);
   };
 
@@ -234,7 +215,7 @@ const AssetNode = ({ data, selected }: AssetNodeProps) => {
       return;
     }
     data.onAssetDelete?.(deleteAsset.id);
-    setDeleteAssetId(null);
+    setDeleteId(null);
     setDeleteOpen(false);
   };
 
@@ -295,13 +276,34 @@ const AssetNode = ({ data, selected }: AssetNodeProps) => {
                   <div
                     className={cn(
                       "aspect-square bg-muted rounded-lg overflow-hidden relative border transition-colors",
-                      data.selectedAssetId === item.id
+                      data.selectedId === item.id
                         ? "border-primary ring-1 ring-primary/40"
                         : "border-border/50 group-hover/asset:border-primary/50",
                     )}
                   >
-                    {(item.type === "image" || item.type === "video") && item.url ? (
-                      <img src={item.url} alt={item.name} className="w-full h-full object-cover" />
+                    {item.type === "image" && item.url ? (
+                      <img
+                        src={item.url}
+                        alt={item.name}
+                        className="w-full h-full object-cover transition-transform group-hover/asset:scale-105"
+                        loading="lazy"
+                      />
+                    ) : item.type === "video" && item.url ? (
+                      item.poster ? (
+                        <img
+                          src={item.poster}
+                          alt={item.name}
+                          className="w-full h-full object-cover transition-transform group-hover/asset:scale-105"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <video
+                          src={item.url}
+                          className="w-full h-full object-cover transition-transform group-hover/asset:scale-105"
+                          muted
+                          playsInline
+                        />
+                      )
                     ) : (
                       <div className="w-full h-full flex items-center justify-center bg-secondary/30">
                         <Music className="w-8 h-8 text-primary/50" />
@@ -370,125 +372,48 @@ const AssetNode = ({ data, selected }: AssetNodeProps) => {
         </ScrollArea>
       </div>
 
-      <Dialog
-        aria-describedby
+      <AssetFormDialog
         open={formDialogOpen}
         onOpenChange={(open) => {
           setFormDialogOpen(open);
           if (!open) {
-            setEditingAssetId(null);
+            setEditingId(null);
           }
         }}
-      >
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>{isEditMode ? tFlow("editTitle") : tFlow("createTitle")}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3">
-            <div className="space-y-1.5">
-              <Label>{tFlow("nameLabel")}</Label>
-              <Input {...form.register("name")} />
-              {form.formState.errors.name && (
-                <div className="text-xs text-destructive">{form.formState.errors.name.message}</div>
-              )}
-            </div>
-            <div className="space-y-1.5">
-              <Label>{tFlow("categoryLabel")}</Label>
-              <Controller
-                control={form.control}
-                name="category"
-                render={({ field }) => (
-                  <Select
-                    value={field.value}
-                    onValueChange={(value) => {
-                      field.onChange(value);
-                      setUploadError("");
-                    }}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {tabs.map((tab) => (
-                        <SelectItem key={tab.id} value={tab.id}>
-                          {tab.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label>{tFlow("descriptionLabel")}</Label>
-              <Textarea {...form.register("description")} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>{tFlow("uploadLabel")}</Label>
-              <FileUpload
-                accept={getAcceptMime(assetCategory)}
-                onFileSelect={(file) => void handleFileUpload(file)}
-                fileUrl={uploadedFileUrl}
-                fileName={uploadedFileName}
-                mediaType={uploadedMediaType}
-                onClear={() => {
-                  setUploadedFileUrl("");
-                  setUploadedFileName("");
-                  setUploadedMediaType(undefined);
-                }}
-                hint={tFlow("uploadHint")}
-                subHint={assetCategory === "audio" ? tFlow("typeAudio") : tFlow("typeImage")}
-                error={uploadError}
-                replaceText={tFlow("replaceFile")}
-                clearText={tFlow("clearFile")}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setFormDialogOpen(false);
-                setEditingAssetId(null);
-              }}
-            >
-              {tFlow("cancel")}
-            </Button>
-            <Button onClick={handleSaveAsset} disabled={!form.watch("name")?.trim()}>
-              {isEditMode ? tFlow("save") : tFlow("create")}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        isEditMode={isEditMode}
+        form={form}
+        assetCategory={assetCategory}
+        tabs={tabs}
+        uploadedFileUrl={uploadedFileUrl}
+        uploadedFileName={uploadedFileName}
+        uploadedMediaType={uploadedMediaType}
+        uploadError={uploadError}
+        onFileUpload={handleFileUpload}
+        onClearFile={() => {
+          setUploadedFileUrl("");
+          setUploadedFileName("");
+          setUploadedMediaType(undefined);
+        }}
+        onSave={handleSaveAsset}
+        onCancel={() => {
+          setFormDialogOpen(false);
+          setEditingId(null);
+        }}
+        setUploadError={setUploadError}
+      />
 
-      <Dialog
+      <AssetDeleteDialog
         open={deleteOpen}
         onOpenChange={(open) => {
           setDeleteOpen(open);
           if (!open) {
-            setDeleteAssetId(null);
+            setDeleteId(null);
           }
         }}
-      >
-        <DialogContent className="sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle>{tFlow("deleteConfirmTitle")}</DialogTitle>
-          </DialogHeader>
-          <div className="text-sm text-muted-foreground">
-            {deleteAsset
-              ? tFlow("deleteConfirmDescriptionWithName", { name: deleteAsset.name })
-              : tFlow("deleteConfirmDescription")}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteOpen(false)}>
-              {tCommon("cancel")}
-            </Button>
-            <Button variant="destructive" onClick={handleDeleteAsset}>
-              {tCommon("delete")}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        deleteAsset={deleteAsset}
+        onConfirm={handleDeleteAsset}
+        onCancel={() => setDeleteOpen(false)}
+      />
 
       <MediaPreviewModal
         open={previewOpen}

@@ -8,7 +8,6 @@ export interface Project {
 
 export interface Resource {
   id: string;
-  projectId: string;
   type: "image" | "video" | "text";
   url: string; // Path to the generated resource
   createdAt: number;

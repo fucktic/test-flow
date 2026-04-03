@@ -38,7 +38,7 @@ export interface EpisodeItem {
 
 export interface EpisodeNodeData {
   episodes: EpisodeItem[];
-  activeEpisodeId?: string;
+  activeId?: string;
   onEpisodeCheck?: (id: string, checked: boolean) => void;
   onEpisodeSelect?: (id: string) => void;
 }
@@ -68,7 +68,7 @@ export interface ReferenceImage {
 }
 
 export interface SceneImageNodeData {
-  sceneId: string;
+  id: string;
   imageUrl?: string;
   images?: { id: string; url: string }[]; // multiple images support
   assetPath?: string;
@@ -97,7 +97,7 @@ export interface VideoPreview {
 }
 
 export interface SceneVideoNodeData {
-  sceneId: string;
+  id: string;
   videos?: VideoPreview[]; // can have multiple, one can be selected
   assetPath?: string;
   isExpanded?: boolean;
@@ -125,7 +125,7 @@ export interface VideoPreviewItem {
 }
 
 export interface EpisodeVideoData {
-  episodeId: string;
+  id: string;
   episodeName: string;
   totalScenes: number;
   selectedVideos: number;
@@ -136,7 +136,7 @@ export interface EpisodeVideoData {
 export interface VideoPreviewNodeData {
   episodes: EpisodeVideoData[];
   onRefresh?: () => void;
-  onDownloadEpisode?: (episodeId: string) => void;
+  onDownloadEpisode?: (id: string) => void;
 }
 
 export type AssetCategory = "characters" | "scenes" | "props" | "audio";
@@ -152,7 +152,7 @@ export interface AssetItem {
 }
 
 export interface AssetNodeData {
-  projectId: string;
+  id: string;
   assets: {
     characters: AssetItem[];
     scenes: AssetItem[];
@@ -160,7 +160,7 @@ export interface AssetNodeData {
     audio: AssetItem[];
   };
   activeTab?: AssetCategory;
-  selectedAssetId?: string;
+  selectedId?: string;
   onTabChange?: (tab: AssetCategory) => void;
   onAssetAdd?: (
     tab: AssetCategory,
@@ -175,7 +175,7 @@ export interface AssetNodeData {
   ) => void;
   onAssetUpdate?: (
     tab: AssetCategory,
-    assetId: string,
+    id: string,
     payload: {
       name: string;
       category: AssetCategory;
@@ -185,6 +185,6 @@ export interface AssetNodeData {
       prompt?: string;
     },
   ) => void;
-  onAssetSelect?: (assetId?: string) => void;
-  onAssetDelete?: (assetId: string) => void;
+  onAssetSelect?: (id?: string) => void;
+  onAssetDelete?: (id: string) => void;
 }

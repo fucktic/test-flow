@@ -8,7 +8,7 @@ import { getCurrentProject, setCurrentProject } from "@/lib/services/project.ser
  */
 export async function GET() {
   const currentProject = await getCurrentProject();
-  return NextResponse.json({ projectId: currentProject || null });
+  return NextResponse.json({ id: currentProject || null });
 }
 
 /**
@@ -16,12 +16,12 @@ export async function GET() {
  */
 export async function POST(req: Request) {
   try {
-    const { projectId } = await req.json();
-    if (!projectId) {
-      return NextResponse.json({ error: "projectId is required" }, { status: 400 });
+    const { id } = await req.json();
+    if (!id) {
+      return NextResponse.json({ error: "id is required" }, { status: 400 });
     }
-    await setCurrentProject(projectId);
-    return NextResponse.json({ success: true, projectId });
+    await setCurrentProject(id);
+    return NextResponse.json({ success: true, id });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

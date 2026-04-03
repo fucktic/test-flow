@@ -43,6 +43,7 @@ const AssetNodeView = (props: any) => {
   };
 
   const className = colorMap[assetType] || "text-muted-foreground bg-background border-primary/20";
+  const displayUrl = url;
 
   return (
     <NodeViewWrapper
@@ -58,7 +59,9 @@ const AssetNodeView = (props: any) => {
           assetType === "characters" ||
           assetType === "scenes" ||
           assetType === "props") &&
-          url && <img src={url} alt={label} className="w-5 h-5 object-cover rounded-sm" />}
+          displayUrl && (
+            <img src={displayUrl} alt={label} className="w-5 h-5 object-cover rounded-sm" />
+          )}
         <span className="text-xs font-medium">{label}</span>
       </span>
     </NodeViewWrapper>

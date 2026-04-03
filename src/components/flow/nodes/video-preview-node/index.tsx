@@ -1,4 +1,4 @@
-import { memo, useCallback, useState } from "react";
+import { memo, useCallback, useState, useMemo } from "react";
 import { VideoPreviewNodeData, EpisodeVideoData } from "@/lib/types/flow.types";
 import { useTranslations } from "next-intl";
 import { Download, Film, Maximize2 } from "lucide-react";
@@ -6,7 +6,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { MediaPreviewModal, MediaItem } from "@/components/common/media-preview-modal";
 import { toast } from "sonner";
-import { getNodeWrapperClassName } from "./utils";
+import { getNodeWrapperClassName } from "../utils";
+import { useProjectStore } from "@/lib/store/use-projects";
 
 interface VideoPreviewNodeProps {
   data: VideoPreviewNodeData;
@@ -17,18 +18,21 @@ const VideoPreviewNode = ({ data }: VideoPreviewNodeProps) => {
   const tFlow = useTranslations("flow.videoPreviewNode");
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewIndex, setPreviewIndex] = useState(0);
+  const currentProject = useProjectStore((state) => state.currentProject);
 
   // Flatten all items across episodes for the preview modal
-  const allPreviewItems: MediaItem[] = (data.episodes || []).flatMap((ep) =>
-    (ep.items || [])
-      .filter((item) => item.status === "generated" && item.url)
-      .map((item) => ({
-        id: item.id,
-        url: item.url!,
-        type: item.url?.endsWith(".mp4") ? "video" : "image",
-        poster: item.poster,
-      })),
-  );
+  const allPreviewItems: MediaItem[] = useMemo(() => {
+    return (data.episodes || []).flatMap((ep) =>
+      (ep.items || [])
+        .filter((item) => item.status === "generated" && item.url)
+        .map((item) => ({
+          id: item.id,
+          url: item.url!,
+          type: item.url?.endsWith(".mp4") ? "video" : "image",
+          poster: item.poster,
+        })),
+    );
+  }, [data.episodes, currentProject]);
 
   const handleDownloadEpisode = useCallback(
     async (episode: EpisodeVideoData) => {
@@ -55,8 +59,9 @@ const VideoPreviewNode = ({ data }: VideoPreviewNodeProps) => {
         for (const item of episodeItems) {
           if (!item.url) continue;
           try {
-            const response = await fetch(item.url);
-            if (!response.ok) throw new Error(`Failed to fetch ${item.url}`);
+            const fetchUrl = item.url;
+            const response = await fetch(fetchUrl);
+            if (!response.ok) throw new Error(`Failed to fetch ${fetchUrl}`);
             const blob = await response.blob();
 
             let filename = item.url.split("/").pop() || `${item.id}`;
@@ -80,7 +85,7 @@ const VideoPreviewNode = ({ data }: VideoPreviewNodeProps) => {
             tFlow("downloadSuccess", { count: successCount }) || `成功下载 ${successCount} 个文件`,
           );
           if (data.onDownloadEpisode) {
-            data.onDownloadEpisode(episode.episodeId);
+            data.onDownloadEpisode(episode.id);
           }
         } else {
           toast.error(tFlow("downloadFailed") || "下载失败");
@@ -93,7 +98,7 @@ const VideoPreviewNode = ({ data }: VideoPreviewNodeProps) => {
         toast.error(tFlow("directorySelectionFailed") || "目录选择失败");
       }
     },
-    [tFlow, data],
+    [tFlow, data, currentProject],
   );
 
   return (
@@ -104,7 +109,7 @@ const VideoPreviewNode = ({ data }: VideoPreviewNodeProps) => {
           <ul className="flex flex-col gap-2 mt-2 w-full max-w-full">
             {(data.episodes || []).map((episode) => (
               <li
-                key={episode.episodeId}
+                key={episode.id}
                 className="flex flex-col group w-full gap-3 relative overflow-hidden mb-4 border-b border-border/50 pb-4 last:border-0 last:pb-0 last:mb-0"
               >
                 <div className="flex items-center justify-between w-full gap-2">

@@ -1,16 +1,16 @@
 import { Handle, Position } from "@xyflow/react";
-import { SceneNodeData, SceneItem } from "../../../lib/types/flow.types";
+import { SceneNodeData, SceneItem } from "@/lib/types/flow.types";
 import { useTranslations } from "next-intl";
-import { ScrollArea } from "../../ui/scroll-area";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Trash2, Plus, Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getNodeWrapperClassName } from "./utils";
+import { getNodeWrapperClassName } from "../utils";
 import { useState, useEffect } from "react";
-import { SceneEditDialog } from "./scene-edit-dialog";
+import { SceneEditDialog } from "./components/scene-edit-dialog";
 
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import { AssetMention } from "./scene-edit-dialog";
+import { AssetMention } from "./components/scene-edit-dialog";
 
 const SceneContent = ({ content, selected }: { content: string; selected?: boolean }) => {
   const editor = useEditor({

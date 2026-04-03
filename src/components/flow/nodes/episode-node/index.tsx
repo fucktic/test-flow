@@ -1,12 +1,12 @@
 import { Handle, Position } from "@xyflow/react";
-import { EpisodeItem, EpisodeNodeData } from "../../../lib/types/flow.types";
+import { EpisodeItem, EpisodeNodeData } from "@/lib/types/flow.types";
 import { useTranslations } from "next-intl";
-import { Checkbox } from "../../ui/checkbox";
-import { ScrollArea } from "../../ui/scroll-area";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Wand2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
-import { getNodeWrapperClassName } from "./utils";
+import { getNodeWrapperClassName } from "../utils";
 
 export const EpisodeNode = ({ data, selected }: { data: EpisodeNodeData; selected?: boolean }) => {
   const tFlow = useTranslations("flow.episodeNode");

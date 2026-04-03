@@ -109,7 +109,7 @@ const syncGraph = (state: any, set: any) => {
               id: imgNodeId,
               type: "sceneImageNode",
               position: { x: episodeNode.position.x + 900, y: sceneY },
-              data: { sceneId: scene.name, isExpanded: true, ...getImageHandlers(set, imgNodeId) },
+              data: { id: scene.name, isExpanded: true, ...getImageHandlers(set, imgNodeId) },
             };
           }
         } else {
@@ -144,7 +144,7 @@ const syncGraph = (state: any, set: any) => {
               id: vidNodeId,
               type: "sceneVideoNode",
               position: { x: episodeNode.position.x + 1400, y: sceneY },
-              data: { sceneId: scene.name, isExpanded: true, ...getVideoHandlers(set, vidNodeId) },
+              data: { id: scene.name, isExpanded: true, ...getVideoHandlers(set, vidNodeId) },
             };
           }
         } else {
@@ -194,7 +194,7 @@ const syncGraph = (state: any, set: any) => {
 
       if (isChecked) {
         episodesData.push({
-          episodeId: epPrefix,
+          id: epPrefix,
           episodeName: ep.title,
           totalScenes: sceneNode.data.scenes.length,
           selectedVideos: selectedVideosCount,
@@ -266,7 +266,7 @@ const getEpisodeHandlers = (set: any, nodeId: string) => ({
       const node = state.nodes.find((n: any) => n.id === nodeId);
       if (node && node.type === "episodeNode") {
         const data = node.data as any;
-        data.activeEpisodeId = data.activeEpisodeId === id ? undefined : id;
+        data.activeId = data.activeId === id ? undefined : id;
       }
     });
   },
@@ -455,26 +455,26 @@ const getAssetHandlers = (set: any, nodeId: string) => ({
       const node = state.nodes.find((n: any) => n.id === nodeId);
       if (node && node.type === "assetNode") {
         const data = node.data as any;
-        const assetId = uuidv4();
+        const id = uuidv4();
         if (!data.assets?.[payload.category]) {
           return;
         }
         data.assets[payload.category].push({
-          id: assetId,
+          id,
           name: payload.name,
           type: payload.mediaType || (payload.category === "audio" ? "audio" : "image"),
           url: payload.fileUrl || "",
           description: payload.description,
           prompt: payload.prompt,
         });
-        data.selectedAssetId = assetId;
+        data.selectedId = id;
         data.activeTab = payload.category;
       }
     });
   },
   onAssetUpdate: (
     tab: string,
-    assetId: string,
+    id: string,
     payload: {
       name: string;
       category: string;
@@ -488,7 +488,7 @@ const getAssetHandlers = (set: any, nodeId: string) => ({
       const node = state.nodes.find((n: any) => n.id === nodeId);
       if (node && node.type === "assetNode") {
         const data = node.data as any;
-        const targetAsset = data.assets?.[tab]?.find((item: any) => item.id === assetId);
+        const targetAsset = data.assets?.[tab]?.find((item: any) => item.id === id);
         if (!targetAsset) {
           return;
         }
@@ -510,7 +510,7 @@ const getAssetHandlers = (set: any, nodeId: string) => ({
         if (payload.category === tab) {
           Object.assign(targetAsset, updatedAsset);
         } else {
-          data.assets[tab] = data.assets[tab].filter((item: any) => item.id !== assetId);
+          data.assets[tab] = data.assets[tab].filter((item: any) => item.id !== id);
           if (!data.assets?.[payload.category]) {
             return;
           }
@@ -520,24 +520,24 @@ const getAssetHandlers = (set: any, nodeId: string) => ({
       }
     });
   },
-  onAssetSelect: (assetId?: string) => {
+  onAssetSelect: (id?: string) => {
     set((state: any) => {
       const node = state.nodes.find((n: any) => n.id === nodeId);
       if (node && node.type === "assetNode") {
-        (node.data as any).selectedAssetId = assetId;
+        (node.data as any).selectedId = id;
       }
     });
   },
-  onAssetDelete: (assetId: string) => {
+  onAssetDelete: (id: string) => {
     set((state: any) => {
       const node = state.nodes.find((n: any) => n.id === nodeId);
       if (node && node.type === "assetNode") {
         const data = node.data as any;
         Object.keys(data.assets).forEach((key) => {
-          data.assets[key] = data.assets[key].filter((item: any) => item.id !== assetId);
+          data.assets[key] = data.assets[key].filter((item: any) => item.id !== id);
         });
-        if (data.selectedAssetId === assetId) {
-          data.selectedAssetId = undefined;
+        if (data.selectedId === id) {
+          data.selectedId = undefined;
         }
       }
     });

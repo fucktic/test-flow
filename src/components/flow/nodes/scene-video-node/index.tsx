@@ -6,17 +6,11 @@ import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { Upload, Save, Maximize2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { MediaPreviewModal, MediaItem } from "@/components/common/media-preview-modal";
-import { getNodeWrapperClassName } from "./utils";
+import { MediaPreviewModal } from "@/components/common/media-preview-modal";
+import { getNodeWrapperClassName } from "../utils";
 import { useFlowStore } from "@/lib/store/use-flow";
 import { useProjectStore } from "@/lib/store/use-projects";
+import { VideoDeleteDialog } from "./components/video-delete-dialog";
 
 interface SceneVideoNodeProps {
   id: string;
@@ -26,7 +20,6 @@ interface SceneVideoNodeProps {
 
 const SceneVideoNode = ({ id, data, selected }: SceneVideoNodeProps) => {
   const tFlow = useTranslations("flow.sceneVideoNode");
-  const tCommon = useTranslations("common");
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewIndex, setPreviewIndex] = useState(0);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -48,7 +41,7 @@ const SceneVideoNode = ({ id, data, selected }: SceneVideoNodeProps) => {
       const formData = new FormData();
       formData.append("file", file);
       formData.append("type", "video");
-      formData.append("sceneId", data.sceneId || "S-x");
+      formData.append("id", data.id || "S-x");
 
       const res = await fetch(`/api/projects/${currentProject.id}/upload`, {
         method: "POST",
@@ -93,7 +86,7 @@ const SceneVideoNode = ({ id, data, selected }: SceneVideoNodeProps) => {
             const posterFormData = new FormData();
             posterFormData.append("file", posterFile);
             posterFormData.append("type", "image");
-            posterFormData.append("sceneId", data.sceneId || "S-x");
+            posterFormData.append("id", data.id || "S-x");
 
             const uploadRes = await fetch(`/api/projects/${currentProject.id}/upload`, {
               method: "POST",
@@ -146,13 +139,13 @@ const SceneVideoNode = ({ id, data, selected }: SceneVideoNodeProps) => {
     setDeleteId(null);
   };
 
-  const previewItems: MediaItem[] =
+  const previewItems =
     data.videos?.map((v) => {
       const isVideo = v.url.match(/\.(mp4|webm|mov)$/i) || v.url.startsWith("data:video/");
       return {
         id: v.id,
         url: v.url,
-        type: isVideo ? "video" : "image",
+        type: (isVideo ? "video" : "image") as "image" | "video",
         poster: v.poster,
       };
     }) || [];
@@ -163,7 +156,7 @@ const SceneVideoNode = ({ id, data, selected }: SceneVideoNodeProps) => {
       <div className="flex items-center gap-2 px-1">
         <span className="text-sm font-semibold text-foreground">{tFlow("title")}</span>
         <span className="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded-sm font-medium">
-          {data.sceneId}
+          {data.id}
         </span>
       </div>
 
@@ -173,7 +166,7 @@ const SceneVideoNode = ({ id, data, selected }: SceneVideoNodeProps) => {
         <div className="relative w-full  h-full bg-muted flex items-center justify-center group p-4">
           {data.videos && data.videos.length > 0 ? (
             <div className="w-full h-full grid grid-cols-2 gap-4 ">
-              {data.videos.map((video, index) => (
+              {data.videos.map((video) => (
                 <div
                   key={video.id}
                   className={cn(
@@ -207,23 +200,30 @@ const SceneVideoNode = ({ id, data, selected }: SceneVideoNodeProps) => {
                       loading="lazy"
                     />
                   )}
-                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/video:opacity-100 transition-opacity z-20">
+                  {video.selected && (
+                    <div className="absolute inset-0 border-2 border-primary rounded-lg pointer-events-none z-10" />
+                  )}
+                  {/* Hover Actions */}
+                  <div className="absolute top-2 right-2 flex flex-col gap-2 opacity-0 group-hover/video:opacity-100 transition-opacity z-20">
                     <Button
                       variant="secondary"
                       size="icon"
-                      className="h-10 w-10 bg-black/40 hover:bg-black/60 text-white/80 hover:text-white rounded-md"
+                      className="w-8 h-8 rounded-full shadow-lg"
                       onClick={(e) => {
                         e.stopPropagation();
-                        setPreviewIndex(index);
-                        setPreviewOpen(true);
+                        const index = previewItems.findIndex((p) => p.id === video.id);
+                        if (index !== -1) {
+                          setPreviewIndex(index);
+                          setPreviewOpen(true);
+                        }
                       }}
                     >
-                      <Maximize2 className="w-5 h-5" />
+                      <Maximize2 className="w-4 h-4" />
                     </Button>
                     <Button
                       variant="destructive"
                       size="icon"
-                      className="absolute -top-1 -right-1 h-8 w-8 bg-muted hover:bg-destructive text-destructive/80 hover:text-white rounded-none rounded-bl-xl"
+                      className="w-8 h-8 rounded-full shadow-lg"
                       onClick={(e) => {
                         e.stopPropagation();
                         setDeleteId(video.id);
@@ -292,24 +292,12 @@ const SceneVideoNode = ({ id, data, selected }: SceneVideoNodeProps) => {
         initialIndex={previewIndex}
       />
 
-      <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{tFlow("deleteConfirmTitle")}</DialogTitle>
-          </DialogHeader>
-          <div className="py-4 text-sm text-muted-foreground">
-            {tFlow("deleteConfirmDescription")}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteOpen(false)}>
-              {tCommon("cancel")}
-            </Button>
-            <Button variant="destructive" onClick={handleDeleteVideo}>
-              {tCommon("delete")}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <VideoDeleteDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        onConfirm={handleDeleteVideo}
+        onCancel={() => setDeleteOpen(false)}
+      />
     </div>
   );
 };

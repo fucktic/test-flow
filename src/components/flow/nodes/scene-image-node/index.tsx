@@ -6,17 +6,11 @@ import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { Upload, Save, Maximize2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
 import { MediaPreviewModal } from "@/components/common/media-preview-modal";
-import { getNodeWrapperClassName } from "./utils";
+import { getNodeWrapperClassName } from "../utils";
 import { useFlowStore } from "@/lib/store/use-flow";
 import { useProjectStore } from "@/lib/store/use-projects";
+import { ImageDeleteDialog } from "./components/image-delete-dialog";
 
 interface SceneImageNodeProps {
   id: string;
@@ -26,7 +20,6 @@ interface SceneImageNodeProps {
 
 const SceneImageNode = ({ id, data, selected }: SceneImageNodeProps) => {
   const tFlow = useTranslations("flow.sceneImageNode");
-  const tCommon = useTranslations("common");
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewIndex, setPreviewIndex] = useState(0);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -43,7 +36,7 @@ const SceneImageNode = ({ id, data, selected }: SceneImageNodeProps) => {
       const formData = new FormData();
       formData.append("file", file);
       formData.append("type", "image");
-      formData.append("sceneId", data.sceneId || "S-x");
+      formData.append("id", data.id || "S-x");
 
       const res = await fetch(`/api/projects/${currentProject.id}/upload`, {
         method: "POST",
@@ -76,7 +69,7 @@ const SceneImageNode = ({ id, data, selected }: SceneImageNodeProps) => {
       const newImageUrl =
         data.imageUrl === deletedImg?.url ? newImages[0]?.url || undefined : data.imageUrl;
       updateNodeData(id, { images: newImages, imageUrl: newImageUrl });
-    } else if (data.imageUrl && (deleteId === data.sceneId || deleteId === "image")) {
+    } else if (data.imageUrl && (deleteId === data.id || deleteId === "image")) {
       updateNodeData(id, { imageUrl: undefined });
     }
 
@@ -85,9 +78,21 @@ const SceneImageNode = ({ id, data, selected }: SceneImageNodeProps) => {
   };
 
   const previewItems = data.images
-    ? data.images.map((img) => ({ id: img.id, url: img.url, type: "image" as const }))
+    ? data.images.map((img) => ({
+        id: img.id,
+        url: img.url,
+        type: "image" as const,
+        originalUrl: img.url,
+      }))
     : data.imageUrl
-      ? [{ id: data.sceneId || "image", url: data.imageUrl, type: "image" as const }]
+      ? [
+          {
+            id: data.id || "image",
+            url: data.imageUrl,
+            type: "image" as const,
+            originalUrl: data.imageUrl,
+          },
+        ]
       : [];
 
   return (
@@ -96,7 +101,7 @@ const SceneImageNode = ({ id, data, selected }: SceneImageNodeProps) => {
       <div className="flex items-center gap-2 px-1">
         <span className="text-sm font-semibold text-foreground">{tFlow("title")}</span>
         <span className="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded-sm font-medium">
-          {data.sceneId}
+          {data.id}
         </span>
       </div>
       {/* Main Container */}
@@ -110,13 +115,13 @@ const SceneImageNode = ({ id, data, selected }: SceneImageNodeProps) => {
                   key={img.id}
                   className={cn(
                     "aspect-square relative rounded-lg overflow-hidden border-2 cursor-pointer transition-all group/image",
-                    img.url === data.imageUrl
+                    (img as any).originalUrl === data.imageUrl
                       ? "border-primary shadow-[0_0_0_2px_rgba(0,163,255,0.3)]"
                       : "border-transparent hover:border-border",
                   )}
                   onClick={() => {
                     // Update main imageUrl when clicking an image in the grid
-                    updateNodeData(id, { imageUrl: img.url });
+                    updateNodeData(id, { imageUrl: (img as any).originalUrl });
                   }}
                 >
                   <img
@@ -215,24 +220,12 @@ const SceneImageNode = ({ id, data, selected }: SceneImageNodeProps) => {
         initialIndex={previewIndex}
       />
 
-      <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{tFlow("deleteConfirmTitle")}</DialogTitle>
-          </DialogHeader>
-          <div className="py-4 text-sm text-muted-foreground">
-            {tFlow("deleteConfirmDescription")}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteOpen(false)}>
-              {tCommon("cancel")}
-            </Button>
-            <Button variant="destructive" onClick={handleDeleteImage}>
-              {tCommon("delete")}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ImageDeleteDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        onConfirm={handleDeleteImage}
+        onCancel={() => setDeleteOpen(false)}
+      />
     </div>
   );
 };

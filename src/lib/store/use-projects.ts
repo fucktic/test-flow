@@ -36,7 +36,7 @@ export const useProjectStore = create<ProjectState>()(
         fetch("/api/projects/current", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ projectId: project.id }),
+          body: JSON.stringify({ id: project.id }),
         }).catch((err) => console.error("Failed to sync current project to server:", err));
       }
     },
@@ -65,7 +65,7 @@ export const useProjectStore = create<ProjectState>()(
         fetch("/api/projects/current", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ projectId: newProject.id }),
+          body: JSON.stringify({ id: newProject.id }),
         }).catch((err) => console.error("Failed to sync new project to server:", err));
       }
     },
