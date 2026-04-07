@@ -166,7 +166,7 @@ const SceneVideoNode = ({ id, data, selected }: SceneVideoNodeProps) => {
         <div className="relative w-full  h-full bg-muted flex items-center justify-center group p-4">
           {data.videos && data.videos.length > 0 ? (
             <div className="w-full h-full grid grid-cols-2 gap-4 ">
-              {data.videos.map((video) => (
+              {data.videos.map((video, index) => (
                 <div
                   key={video.id}
                   className={cn(
@@ -204,33 +204,30 @@ const SceneVideoNode = ({ id, data, selected }: SceneVideoNodeProps) => {
                     <div className="absolute inset-0 border-2 border-primary rounded-lg pointer-events-none z-10" />
                   )}
                   {/* Hover Actions */}
-                  <div className="absolute top-2 right-2 flex flex-col gap-2 opacity-0 group-hover/video:opacity-100 transition-opacity z-20">
+                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/video:opacity-100 transition-opacity z-20">
                     <Button
                       variant="secondary"
                       size="icon"
-                      className="w-8 h-8 rounded-full shadow-lg"
+                      className="h-10 w-10 bg-black/40 hover:bg-black/60 text-white/80 hover:text-white rounded-md"
                       onClick={(e) => {
                         e.stopPropagation();
-                        const index = previewItems.findIndex((p) => p.id === video.id);
-                        if (index !== -1) {
-                          setPreviewIndex(index);
-                          setPreviewOpen(true);
-                        }
+                        setPreviewIndex(index);
+                        setPreviewOpen(true);
                       }}
                     >
-                      <Maximize2 className="w-4 h-4" />
+                      <Maximize2 className="w-5 h-5" />
                     </Button>
                     <Button
                       variant="destructive"
                       size="icon"
-                      className="w-8 h-8 rounded-full shadow-lg"
+                      className="absolute -top-1 -right-1 h-8 w-8 bg-muted hover:bg-destructive text-destructive/80 hover:text-white rounded-none rounded-bl-xl"
                       onClick={(e) => {
                         e.stopPropagation();
                         setDeleteId(video.id);
                         setDeleteOpen(true);
                       }}
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-4 h-4 " />
                     </Button>
                   </div>
                 </div>

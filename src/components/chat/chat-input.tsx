@@ -72,7 +72,7 @@ export function ChatInput({
             size="icon"
             className="w-8 h-8 shrink-0 rounded-lg bg-primary hover:bg-primary/90 shadow-sm transition-transform active:scale-95 disabled:opacity-50"
             onClick={handleSend}
-            disabled={!input.trim() || !selectedAgentId}
+            disabled={(!input.trim() && uploadedFiles.length === 0) || !selectedAgentId}
           >
             <Send className={cn("w-3.5 h-3.5", isExecuting && "animate-pulse")} />
           </Button>

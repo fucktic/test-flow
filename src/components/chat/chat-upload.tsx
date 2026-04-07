@@ -2,7 +2,7 @@ import { useRef } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { ImageIcon, Paperclip, X } from "lucide-react";
+import { Paperclip, X } from "lucide-react";
 
 export interface UploadedFile {
   id: string;
@@ -21,18 +21,20 @@ interface ChatUploadProps {
  */
 export function ChatUpload({ files, onFilesChange }: ChatUploadProps) {
   const t = useTranslations("chat");
-  const imageInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: "image" | "file") => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      const newFiles = Array.from(e.target.files).map((file) => ({
-        id: Math.random().toString(36).substring(7),
-        file,
-        previewUrl: type === "image" ? URL.createObjectURL(file) : undefined,
-        type,
-      }));
-      onFilesChange([...files, ...newFiles]);
+      const newFiles = Array.from(e.target.files).map((file) => {
+        const isImage = file.type.startsWith("image/");
+        return {
+          id: Math.random().toString(36).substring(7),
+          file,
+          previewUrl: isImage ? URL.createObjectURL(file) : undefined,
+          type: isImage ? "image" : "file",
+        };
+      });
+      onFilesChange([...files, ...(newFiles as UploadedFile[])]);
     }
     // 清空 input 值，允许重复选择相同文件
     e.target.value = "";
@@ -42,37 +44,12 @@ export function ChatUpload({ files, onFilesChange }: ChatUploadProps) {
     <div className="flex items-center gap-1">
       <input
         type="file"
-        accept="image/*"
-        multiple
-        className="hidden"
-        ref={imageInputRef}
-        onChange={(e) => handleFileChange(e, "image")}
-      />
-      <input
-        type="file"
+        accept="image/*,video/*,.md"
         multiple
         className="hidden"
         ref={fileInputRef}
-        onChange={(e) => handleFileChange(e, "file")}
+        onChange={handleFileChange}
       />
-
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="w-8 h-8 text-muted-foreground hover:text-foreground shrink-0"
-              onClick={() => imageInputRef.current?.click()}
-            >
-              <ImageIcon className="w-4 h-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p className="text-xs">{t("uploadImage")}</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
 
       <TooltipProvider>
         <Tooltip>

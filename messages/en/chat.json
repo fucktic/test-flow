@@ -23,5 +23,13 @@
   "send": "Send",
   "chatWithAgent": "Chat with Agent",
   "uploadImage": "Upload Image",
-  "uploadFile": "Upload File"
+  "uploadFile": "Upload File",
+  "imagePrefix": "Image",
+  "filePrefix": "File",
+  "sentAttachment": "[Sent attachment]",
+  "selectProjectToUpload": "Please select a project before uploading files",
+  "uploadFailedMessage": "File upload failed: {message}",
+  "executionCompleteNoOutput": "Execution complete (no output)",
+  "executionFailedMessage": "Execution failed: {message}",
+  "unknownError": "Unknown error"
 }

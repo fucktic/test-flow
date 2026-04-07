@@ -30,6 +30,7 @@ import {
   MentionList,
 } from "@/components/flow/nodes/scene-node/components/scene-edit-dialog";
 import { UploadedFile } from "./chat-upload";
+import { useUpload } from "@/lib/hooks/use-upload";
 
 const MINIMIZED_SIZE = 56; // w-14/h-14 (14 * 4px = 56px)
 const MARGIN = 20;
@@ -63,6 +64,7 @@ export function ChatWidget() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { runCommand, isExecuting } = useAgent();
   const currentProject = useProjectStore((state) => state.currentProject);
+  const { uploadFiles } = useUpload();
   const { initFlow } = useFlowStore();
 
   const handleSendRef = useRef<(() => void) | null>(null);
@@ -98,7 +100,9 @@ export function ChatWidget() {
     let fileIndex = 1;
     const fileItems = uploadedFiles.map((f) => {
       const isImage = f.type === "image";
-      const name = isImage ? `图片${imageIndex++}` : `文件${fileIndex++}`;
+      const name = isImage
+        ? `${t("imagePrefix")}${imageIndex++}`
+        : `${t("filePrefix")}${fileIndex++}`;
       return {
         id: f.id,
         name,
@@ -426,13 +430,13 @@ export function ChatWidget() {
 
   // 处理发送消息
   const handleSend = useCallback(async () => {
-    if (!input.trim()) return;
+    if (!input.trim() && uploadedFiles.length === 0) return;
     if (!selectedAgentId) {
       toast.error(t("selectAgentPrompt"));
       return;
     }
 
-    const currentInput = input;
+    const currentInput = input.trim() ? input : t("sentAttachment");
     addMessage({ role: "user", content: currentInput });
     setInput("");
     editor?.commands.clearContent();
@@ -440,11 +444,38 @@ export function ChatWidget() {
     const agent = currentAgent;
     if (!agent) return;
 
+    const files = uploadedFiles;
+    setUploadedFiles([]);
+
+    // 上传文件到 temp 文件夹
+    let uploadedFilePaths: string[] = [];
+
     try {
+      if (files.length > 0) {
+        if (!currentProject) {
+          toast.error(t("selectProjectToUpload"));
+          return;
+        }
+
+        try {
+          const filesToUpload = files.map((f) => ({ file: f.file }));
+          uploadedFilePaths = await uploadFiles(filesToUpload, currentProject.id);
+        } catch (err: any) {
+          toast.error(t("uploadFailedMessage", { message: err.message }));
+          return; // 终止发送
+        }
+      }
+
       // 构建包含 skills 文件夹上下文的命令提示
       // 添加系统提示：强制让 opencode 主动寻找技能，而不是依赖用户提供确切文件夹名
       const idContext = currentProject ? `\n当前选中的项目ID为: ${currentProject.id}。` : "";
-      const systemPrompt = `【系统指令】你当前所在的目录为项目根目录，包含 projects 和 skills 文件夹。技能存放在 skills/ 目录下。在回答用户之前，请务必主动使用 ls 查看 skills/ 下的所有子目录，并读取各个子目录中的 SKILL.md 或相关文件来匹配用户的意图。请自行找到最匹配的技能并执行，绝对不要要求用户提供具体的技能文件夹名！在读写项目文件时，请直接访问根目录下的 projects/ 文件夹，不要在 skills/ 目录下新建 projects 文件夹！注意：任何 skill 生成节点时，必须先生成 episode-node 节点（需包含标题、核心情节点、情绪节奏、主要角色等核心字段，具体参考 skills/episode-plan/SKILL.md 第22行及相关定义）。${idContext}\n`;
+
+      let filesContext = "";
+      if (uploadedFilePaths.length > 0) {
+        filesContext = `\n【用户上传的文件】\n用户已上传了以下文件，路径如下：\n${uploadedFilePaths.join("\n")}\n请在需要时使用这些文件。\n`;
+      }
+
+      const systemPrompt = `【系统指令】你当前所在的目录为项目根目录，包含 projects 和 skills 文件夹。技能存放在 skills/ 目录下。在回答用户之前，请务必主动使用 ls 查看 skills/ 下的所有子目录，并读取各个子目录中的 SKILL.md 或相关文件来匹配用户的意图。请自行找到最匹配的技能并执行，绝对不要要求用户提供具体的技能文件夹名！在读写项目文件时，请直接访问根目录下的 projects/ 文件夹，不要在 skills/ 目录下新建 projects 文件夹！注意：任何 skill 生成节点时，必须先生成 episode-node 节点（需包含标题、核心情节点、情绪节奏、主要角色等核心字段，具体参考 skills/episode-plan/SKILL.md 第22行及相关定义）。${idContext}${filesContext}\n`;
 
       const commandText = `${systemPrompt}\n【最新指令】\nUser: ${currentInput}`;
 
@@ -482,7 +513,7 @@ export function ChatWidget() {
       // 最终确保显示完整的结果
       updateMessage(agentMsgId, (msg) => {
         if (!result.stdout && !result.stderr && msg.content === "...") {
-          msg.content = "执行完成 (无输出)";
+          msg.content = t("executionCompleteNoOutput");
         }
       });
     } catch (error: any) {
@@ -492,7 +523,7 @@ export function ChatWidget() {
       // 如果没有，或者流根本没启动，我们就新建一条消息
       addMessage({
         role: "agent",
-        content: `执行失败: ${error.message || "未知错误"}`,
+        content: t("executionFailedMessage", { message: error.message || t("unknownError") }),
       });
     }
   }, [
@@ -506,6 +537,9 @@ export function ChatWidget() {
     messages.length,
     runCommand,
     updateMessage,
+    uploadedFiles,
+    currentProject,
+    uploadFiles,
   ]);
 
   // 如果未初始化完成位置，先不渲染以防闪烁

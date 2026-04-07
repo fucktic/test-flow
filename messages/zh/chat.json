@@ -23,5 +23,13 @@
   "send": "发送",
   "chatWithAgent": "智能体对话",
   "uploadImage": "上传图片",
-  "uploadFile": "上传文件"
+  "uploadFile": "上传文件",
+  "imagePrefix": "图片",
+  "filePrefix": "文件",
+  "sentAttachment": "[发送了附件]",
+  "selectProjectToUpload": "请先选择一个项目再上传文件",
+  "uploadFailedMessage": "文件上传失败: {message}",
+  "executionCompleteNoOutput": "执行完成 (无输出)",
+  "executionFailedMessage": "执行失败: {message}",
+  "unknownError": "未知错误"
 }
