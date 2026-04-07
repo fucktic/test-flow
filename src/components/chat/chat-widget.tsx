@@ -132,8 +132,12 @@ export function ChatWidget() {
           result += node.text;
         } else if (node.type === "assetMention") {
           const { id, assetType } = node.attrs;
-          const suffix = ["image", "file", "temp"].includes(assetType) ? "temp" : assetType;
-          result += `@${id}${suffix}`;
+          if (assetType === "props" || assetType === "scene") {
+            result += `@${id}props`;
+          } else {
+            const suffix = ["image", "file", "temp"].includes(assetType) ? "temp" : assetType;
+            result += `@${id}${suffix}`;
+          }
         } else if (node.content) {
           node.content.forEach(traverse);
         }

@@ -647,8 +647,11 @@ export const useFlowStore = create<FlowState>()(
       },
       initFlow: (nodes: Node[], edges: Edge[]) => {
         set((state) => {
-          state.nodes = rehydrateNodes(nodes, set);
-          state.edges = edges;
+          state.nodes = rehydrateNodes(
+            nodes.map((n) => ({ ...n, selected: false })),
+            set,
+          );
+          state.edges = edges.map((e) => ({ ...e, selected: false }));
           syncGraph(state, set);
         });
       },

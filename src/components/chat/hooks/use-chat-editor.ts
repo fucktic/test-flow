@@ -20,7 +20,6 @@ interface UseChatEditorProps {
 
 export function useChatEditor({
   mentionItemsRef,
-  currentSelectionRef,
   currentSelection,
   allAssets,
   handleSendRef,
@@ -154,49 +153,6 @@ export function useChatEditor({
     content: input,
     onUpdate: ({ editor }) => {
       setInput(editor.getText());
-
-      const selection = currentSelectionRef.current;
-      const updateData = updateNodeDataRef.current;
-
-      if (selection?.id) {
-        const doc = editor.getJSON();
-        let result = "";
-
-        const traverse = (node: any) => {
-          if (node.type === "text") {
-            result += node.text;
-          } else if (node.type === "assetMention") {
-            const { id, assetType } = node.attrs;
-            const suffix = ["image", "file", "temp"].includes(assetType) ? "temp" : assetType;
-            result += `@${id}${suffix}`;
-          } else if (node.content) {
-            node.content.forEach(traverse);
-          }
-
-          if (node.type === "paragraph") {
-            result += "\n";
-          }
-        };
-
-        if (doc.content) {
-          doc.content.forEach(traverse);
-        }
-
-        const finalPrompt = result.replace(/\n+$/, "").trim();
-
-        if (selection.type === "assetItem") {
-          const assetData = selection.asset;
-          const nodeData = selection.node.data as any;
-          if (nodeData.onAssetUpdate && assetData.category) {
-            nodeData.onAssetUpdate(assetData.category, selection.id, {
-              ...assetData,
-              prompt: finalPrompt,
-            });
-          }
-        } else if (selection.type === "sceneImageNode" || selection.type === "sceneVideoNode") {
-          updateData(selection.node.id, { prompt: finalPrompt });
-        }
-      }
     },
     editorProps: {
       attributes: {

@@ -58,6 +58,24 @@ export function useCurrentSelection(uploadedFiles: UploadedFile[]) {
       }
     }
 
+    // 收集所有场景分镜（scene）到 allAssets 中
+    const sceneNodes = nodes.filter((n) => n.type === "sceneNode" || n.type === "scene-node");
+    sceneNodes.forEach((n) => {
+      const scenesData = n.data.scenes as any[];
+      if (Array.isArray(scenesData)) {
+        scenesData.forEach((scene) => {
+          list.push({
+            id: scene.id,
+            name: scene.name || "分镜",
+            category: "props", // 给一个 category 标识，以生成 @uuidprops
+            type: "scene",
+            prompt: scene.prompt,
+            content: scene.content,
+          });
+        });
+      }
+    });
+
     return list;
   }, [nodes, edges, t]);
 

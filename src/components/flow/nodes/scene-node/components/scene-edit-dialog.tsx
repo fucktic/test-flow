@@ -208,7 +208,7 @@ export const MentionList = forwardRef((props: any, ref) => {
 
   if (!props.items || props.items.length === 0) {
     return (
-      <div className="bg-popover text-popover-foreground border border-border shadow-lg rounded-xl p-3 text-sm w-64 text-center z-[999999]">
+      <div className="bg-popover text-popover-foreground border border-border shadow-lg rounded-xl p-3 text-sm w-64 text-center z-999999">
         {tFlow("noMatchedAssets")}
       </div>
     );
