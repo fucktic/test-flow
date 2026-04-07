@@ -89,6 +89,13 @@ export function ChatWidget() {
   const { allAssets, mentionItemsRef, currentSelection, currentSelectionRef } =
     useCurrentSelection(uploadedFiles);
 
+  const { setNodes, setEdges } = useFlowStore();
+
+  const handleClearSelection = useCallback(() => {
+    setNodes((nodes) => nodes.map((n) => ({ ...n, selected: false })));
+    setEdges((edges) => edges.map((e) => ({ ...e, selected: false })));
+  }, [setNodes, setEdges]);
+
   const { editor, input, setInput } = useChatEditor({
     mentionItemsRef,
     currentSelectionRef,
@@ -475,6 +482,7 @@ export function ChatWidget() {
               onSend={handleSend}
               onStop={stopCommand}
               currentSelection={currentSelection}
+              onClearSelection={handleClearSelection}
             />
           </div>
         </div>

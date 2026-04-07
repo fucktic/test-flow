@@ -1,11 +1,13 @@
 import { Editor } from "@tiptap/react";
 import { EditorContent } from "@tiptap/react";
 import { Button } from "@/components/ui/button";
-import { Send, Square, ImageIcon, Video, Box } from "lucide-react";
+import { Send, Square, ImageIcon, Video, Box, X } from "lucide-react";
 import { Agent } from "@/lib/types/agent.types";
 
 import { AgentSelect } from "./agent-select";
 import { ChatUpload, UploadedFileList, UploadedFile } from "./chat-upload";
+
+import { useTranslations } from "next-intl";
 
 interface ChatInputProps {
   editor: Editor | null;
@@ -25,6 +27,7 @@ interface ChatInputProps {
     type: string;
     title: string;
   } | null;
+  onClearSelection?: () => void;
 }
 
 export function ChatInput({
@@ -41,7 +44,10 @@ export function ChatInput({
   onSend,
   onStop,
   currentSelection,
+  onClearSelection,
 }: ChatInputProps) {
+  const t = useTranslations("chat");
+
   const handleRemoveFile = (id: string) => {
     setUploadedFiles((prev) => prev.filter((f) => f.id !== id));
   };
@@ -60,9 +66,9 @@ export function ChatInput({
       <div className="bg-muted/30 p-2 rounded-xl border border-border/50 focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/20 transition-all flex flex-col gap-2">
         {currentSelection && (
           <div className="flex items-center">
-            <div className="inline-flex items-center max-w-[90%] gap-1.5 px-2.5 py-1.5 bg-primary/5 border border-primary/10 rounded-xl text-xs shadow-sm overflow-hidden">
+            <div className="inline-flex items-center max-w-[90%] gap-1.5 px-2.5 py-1.5 bg-primary/5 border border-primary/10 rounded-xl text-xs shadow-sm overflow-hidden relative group">
               <span className="text-muted-foreground/60 shrink-0 border-r border-border/50 pr-2">
-                当前操作节点
+                {t("currentOperationNode")}
               </span>
               <span className="flex items-center justify-center text-primary/80 shrink-0">
                 {currentSelection.type === "sceneImageNode" && (
@@ -71,9 +77,16 @@ export function ChatInput({
                 {currentSelection.type === "sceneVideoNode" && <Video className="w-3.5 h-3.5" />}
                 {currentSelection.type === "assetItem" && <Box className="w-3.5 h-3.5" />}
               </span>
-              <span className="font-medium text-foreground/80 truncate">
+              <span className="font-medium text-foreground/80 truncate pr-4">
                 {currentSelection.title}
               </span>
+              <button
+                onClick={onClearSelection}
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+                title={t("clearSelection")}
+              >
+                <X className="w-3 h-3" />
+              </button>
             </div>
           </div>
         )}
@@ -117,7 +130,7 @@ export function ChatInput({
       </div>
 
       <div className="text-[10px] text-muted-foreground/60 text-center mt-2 font-medium">
-        Press Enter to send, Shift + Enter for new line
+        {t("pressEnterToSend")}
       </div>
     </div>
   );
