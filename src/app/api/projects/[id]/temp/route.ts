@@ -12,6 +12,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
     // Extract all files from formData
     const files = formData.getAll("files") as File[];
+    const ids = formData.getAll("ids") as string[];
     console.log(`[API Route] extracted files array length: ${files?.length || 0}`);
 
     if (!files || files.length === 0) {
@@ -20,7 +21,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     }
 
     console.log(`[API Route] Calling saveTempFilesToProject for ${files.length} files...`);
-    const paths = await saveTempFilesToProject(id, files);
+    const paths = await saveTempFilesToProject(id, files, ids);
     console.log(`[API Route] saveTempFilesToProject finished successfully. Paths:`, paths);
 
     return NextResponse.json({ success: true, paths });

@@ -31,5 +31,8 @@
   "uploadFailedMessage": "File upload failed: {message}",
   "executionCompleteNoOutput": "Execution complete (no output)",
   "executionFailedMessage": "Execution failed: {message}",
-  "unknownError": "Unknown error"
+  "unknownError": "Unknown error",
+  "selectedProjectIdContext": "\nCurrent selected project ID is: {id}.",
+  "systemPromptContext": "【System Instruction】You are currently in the project root directory, which contains 'projects' and 'skills' folders. Skills are stored in the 'skills/' directory. Before answering the user, you must proactively use 'ls' to check all subdirectories under 'skills/', and read the SKILL.md or related files in each subdirectory to match the user's intent. Please find the most matching skill and execute it yourself, never ask the user to provide a specific skill folder name! When reading and writing project files, please access the 'projects/' folder under the root directory directly, and do not create a 'projects' folder under the 'skills/' directory! Note: Whenever a skill generates a node, it must first generate an episode-node (which needs to include core fields such as title, core plot points, emotional rhythm, main characters, etc., please refer to line 22 and related definitions in skills/episode-plan/SKILL.md).\n",
+  "latestCommandContext": "{systemPrompt}\n【Latest Command】\nUser: {command}"
 }

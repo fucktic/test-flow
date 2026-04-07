@@ -3,7 +3,10 @@ import { useState } from "react";
 export const useUpload = () => {
   const [isUploading, setIsUploading] = useState(false);
 
-  const uploadFiles = async (files: { file: File }[], projectId: string): Promise<string[]> => {
+  const uploadFiles = async (
+    files: { id?: string; file: File }[],
+    projectId: string,
+  ): Promise<string[]> => {
     console.log(
       `[useUpload] Started uploadFiles hook. File count: ${files?.length}, projectId: ${projectId}`,
     );
@@ -17,6 +20,9 @@ export const useUpload = () => {
           `[useUpload] Appending file ${index} to FormData: name=${f.file.name}, type=${f.file.type}`,
         );
         formData.append("files", f.file);
+        if (f.id) {
+          formData.append("ids", f.id);
+        }
       });
 
       console.log(`[useUpload] Sending POST request to /api/projects/${projectId}/temp ...`);

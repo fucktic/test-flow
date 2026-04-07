@@ -11,6 +11,8 @@ export interface UploadedFile {
   type: "image" | "file";
 }
 
+import { v4 as uuidv4 } from "uuid";
+
 interface ChatUploadProps {
   files: UploadedFile[];
   onFilesChange: (files: UploadedFile[]) => void;
@@ -28,7 +30,7 @@ export function ChatUpload({ files, onFilesChange }: ChatUploadProps) {
       const newFiles = Array.from(e.target.files).map((file) => {
         const isImage = file.type.startsWith("image/");
         return {
-          id: Math.random().toString(36).substring(7),
+          id: uuidv4(),
           file,
           previewUrl: isImage ? URL.createObjectURL(file) : undefined,
           type: isImage ? "image" : "file",

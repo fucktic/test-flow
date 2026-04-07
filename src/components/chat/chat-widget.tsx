@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  useEffect,
-  useRef,
-  useState,
-  useCallback,
-  useMemo,
-  MouseEvent as ReactMouseEvent,
-} from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import { useChatStore } from "@/lib/store/use-chat";
 import { useProjectStore } from "@/lib/store/use-projects";
@@ -17,23 +10,16 @@ import { AgentManagerModal } from "./agent-manager-modal";
 import { ChatInput } from "./chat-input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Minus, User } from "lucide-react";
+import { Minus, User, ArrowDownRight, ArrowDownLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { useEditor, ReactRenderer } from "@tiptap/react";
-import StarterKit from "@tiptap/starter-kit";
-import Placeholder from "@tiptap/extension-placeholder";
-import tippy, { Instance as TippyInstance } from "tippy.js";
-import {
-  AssetMention,
-  MentionList,
-} from "@/components/flow/nodes/scene-node/components/scene-edit-dialog";
 import { UploadedFile } from "./chat-upload";
 import { useUpload } from "@/lib/hooks/use-upload";
 
-const MINIMIZED_SIZE = 56; // w-14/h-14 (14 * 4px = 56px)
-const MARGIN = 20;
+import { useWidgetDragResize } from "./hooks/use-widget-drag-resize";
+import { useCurrentSelection } from "./hooks/use-current-selection";
+import { useChatEditor } from "./hooks/use-chat-editor";
 
 export function ChatWidget() {
   const t = useTranslations("chat");
@@ -46,7 +32,6 @@ export function ChatWidget() {
     messages,
     setIsMinimized,
     setPosition,
-    setSize,
     fetchAgents,
     setSelectedAgentId,
     setAgentModalOpen,
@@ -54,15 +39,10 @@ export function ChatWidget() {
     updateMessage,
   } = useChatStore();
 
-  const [input, setInput] = useState("");
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
-  const dragInfoRef = useRef({ hasMoved: false, startX: 0, startY: 0 });
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
-  const resizeInfoRef = useRef({ startX: 0, startY: 0, startWidth: 0, startHeight: 0 });
-  const [isResizing, setIsResizing] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const { runCommand, isExecuting } = useAgent();
+
+  const { runCommand, stopCommand, isExecuting } = useAgent();
   const currentProject = useProjectStore((state) => state.currentProject);
   const { uploadFiles } = useUpload();
   const { initFlow } = useFlowStore();
@@ -71,54 +51,8 @@ export function ChatWidget() {
 
   const currentAgent = agents.find((a) => a.id === selectedAgentId);
 
-  useEffect(() => {
-    handleSendRef.current = handleSend;
-  });
-
-  const prevIsExecutingRef = useRef(isExecuting);
-
-  const nodes = useFlowStore((state) => state.nodes);
-
-  const allAssets = useMemo(() => {
-    const assetNodes = nodes.filter((n) => n.type === "assetNode" || n.type === "asset-node");
-    const list: any[] = [];
-    assetNodes.forEach((n) => {
-      const assetsData = n.data.assets as any;
-      if (assetsData) {
-        Object.keys(assetsData).forEach((cat) => {
-          if (Array.isArray(assetsData[cat])) {
-            list.push(...assetsData[cat].map((a: any) => ({ ...a, category: cat })));
-          }
-        });
-      }
-    });
-    return list;
-  }, [nodes]);
-
-  const mentionItems = useMemo(() => {
-    let imageIndex = 1;
-    let fileIndex = 1;
-    const fileItems = uploadedFiles.map((f) => {
-      const isImage = f.type === "image";
-      const name = isImage
-        ? `${t("imagePrefix")}${imageIndex++}`
-        : `${t("filePrefix")}${fileIndex++}`;
-      return {
-        id: f.id,
-        name,
-        category: f.type,
-        url: f.previewUrl || f.file.name,
-      };
-    });
-    return [...allAssets, ...fileItems];
-  }, [allAssets, uploadedFiles]);
-
-  const mentionItemsRef = useRef(mentionItems);
-  useEffect(() => {
-    mentionItemsRef.current = mentionItems;
-  }, [mentionItems]);
-
   // 定时刷新画布或在执行结束时刷新
+  const prevIsExecutingRef = useRef(isExecuting);
   useEffect(() => {
     let intervalId: NodeJS.Timeout;
 
@@ -150,149 +84,21 @@ export function ChatWidget() {
     };
   }, [isExecuting, currentProject?.id, initFlow]);
 
-  const editor = useEditor({
-    immediatelyRender: false,
-    extensions: [
-      StarterKit.configure({
-        heading: false,
-      }),
-      Placeholder.configure({
-        placeholder: t("inputPlaceholder"),
-      }),
-      AssetMention.configure({
-        HTMLAttributes: {
-          class: "asset-mention",
-        },
-        suggestion: {
-          char: "@",
-          // 使用自定义的匹配逻辑，完全覆盖默认规则，支持任何字符后直接触发 @
-          findSuggestionMatch: ({ char, $position }: any) => {
-            const text = $position.nodeBefore?.isText && $position.nodeBefore.text;
-            if (!text) return null;
+  const { isDragging, handleMouseDown, handleResizeMouseDown, MARGIN } = useWidgetDragResize();
 
-            const escapedChar = char.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-            // 匹配文本末尾的 @ 及其后的非空白字符
-            const regexp = new RegExp(`${escapedChar}([^\\s${escapedChar}]*)$`);
-            const match = regexp.exec(text);
+  const { allAssets, mentionItemsRef, currentSelection, currentSelectionRef } =
+    useCurrentSelection(uploadedFiles);
 
-            if (!match) return null;
+  const { editor, input, setInput } = useChatEditor({
+    mentionItemsRef,
+    currentSelectionRef,
+    currentSelection,
+    allAssets,
+    handleSendRef,
+  });
 
-            const textFrom = $position.pos - text.length;
-            const from = textFrom + match.index;
-            const to = from + match[0].length;
-
-            return {
-              range: { from, to },
-              query: match[1],
-              text: match[0],
-            };
-          },
-          items: ({ query }: { query: string }) => {
-            const list = mentionItemsRef.current
-              .filter((item) =>
-                (item.name || "").toLowerCase().includes((query || "").toLowerCase()),
-              )
-              .sort((a, b) => {
-                const typeA = a.category || a.type || "";
-                const typeB = b.category || b.type || "";
-                if (typeA !== typeB) {
-                  return typeA.localeCompare(typeB);
-                }
-                return (a.name || "").localeCompare(b.name || "");
-              })
-              .slice(0, 10);
-            return list;
-          },
-          render: () => {
-            let component: any;
-            let popup: TippyInstance<any>[];
-
-            return {
-              onStart: (props: any) => {
-                component = new ReactRenderer(MentionList, {
-                  props,
-                  editor: props.editor,
-                });
-
-                if (!props.clientRect) {
-                  return;
-                }
-
-                requestAnimationFrame(() => {
-                  popup = tippy("body", {
-                    getReferenceClientRect: props.clientRect,
-                    appendTo: () => document.body,
-                    content: component.element,
-                    showOnCreate: true,
-                    interactive: true,
-                    trigger: "manual",
-                    placement: "bottom-start",
-                    zIndex: 99999,
-                    allowHTML: true,
-                    arrow: false,
-                    offset: [0, 8],
-                    theme: "asset-mention",
-                  });
-                });
-              },
-              onUpdate(props: any) {
-                component?.updateProps(props);
-
-                if (!props.clientRect) {
-                  return;
-                }
-
-                requestAnimationFrame(() => {
-                  popup?.[0]?.setProps({
-                    getReferenceClientRect: props.clientRect,
-                  });
-                });
-              },
-              onKeyDown(props: any) {
-                if (props.event.key === "Escape") {
-                  popup?.[0]?.hide();
-                  return true;
-                }
-                return component?.ref?.onKeyDown(props) || false;
-              },
-              onExit() {
-                requestAnimationFrame(() => {
-                  if (popup?.[0] && !popup[0].state.isDestroyed) {
-                    popup[0].destroy();
-                  }
-                  component?.destroy();
-                });
-              },
-            };
-          },
-        },
-      }),
-    ],
-    content: input,
-    onUpdate: ({ editor }) => {
-      setInput(editor.getText());
-    },
-    editorProps: {
-      attributes: {
-        class:
-          "w-full h-20 overflow-y-auto resize-none border-0 bg-transparent focus-visible:ring-0 p-1 text-sm outline-none",
-      },
-      handleKeyDown: (view, event) => {
-        // 如果当前有提及下拉框正在显示，不触发发送消息逻辑
-        // Tiptap 的 Mention 插件会在文档中插入一个特殊的类，但更稳妥的方式是
-        // 检查是否有 popup 存在且可见，这里我们通过检查 DOM 中的 tippy 元素来判断
-        const isMentionPopupVisible = document.querySelector(
-          '.tippy-box[data-theme="asset-mention"]',
-        );
-
-        if (event.key === "Enter" && !event.shiftKey && !isMentionPopupVisible) {
-          event.preventDefault();
-          handleSendRef.current?.();
-          return true;
-        }
-        return false;
-      },
-    },
+  useEffect(() => {
+    handleSendRef.current = handleSend;
   });
 
   // 初始化加载智能体列表
@@ -300,133 +106,12 @@ export function ChatWidget() {
     fetchAgents();
   }, [fetchAgents]);
 
-  // 组件挂载时设置初始位置
-  useEffect(() => {
-    if (position.x === -1) {
-      // 初始化到右上角，但为了动画效果或者初始默认位置，依然计算一个合理的值
-      setPosition(window.innerWidth - size.width - MARGIN, 80);
-    }
-  }, [position.x, setPosition, size.width]);
-
   // 消息更新或展开时自动滚动到底部
   useEffect(() => {
     if (!isMinimized) {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages, isMinimized]);
-
-  // 处理拖拽开始
-  const handleMouseDown = useCallback(
-    (e: ReactMouseEvent<HTMLDivElement>) => {
-      if ((e.target as HTMLElement).closest("button, input, select, textarea")) return;
-      setIsDragging(true);
-      dragInfoRef.current = { hasMoved: false, startX: e.clientX, startY: e.clientY };
-      setDragOffset({
-        x: e.clientX - position.x,
-        y: e.clientY - position.y,
-      });
-    },
-    [position.x, position.y],
-  );
-
-  // 处理调整大小开始
-  const handleResizeMouseDown = useCallback(
-    (e: ReactMouseEvent<HTMLDivElement>) => {
-      e.stopPropagation(); // 阻止事件冒泡到拖拽逻辑
-      setIsResizing(true);
-      resizeInfoRef.current = {
-        startX: e.clientX,
-        startY: e.clientY,
-        startWidth: size.width,
-        startHeight: size.height,
-      };
-    },
-    [size.width, size.height],
-  );
-
-  // 处理拖拽过程
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!isDragging) return;
-
-      if (!dragInfoRef.current.hasMoved) {
-        if (
-          Math.abs(e.clientX - dragInfoRef.current.startX) > 3 ||
-          Math.abs(e.clientY - dragInfoRef.current.startY) > 3
-        ) {
-          dragInfoRef.current.hasMoved = true;
-        } else {
-          return;
-        }
-      }
-
-      let newX = e.clientX - dragOffset.x;
-      let newY = e.clientY - dragOffset.y;
-
-      const width = isMinimized ? MINIMIZED_SIZE : size.width;
-      const height = isMinimized ? MINIMIZED_SIZE : size.height;
-
-      // 限制拖拽范围在屏幕内
-      newX = Math.max(0, Math.min(window.innerWidth - width, newX));
-      newY = Math.max(0, Math.min(window.innerHeight - height, newY));
-
-      setPosition(newX, newY);
-    };
-
-    const handleMouseUp = () => {
-      setIsDragging(false);
-    };
-
-    if (isDragging) {
-      window.addEventListener("mousemove", handleMouseMove);
-      window.addEventListener("mouseup", handleMouseUp);
-    }
-
-    return () => {
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseup", handleMouseUp);
-    };
-  }, [isDragging, dragOffset, setPosition, isMinimized, size]);
-
-  // 处理调整大小过程
-  useEffect(() => {
-    const handleResizeMouseMove = (e: MouseEvent) => {
-      if (!isResizing) return;
-
-      const deltaX = e.clientX - resizeInfoRef.current.startX;
-      const deltaY = e.clientY - resizeInfoRef.current.startY;
-
-      let newWidth = resizeInfoRef.current.startWidth + deltaX;
-      let newHeight = resizeInfoRef.current.startHeight + deltaY;
-
-      // 限制宽高
-      newWidth = Math.max(400, Math.min(800, newWidth));
-      // 高度最大为画布高度（屏幕高度减去一定的边距，比如上下各留 MARGIN）
-      const maxHeight = window.innerHeight - MARGIN * 2;
-      newHeight = Math.max(500, Math.min(maxHeight, newHeight));
-
-      setSize(newWidth, newHeight);
-    };
-
-    const handleResizeMouseUp = () => {
-      setIsResizing(false);
-    };
-
-    if (isResizing) {
-      window.addEventListener("mousemove", handleResizeMouseMove);
-      window.addEventListener("mouseup", handleResizeMouseUp);
-      // 可以在调整大小时禁用 body 的文本选择
-      document.body.style.userSelect = "none";
-    } else {
-      document.body.style.userSelect = "";
-    }
-
-    return () => {
-      window.removeEventListener("mousemove", handleResizeMouseMove);
-      window.removeEventListener("mouseup", handleResizeMouseUp);
-      document.body.style.userSelect = "";
-    };
-  }, [isResizing, setSize]);
 
   // 处理发送消息
   const handleSend = useCallback(async () => {
@@ -436,8 +121,50 @@ export function ChatWidget() {
       return;
     }
 
-    const currentInput = input.trim() ? input : t("sentAttachment");
-    addMessage({ role: "user", content: currentInput });
+    // 提取带有 @uuidtype 格式的输入文本
+    const getTransformedInput = () => {
+      if (!editor) return input;
+      const doc = editor.getJSON();
+      let result = "";
+
+      const traverse = (node: any) => {
+        if (node.type === "text") {
+          result += node.text;
+        } else if (node.type === "assetMention") {
+          const { id, assetType } = node.attrs;
+          const suffix = ["image", "file", "temp"].includes(assetType) ? "temp" : assetType;
+          result += `@${id}${suffix}`;
+        } else if (node.content) {
+          node.content.forEach(traverse);
+        }
+
+        if (node.type === "paragraph") {
+          result += "\n";
+        }
+      };
+
+      if (doc.content) {
+        doc.content.forEach(traverse);
+      }
+
+      return result.replace(/\n+$/, "").trim();
+    };
+
+    const transformedInput = getTransformedInput();
+    let finalTransformedInput = transformedInput;
+
+    // 追加未在文本中@的临时文件
+    uploadedFiles.forEach((f) => {
+      const token = `@${f.id}temp`;
+      if (!finalTransformedInput.includes(token)) {
+        finalTransformedInput += (finalTransformedInput ? " " : "") + token;
+      }
+    });
+
+    const displayInput = input.trim() ? input : t("sentAttachment");
+    const currentInputForCommand = finalTransformedInput || t("sentAttachment");
+
+    addMessage({ role: "user", content: displayInput });
     setInput("");
     editor?.commands.clearContent();
 
@@ -448,8 +175,6 @@ export function ChatWidget() {
     setUploadedFiles([]);
 
     // 上传文件到 temp 文件夹
-    let uploadedFilePaths: string[] = [];
-
     try {
       if (files.length > 0) {
         if (!currentProject) {
@@ -458,8 +183,8 @@ export function ChatWidget() {
         }
 
         try {
-          const filesToUpload = files.map((f) => ({ file: f.file }));
-          uploadedFilePaths = await uploadFiles(filesToUpload, currentProject.id);
+          const filesToUpload = files.map((f) => ({ id: f.id, file: f.file }));
+          await uploadFiles(filesToUpload, currentProject.id);
         } catch (err: any) {
           toast.error(t("uploadFailedMessage", { message: err.message }));
           return; // 终止发送
@@ -468,23 +193,22 @@ export function ChatWidget() {
 
       // 构建包含 skills 文件夹上下文的命令提示
       // 添加系统提示：强制让 opencode 主动寻找技能，而不是依赖用户提供确切文件夹名
-      const idContext = currentProject ? `\n当前选中的项目ID为: ${currentProject.id}。` : "";
+      const idContext = currentProject
+        ? t("selectedProjectIdContext", { id: currentProject.id })
+        : "";
 
-      let filesContext = "";
-      if (uploadedFilePaths.length > 0) {
-        filesContext = `\n【用户上传的文件】\n用户已上传了以下文件，路径如下：\n${uploadedFilePaths.join("\n")}\n请在需要时使用这些文件。\n`;
-      }
+      const systemPrompt = `${t("systemPromptContext")}${idContext}`;
 
-      const systemPrompt = `【系统指令】你当前所在的目录为项目根目录，包含 projects 和 skills 文件夹。技能存放在 skills/ 目录下。在回答用户之前，请务必主动使用 ls 查看 skills/ 下的所有子目录，并读取各个子目录中的 SKILL.md 或相关文件来匹配用户的意图。请自行找到最匹配的技能并执行，绝对不要要求用户提供具体的技能文件夹名！在读写项目文件时，请直接访问根目录下的 projects/ 文件夹，不要在 skills/ 目录下新建 projects 文件夹！注意：任何 skill 生成节点时，必须先生成 episode-node 节点（需包含标题、核心情节点、情绪节奏、主要角色等核心字段，具体参考 skills/episode-plan/SKILL.md 第22行及相关定义）。${idContext}${filesContext}\n`;
-
-      const commandText = `${systemPrompt}\n【最新指令】\nUser: ${currentInput}`;
+      const commandText = t("latestCommandContext", {
+        systemPrompt,
+        command: currentInputForCommand,
+      });
 
       // 如果是 opencode，需要使用 run 子命令
       const agentCmd = agent.endpoint || agent.name;
 
       // 使用单引号包裹，并转义内部的单引号以防 shell 注入
       const safeCommandText = commandText.replace(/'/g, "'\"'\"'");
-
       // 如果对话框中没有聊天记录（即这是第一条消息），则不加 --continue
       const isFirstMessage = messages.length === 0;
       const continueArg = isFirstMessage ? "" : "--continue ";
@@ -540,6 +264,7 @@ export function ChatWidget() {
     uploadedFiles,
     currentProject,
     uploadFiles,
+    setInput,
   ]);
 
   // 如果未初始化完成位置，先不渲染以防闪烁
@@ -572,18 +297,25 @@ export function ChatWidget() {
                   setIsMinimized(false);
                 }}
               >
-                <div className="relative">
+                <div className="relative flex items-center justify-center w-full h-full">
+                  {isExecuting && (
+                    <>
+                      <div className="absolute inset-0 border-2 border-primary/20 rounded-full z-0" />
+                      <div
+                        className="absolute inset-0 animate-spin z-0"
+                        style={{ animationDuration: "2s" }}
+                      >
+                        <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-primary rounded-full shadow-[0_0_8px_rgba(59,130,246,0.8)]" />
+                      </div>
+                    </>
+                  )}
                   <img
                     src="/mantur-logo.svg"
-                    className={cn(
-                      "w-8 select-none pointer-events-none relative z-10",
-                      isExecuting && "animate-pulse",
-                    )}
-                    style={{ objectFit: "contain" }}
+                    className="w-8 select-none pointer-events-none relative z-10"
+                    style={{
+                      objectFit: "contain",
+                    }}
                   />
-                  {isExecuting && (
-                    <div className="absolute inset-0 bg-primary/20 blur-md rounded-full animate-ping z-0" />
-                  )}
                 </div>
               </div>
             </TooltipTrigger>
@@ -610,6 +342,7 @@ export function ChatWidget() {
           top: `${position.y}px`,
           width: `${size.width}px`,
           height: `${size.height}px`,
+          maxHeight: "100vh",
         }}
       >
         {/* Header (Draggable) */}
@@ -618,13 +351,21 @@ export function ChatWidget() {
           onMouseDown={handleMouseDown}
         >
           <div className="flex items-center gap-2 font-semibold text-sm select-none text-foreground/90">
-            <div className="p-1.5 bg-primary/10 rounded-md text-primary relative">
+            <div className="w-8 h-8 bg-primary/10 rounded-full text-primary relative flex items-center justify-center">
+              {isExecuting && (
+                <>
+                  <div className="absolute inset-0 border-[1.5px] border-primary/20 rounded-full z-0" />
+                  <div
+                    className="absolute inset-0 animate-spin z-0"
+                    style={{ animationDuration: "2s" }}
+                  >
+                    <div className="absolute -top-0.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-primary rounded-full shadow-[0_0_6px_rgba(59,130,246,0.8)]" />
+                  </div>
+                </>
+              )}
               <img
                 src="/mantur-logo.svg"
-                className={cn(
-                  "w-6 select-none pointer-events-none relative z-10",
-                  isExecuting && "animate-pulse",
-                )}
+                className="w-5 select-none pointer-events-none relative z-10"
                 style={{ objectFit: "contain" }}
               />
             </div>
@@ -715,41 +456,39 @@ export function ChatWidget() {
           </ScrollArea>
 
           {/* Input Area */}
-          <ChatInput
-            editor={editor}
-            input={input}
-            isExecuting={isExecuting}
-            selectedAgentId={selectedAgentId}
-            agents={agents}
-            currentAgent={currentAgent}
-            uploadedFiles={uploadedFiles}
-            setUploadedFiles={setUploadedFiles}
-            setSelectedAgentId={setSelectedAgentId}
-            setAgentModalOpen={setAgentModalOpen}
-            onSend={handleSend}
-          />
+          <div className="flex flex-col bg-background relative z-10  shadow-[0_-4px_10px_-5px_rgba(0,0,0,0.05)]">
+            <ChatInput
+              editor={editor}
+              input={input}
+              isExecuting={isExecuting}
+              selectedAgentId={selectedAgentId}
+              agents={agents}
+              currentAgent={currentAgent}
+              uploadedFiles={uploadedFiles}
+              setUploadedFiles={setUploadedFiles}
+              setSelectedAgentId={setSelectedAgentId}
+              setAgentModalOpen={setAgentModalOpen}
+              onSend={handleSend}
+              onStop={stopCommand}
+              currentSelection={currentSelection}
+            />
+          </div>
         </div>
 
-        {/* 调整大小手柄 */}
+        {/* 调整大小手柄 (右下) */}
         <div
           className="absolute bottom-0 right-0 w-5 h-5 cursor-se-resize flex items-end justify-end p-1 text-muted-foreground/50 hover:text-muted-foreground transition-colors z-50"
-          onMouseDown={handleResizeMouseDown}
+          onMouseDown={(e) => handleResizeMouseDown(e, "se")}
         >
-          <svg
-            width="10"
-            height="10"
-            viewBox="0 0 10 10"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M9 1L9 9L1 9"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
+          <ArrowDownRight className="w-4 h-4" />
+        </div>
+
+        {/* 调整大小手柄 (左下) */}
+        <div
+          className="absolute bottom-0 left-0 w-5 h-5 cursor-sw-resize flex items-end justify-start p-1 text-muted-foreground/50 hover:text-muted-foreground transition-colors z-50"
+          onMouseDown={(e) => handleResizeMouseDown(e, "sw")}
+        >
+          <ArrowDownLeft className="w-4 h-4" />
         </div>
       </div>
 
