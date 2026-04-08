@@ -172,7 +172,17 @@ export function ChatWidget() {
       }
     });
 
-    const displayInput = input.trim() ? input : t("sentAttachment");
+    if (currentSelection) {
+      const selectedNodeIds = currentSelection.id;
+      const prompt = t("selectedNodesPrompt", { id: selectedNodeIds });
+      finalTransformedInput += (finalTransformedInput ? "\n" : "") + prompt;
+    }
+
+    let displayInput = input.trim() ? input : t("sentAttachment");
+    if (currentSelection) {
+      displayInput = `${t("onlyModifyNodePrefix", { title: currentSelection.title })}\n${displayInput}`;
+    }
+
     const currentInputForCommand = finalTransformedInput || t("sentAttachment");
 
     addMessage({ role: "user", content: displayInput });

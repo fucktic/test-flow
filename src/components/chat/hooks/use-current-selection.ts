@@ -154,6 +154,17 @@ export function useCurrentSelection(uploadedFiles: UploadedFile[]) {
       }
     }
 
+    const selectedNodes = nodes.filter((n) => n.selected);
+    if (selectedNodes.length > 0) {
+      return {
+        type: "node",
+        node: selectedNodes[0],
+        id: selectedNodes.map((n) => n.id).join(", "),
+        title: selectedNodes.map((n) => n.data?.title || n.data?.name || n.id).join(", "),
+        prompt: "",
+      };
+    }
+
     return null;
   }, [nodes]);
 

@@ -75,7 +75,9 @@ export function ChatInput({
                   <ImageIcon className="w-3.5 h-3.5" />
                 )}
                 {currentSelection.type === "sceneVideoNode" && <Video className="w-3.5 h-3.5" />}
-                {currentSelection.type === "assetItem" && <Box className="w-3.5 h-3.5" />}
+                {(currentSelection.type === "assetItem" || currentSelection.type === "node") && (
+                  <Box className="w-3.5 h-3.5" />
+                )}
               </span>
               <span className="font-medium text-foreground/80 truncate pr-4">
                 {currentSelection.title}
