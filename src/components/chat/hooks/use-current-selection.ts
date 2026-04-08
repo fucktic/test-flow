@@ -66,8 +66,8 @@ export function useCurrentSelection(uploadedFiles: UploadedFile[]) {
         scenesData.forEach((scene) => {
           list.push({
             id: scene.id,
-            name: scene.name || "分镜",
-            category: "props", // 给一个 category 标识，以生成 @uuidprops
+            name: scene.name || t("scenePrefix") || "分镜",
+            category: "storyboard", // 给一个 category 标识，以生成 @uuidprops
             type: "scene",
             prompt: scene.prompt,
             content: scene.content,

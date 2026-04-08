@@ -25,7 +25,16 @@ import tippy, { Instance as TippyInstance } from "tippy.js";
 import "tippy.js/dist/tippy.css";
 import "@/styles/tiptap-mention.css";
 import { cn } from "@/lib/utils";
-import { Music, Image as ImageIcon, Video, Box, Users, FileVideo, Paperclip } from "lucide-react";
+import {
+  Music,
+  Image as ImageIcon,
+  Video,
+  Box,
+  Users,
+  FileVideo,
+  Paperclip,
+  Clapperboard,
+} from "lucide-react";
 
 // --- Custom Asset Mention Node View ---
 const AssetNodeView = (props: any) => {
@@ -37,6 +46,7 @@ const AssetNodeView = (props: any) => {
     characters: " bg-blue-500/10 border-blue-500/20",
     scenes: " bg-green-500/10 border-green-500/20",
     props: " bg-amber-500/10 border-amber-500/20",
+    storyboard: " bg-teal-500/10 border-teal-500/20",
     audio: " bg-purple-500/10 border-purple-500/20",
     image: " bg-indigo-500/10 border-indigo-500/20",
     video: " bg-rose-500/10 border-rose-500/20",
@@ -58,7 +68,8 @@ const AssetNodeView = (props: any) => {
           assetType === "video" ||
           assetType === "characters" ||
           assetType === "scenes" ||
-          assetType === "props") &&
+          assetType === "props" ||
+          assetType === "storyboard") &&
           displayUrl && (
             <img src={displayUrl} alt={label} className="w-5 h-5 object-cover rounded-sm" />
           )}
@@ -129,17 +140,8 @@ export const AssetMention = Mention.extend({
 // --- Mention List Component ---
 export const MentionList = forwardRef((props: any, ref) => {
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const tFlow = useTranslations("flow.sceneNode");
 
-  const categoryMap: Record<string, string> = {
-    characters: "角色",
-    scenes: "场景",
-    props: "道具",
-    audio: "音频",
-    image: "图片",
-    video: "视频",
-    file: "文件",
-  };
+  const categoryMap: Record<string, string> = props.categoryMap || {};
 
   const getIcon = (type: string) => {
     switch (type) {
@@ -149,6 +151,8 @@ export const MentionList = forwardRef((props: any, ref) => {
         return <FileVideo className="w-4 h-4" />;
       case "props":
         return <Box className="w-4 h-4" />;
+      case "storyboard":
+        return <Clapperboard className="w-4 h-4" />;
       case "audio":
         return <Music className="w-4 h-4" />;
       case "image":
@@ -209,7 +213,7 @@ export const MentionList = forwardRef((props: any, ref) => {
   if (!props.items || props.items.length === 0) {
     return (
       <div className="bg-popover text-popover-foreground border border-border shadow-lg rounded-xl p-3 text-sm w-64 text-center z-999999">
-        {tFlow("noMatchedAssets")}
+        {props.emptyText || "无匹配资产"}
       </div>
     );
   }
@@ -268,9 +272,6 @@ export const MentionList = forwardRef((props: any, ref) => {
                 <span className="truncate font-medium text-foreground leading-none">
                   {item.name}
                 </span>
-                <span className="text-[10px] opacity-80 truncate uppercase tracking-wider">
-                  {typeText}
-                </span>
               </div>
             </button>
           </div>
@@ -294,6 +295,21 @@ export function SceneEditDialog({ scene, onOpenChange, onSave }: SceneEditDialog
   const tCommon = useTranslations("common");
   const [name, setName] = useState(scene.name);
   const nodes = useFlowStore((state) => state.nodes);
+
+  const categoryMap = useMemo(
+    () => ({
+      characters: tFlow("categoryMap.characters"),
+      scenes: tFlow("categoryMap.scenes"),
+      props: tFlow("categoryMap.props"),
+      storyboard: tFlow("categoryMap.storyboard"),
+      audio: tFlow("categoryMap.audio"),
+      image: tFlow("categoryMap.image"),
+      video: tFlow("categoryMap.video"),
+      file: tFlow("categoryMap.file"),
+    }),
+    [tFlow],
+  );
+  const emptyText = tFlow("noMatchedAssets");
 
   // Gather all assets
   const allAssets = useMemo(() => {
@@ -371,7 +387,7 @@ export function SceneEditDialog({ scene, onOpenChange, onSave }: SceneEditDialog
             return {
               onStart: (props: any) => {
                 component = new ReactRenderer(MentionList, {
-                  props,
+                  props: { ...props, categoryMap, emptyText },
                   editor: props.editor,
                 });
 

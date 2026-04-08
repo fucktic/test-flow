@@ -1,4 +1,5 @@
 {
   "projectCanvas": "Project Canvas",
-  "loading": "Loading canvas..."
+  "loading": "Loading canvas...",
+  "reload": "Reload Canvas"
 }

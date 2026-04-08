@@ -1,4 +1,5 @@
 {
   "projectCanvas": "项目画布",
-  "loading": "加载画布中..."
+  "loading": "加载画布中...",
+  "reload": "重新加载画布"
 }

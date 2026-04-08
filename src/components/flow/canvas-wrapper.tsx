@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { ReactFlow, Background, Controls, MiniMap } from "@xyflow/react";
-import { Loader2 } from "lucide-react";
+import { Loader2, RefreshCw } from "lucide-react";
 import "@xyflow/react/dist/style.css";
 import "@/styles/react-flow.css";
 import { useFlowStore } from "../../lib/store/use-flow";
@@ -16,6 +16,12 @@ import AssetNode from "./nodes/asset-node";
 import { useTheme } from "next-themes";
 import { useProjectStore } from "@/lib/store/use-projects";
 import { useTranslations } from "next-intl";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 
 const nodeTypes = {
   episodeNode: EpisodeNode,
@@ -106,28 +112,62 @@ export const FlowCanvas = () => {
   const currentTheme = theme === "system" ? systemTheme : theme;
   const colorMode = currentTheme === "dark" ? "dark" : "light";
 
+  const handleReload = () => {
+    if (currentProject?.id) {
+      setIsLoading(true);
+      fetch(`/api/projects/${currentProject.id}/flow`)
+        .then((res) => {
+          if (!res.ok) throw new Error("Not found");
+          return res.json();
+        })
+        .then((data) => {
+          if (data && data.nodes && data.edges) {
+            initFlow(data.nodes, data.edges);
+          }
+        })
+        .catch((err) => {
+          console.error("Failed to reload flow:", err);
+        })
+        .finally(() => {
+          setIsLoading(false);
+        });
+    }
+  };
+
   return (
-    <div className="w-full h-full min-h-150 border-none overflow-hidden bg-background relative">
-      {isLoading && (
-        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm transition-all duration-300">
-          <Loader2 className="w-8 h-8 animate-spin text-primary mb-4" />
-          <p className="text-sm text-muted-foreground">{tCanvas("loading")}</p>
+    <ContextMenu>
+      <ContextMenuTrigger className="w-full h-full block">
+        <div className="w-full h-full min-h-150 border-none overflow-hidden bg-background relative">
+          {isLoading && (
+            <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm transition-all duration-300">
+              <Loader2 className="w-8 h-8 animate-spin text-primary mb-4" />
+              <p className="text-sm text-muted-foreground">{tCanvas("loading")}</p>
+            </div>
+          )}
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            onConnect={onConnect}
+            nodeTypes={nodeTypes}
+            colorMode={colorMode}
+            onNodeContextMenu={(e) => e.stopPropagation()}
+            onEdgeContextMenu={(e) => e.stopPropagation()}
+            fitView
+          >
+            <Background />
+            <Controls />
+            <MiniMap />
+          </ReactFlow>
         </div>
-      )}
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        onConnect={onConnect}
-        nodeTypes={nodeTypes}
-        colorMode={colorMode}
-        fitView
-      >
-        <Background />
-        <Controls />
-        <MiniMap />
-      </ReactFlow>
-    </div>
+      </ContextMenuTrigger>
+      <ContextMenuContent>
+        <ContextMenuItem onClick={handleReload} className="cursor-pointer">
+          <RefreshCw className="mr-2 h-4 w-4" />
+          {tCanvas("reload")}
+        </ContextMenuItem>
+      </ContextMenuContent>
+    </ContextMenu>
   );
 };

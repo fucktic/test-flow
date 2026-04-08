@@ -8,6 +8,7 @@ import { AgentSelect } from "./agent-select";
 import { ChatUpload, UploadedFileList, UploadedFile } from "./chat-upload";
 
 import { useTranslations } from "next-intl";
+import { useMemo } from "react";
 
 interface ChatInputProps {
   editor: Editor | null;
@@ -29,6 +30,16 @@ interface ChatInputProps {
   } | null;
   onClearSelection?: () => void;
 }
+
+const SELECTED_NODE_TYPES = [
+  // 分镜视频节点
+  "sceneVideoNode",
+  // 资产item节点
+  "assetItem",
+  // 分镜图片节点
+  "sceneImageNode",
+  "",
+];
 
 export function ChatInput({
   editor,
@@ -58,29 +69,33 @@ export function ChatInput({
     // 发送后可以选择清空附件
     setUploadedFiles([]);
   };
-
+  // 过滤出选中的有效节点类型
+  const filterSelection = useMemo(() => {
+    if (SELECTED_NODE_TYPES.includes(currentSelection?.type || "")) {
+      return currentSelection;
+    }
+    return null;
+  }, [currentSelection]);
   return (
     <div className="p-3 border-t bg-background/80 backdrop-blur-sm">
       <UploadedFileList files={uploadedFiles} onRemove={handleRemoveFile} />
 
       <div className="bg-muted/30 p-2 rounded-xl border border-border/50 focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/20 transition-all flex flex-col gap-2">
-        {currentSelection && (
+        {filterSelection && (
           <div className="flex items-center">
             <div className="inline-flex items-center max-w-[90%] gap-1.5 px-2.5 py-1.5 bg-primary/5 border border-primary/10 rounded-xl text-xs shadow-sm overflow-hidden relative group">
               <span className="text-muted-foreground/60 shrink-0 border-r border-border/50 pr-2">
                 {t("currentOperationNode")}
               </span>
               <span className="flex items-center justify-center text-primary/80 shrink-0">
-                {currentSelection.type === "sceneImageNode" && (
-                  <ImageIcon className="w-3.5 h-3.5" />
-                )}
-                {currentSelection.type === "sceneVideoNode" && <Video className="w-3.5 h-3.5" />}
-                {(currentSelection.type === "assetItem" || currentSelection.type === "node") && (
+                {filterSelection.type === "sceneImageNode" && <ImageIcon className="w-3.5 h-3.5" />}
+                {filterSelection.type === "sceneVideoNode" && <Video className="w-3.5 h-3.5" />}
+                {(filterSelection.type === "assetItem" || filterSelection.type === "node") && (
                   <Box className="w-3.5 h-3.5" />
                 )}
               </span>
               <span className="font-medium text-foreground/80 truncate pr-4">
-                {currentSelection.title}
+                {currentSelection?.title}
               </span>
               <button
                 onClick={onClearSelection}

@@ -26,6 +26,7 @@
   "uploadFile": "上传文件",
   "imagePrefix": "图片",
   "filePrefix": "文件",
+  "scenePrefix": "分镜",
   "sentAttachment": "[发送了附件]",
   "selectProjectToUpload": "请先选择一个项目再上传文件",
   "uploadFailedMessage": "文件上传失败: {message}",
@@ -39,5 +40,6 @@
   "onlyModifyNodePrefix": "只修改节点：{title}",
   "clearSelection": "清除选择",
   "pressEnterToSend": "按 Enter 发送，Shift + Enter 换行",
-  "selectedNodesPrompt": "只操作节点id为{id}，不操作其节点"
+  "selectedNodesPrompt": "只操作节点id为{id}，不操作其节点",
+  "skillInProgressWarning": "Skill正在进行中，退出将丢失相关内容，确定要离开吗？"
 }

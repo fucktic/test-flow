@@ -27,7 +27,17 @@
     "delete": "Delete current scene",
     "add": "Add scene at current position",
     "sceneList": "Scene List",
-    "noMatchedAssets": "No matched assets"
+    "noMatchedAssets": "No matched assets",
+    "categoryMap": {
+      "characters": "Characters",
+      "scenes": "Scenes",
+      "props": "Props",
+      "storyboard": "Storyboard",
+      "audio": "Audio",
+      "image": "Image",
+      "video": "Video",
+      "file": "File"
+    }
   },
   "sceneImageNode": {
     "title": "Generate Image",

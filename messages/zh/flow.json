@@ -27,7 +27,17 @@
     "delete": "删除当前分镜",
     "add": "当前位置手动增加分镜",
     "sceneList": "分镜列表",
-    "noMatchedAssets": "无匹配资产"
+    "noMatchedAssets": "无匹配资产",
+    "categoryMap": {
+      "characters": "角色",
+      "scenes": "场景",
+      "props": "道具",
+      "storyboard": "分镜",
+      "audio": "音频",
+      "image": "图片",
+      "video": "视频",
+      "file": "文件"
+    }
   },
   "sceneImageNode": {
     "title": "生成图像",

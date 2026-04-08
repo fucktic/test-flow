@@ -84,6 +84,25 @@ export function ChatWidget() {
     };
   }, [isExecuting, currentProject?.id, initFlow]);
 
+  // 监听窗口关闭、刷新，如果执行中则拦截提示
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isExecuting) {
+        e.preventDefault();
+        e.returnValue = t("skillInProgressWarning");
+        return t("skillInProgressWarning");
+      }
+    };
+
+    if (isExecuting) {
+      window.addEventListener("beforeunload", handleBeforeUnload);
+    }
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [isExecuting, t]);
+
   const { isDragging, handleMouseDown, handleResizeMouseDown, MARGIN } = useWidgetDragResize();
 
   const { allAssets, mentionItemsRef, currentSelection, currentSelectionRef } =
@@ -139,7 +158,7 @@ export function ChatWidget() {
           result += node.text;
         } else if (node.type === "assetMention") {
           const { id, assetType } = node.attrs;
-          if (assetType === "props" || assetType === "scene") {
+          if (assetType === "props" || assetType === "scene" || assetType === "storyboard") {
             result += `@${id}props`;
           } else {
             const suffix = ["image", "file", "temp"].includes(assetType) ? "temp" : assetType;
