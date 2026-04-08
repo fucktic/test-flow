@@ -84,34 +84,6 @@ export const FlowCanvas = () => {
     }
   }, [currentProject?.id, initFlow]);
 
-  // Auto-save flow data
-  useEffect(() => {
-    if (!currentProject?.id || !isMounted || isLoading) return;
-    if (currentProject.id !== loadedProjectIdRef.current) return;
-
-    const timer = setTimeout(() => {
-      // Clean nodes: remove functions and expanded state
-      const cleanNodes = nodes.map((node) => {
-        const { isExpanded: _isExpanded, ...restData } = node.data as any;
-
-        // Strip out functions from data
-        const cleanData = Object.fromEntries(
-          Object.entries(restData).filter(([_, v]) => typeof v !== "function"),
-        );
-
-        return { ...node, data: cleanData };
-      });
-
-      fetch(`/api/projects/${currentProject.id}/flow`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nodes: cleanNodes, edges }),
-      }).catch((err) => console.error("Failed to save flow:", err));
-    }, 1000);
-
-    return () => clearTimeout(timer);
-  }, [nodes, edges, currentProject?.id, isMounted, isLoading]);
-
   if (!isMounted) {
     return null;
   }
