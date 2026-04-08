@@ -436,8 +436,8 @@ export function ChatWidget() {
                     </div>
                     <div
                       className={cn(
-                        "px-4 py-2.5  max-w-[75%] whitespace-pre-wrap wrap-break-words leading-relaxed ",
-                        isUser ? " rounded-tr-sm" : "rounded-tl-sm text-foreground/90",
+                        "px-4 py-2.5 max-w-[75%] min-w-0 whitespace-pre-wrap wrap-break-word leading-relaxed",
+                        isUser ? "rounded-tr-sm" : "rounded-tl-sm text-foreground/90",
                       )}
                     >
                       {msg.content}
