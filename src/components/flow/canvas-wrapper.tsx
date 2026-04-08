@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { ReactFlow, Background, Controls, MiniMap } from "@xyflow/react";
 import { Loader2, RefreshCw } from "lucide-react";
 import "@xyflow/react/dist/style.css";
@@ -46,6 +46,7 @@ export const FlowCanvas = () => {
   const tCanvas = useTranslations("canvas");
   const [isMounted, setIsMounted] = useState(false);
   const [isLoading, setIsLoading] = useState(true); // 添加画布加载状态
+  const loadedProjectIdRef = useRef<string | null>(null);
   const { theme, systemTheme } = useTheme();
 
   useEffect(() => {
@@ -64,10 +65,16 @@ export const FlowCanvas = () => {
         .then((data) => {
           if (data && data.nodes && data.edges) {
             initFlow(data.nodes, data.edges);
+          } else {
+            initFlow([], []);
           }
+          loadedProjectIdRef.current = currentProject.id;
         })
         .catch(() => {
-          // 忽略错误，可能是新项目没有保存过 flow 数据
+          // 如果加载失败，清空画布避免显示上一个项目的数据
+          initFlow([], []);
+          // 同样允许对新项目或出错后的空画布进行保存
+          loadedProjectIdRef.current = currentProject.id;
         })
         .finally(() => {
           setIsLoading(false); // 请求结束（成功或失败）后关闭 loading
@@ -79,7 +86,8 @@ export const FlowCanvas = () => {
 
   // Auto-save flow data
   useEffect(() => {
-    if (!currentProject?.id || !isMounted) return;
+    if (!currentProject?.id || !isMounted || isLoading) return;
+    if (currentProject.id !== loadedProjectIdRef.current) return;
 
     const timer = setTimeout(() => {
       // Clean nodes: remove functions and expanded state
@@ -102,7 +110,7 @@ export const FlowCanvas = () => {
     }, 1000);
 
     return () => clearTimeout(timer);
-  }, [nodes, edges, currentProject?.id, isMounted]);
+  }, [nodes, edges, currentProject?.id, isMounted, isLoading]);
 
   if (!isMounted) {
     return null;
@@ -123,10 +131,15 @@ export const FlowCanvas = () => {
         .then((data) => {
           if (data && data.nodes && data.edges) {
             initFlow(data.nodes, data.edges);
+          } else {
+            initFlow([], []);
           }
+          loadedProjectIdRef.current = currentProject.id;
         })
         .catch((err) => {
           console.error("Failed to reload flow:", err);
+          initFlow([], []);
+          loadedProjectIdRef.current = currentProject.id;
         })
         .finally(() => {
           setIsLoading(false);
