@@ -25,6 +25,7 @@ export function useChatEditor({
   handleSendRef,
 }: UseChatEditorProps) {
   const t = useTranslations("chat");
+  const tFlow = useTranslations("flow.sceneNode");
   const [input, setInput] = useState("");
   const [lastSelectedId, setLastSelectedId] = useState<string | null>(null);
   const { updateNodeData } = useFlowStore();
@@ -91,8 +92,24 @@ export function useChatEditor({
 
             return {
               onStart: (props: any) => {
+                const categoryMap = {
+                  characters: tFlow("categoryMap.characters") || "角色",
+                  scenes: tFlow("categoryMap.scenes") || "场景",
+                  props: tFlow("categoryMap.props") || "道具",
+                  storyboard: tFlow("categoryMap.storyboard") || "分镜",
+                  audio: tFlow("categoryMap.audio") || "音频",
+                  image: tFlow("categoryMap.image") || "图片",
+                  video: tFlow("categoryMap.video") || "视频",
+                  file: tFlow("categoryMap.file") || "文件",
+                  temp: tFlow("categoryMap.temp") || "临时类别",
+                };
+
                 component = new ReactRenderer(MentionList, {
-                  props,
+                  props: {
+                    ...props,
+                    categoryMap,
+                    emptyText: tFlow("noMatchedAssets") || "无匹配资产",
+                  },
                   editor: props.editor,
                 });
 

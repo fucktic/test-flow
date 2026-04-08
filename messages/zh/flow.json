@@ -36,7 +36,8 @@
       "audio": "音频",
       "image": "图片",
       "video": "视频",
-      "file": "文件"
+      "file": "文件",
+      "temp": "临时类别"
     }
   },
   "sceneImageNode": {

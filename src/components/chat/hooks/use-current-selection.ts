@@ -85,12 +85,13 @@ export function useCurrentSelection(uploadedFiles: UploadedFile[]) {
     const fileItems = uploadedFiles.map((f) => {
       const isImage = f.type === "image";
       const name = isImage
-        ? `${t("imagePrefix")}${imageIndex++}`
-        : `${t("filePrefix")}${fileIndex++}`;
+        ? `${t("imagePrefix") || "图片"}${imageIndex++}`
+        : `${t("filePrefix") || "文件"}${fileIndex++}`;
       return {
         id: f.id,
         name,
-        category: f.type,
+        category: "temp",
+        type: f.type,
         url: f.previewUrl || f.file.name,
       };
     });

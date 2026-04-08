@@ -306,6 +306,7 @@ export function SceneEditDialog({ scene, onOpenChange, onSave }: SceneEditDialog
       image: tFlow("categoryMap.image"),
       video: tFlow("categoryMap.video"),
       file: tFlow("categoryMap.file"),
+      temp: tFlow("categoryMap.temp") || "临时类别",
     }),
     [tFlow],
   );
