@@ -13,6 +13,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { getNodeWrapperClassName } from "../utils";
 import { useProjectStore } from "@/lib/store/use-projects";
 
+import { LazyImage } from "@/components/common/lazy-image";
 import { AssetFormDialog } from "./components/asset-form-dialog";
 import { AssetDeleteDialog } from "./components/asset-delete-dialog";
 
@@ -282,19 +283,17 @@ const AssetNode = ({ data, selected }: AssetNodeProps) => {
                     )}
                   >
                     {item.type === "image" && item.url ? (
-                      <img
+                      <LazyImage
                         src={item.url}
                         alt={item.name}
                         className="w-full h-full object-cover transition-transform group-hover/asset:scale-105"
-                        loading="lazy"
                       />
                     ) : item.type === "video" && item.url ? (
                       item.poster ? (
-                        <img
+                        <LazyImage
                           src={item.poster}
                           alt={item.name}
                           className="w-full h-full object-cover transition-transform group-hover/asset:scale-105"
-                          loading="lazy"
                         />
                       ) : (
                         <video

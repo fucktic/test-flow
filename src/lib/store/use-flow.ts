@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
+import { useChatStore } from "./use-chat";
 import { v4 as uuidv4 } from "uuid";
 import {
   Node,
@@ -24,6 +25,10 @@ interface FlowState {
   addNode: (node: Node) => void;
   updateNodeData: (nodeId: string, data: any) => void;
   initFlow: (nodes: Node[], edges: Edge[]) => void;
+  modifiedNodesDuringChat: Map<string, Node>; // 记录聊天期间修改过的节点信息
+  setModifiedNodesDuringChat: (
+    nodes: Map<string, Node> | ((prev: Map<string, Node>) => Map<string, Node>),
+  ) => void;
 }
 
 const syncGraph = (state: any, set: any) => {
@@ -600,13 +605,27 @@ export const useFlowStore = create<FlowState>()(
       nodes: [] as Node[],
       edges: [] as Edge[],
       selectedNodeId: null,
+      modifiedNodesDuringChat: new Map<string, Node>(),
     };
 
-    const tempState = JSON.parse(JSON.stringify(initialState));
+    const tempState = JSON.parse(
+      JSON.stringify({ ...initialState, modifiedNodesDuringChat: undefined }),
+    );
+    tempState.modifiedNodesDuringChat = initialState.modifiedNodesDuringChat;
     syncGraph(tempState, set);
 
     return {
       ...tempState,
+      setModifiedNodesDuringChat: (
+        update: Map<string, Node> | ((prev: Map<string, Node>) => Map<string, Node>),
+      ) => {
+        set((state) => {
+          state.modifiedNodesDuringChat =
+            typeof update === "function"
+              ? update(state.modifiedNodesDuringChat as unknown as Map<string, Node>)
+              : update;
+        });
+      },
       setNodes: (update) => {
         set((state) => {
           state.nodes = typeof update === "function" ? update(state.nodes) : update;
@@ -619,7 +638,30 @@ export const useFlowStore = create<FlowState>()(
       },
       onNodesChange: (changes: NodeChange[]) => {
         set((state) => {
-          state.nodes = applyNodeChanges(changes, state.nodes);
+          const isChatting = useChatStore.getState().isChatting;
+          const newNodes = applyNodeChanges(changes, state.nodes);
+
+          if (isChatting) {
+            // Record modified nodes during chat
+            changes.forEach((change) => {
+              if (
+                change.type === "position" ||
+                change.type === "dimensions" ||
+                change.type === "replace"
+              ) {
+                const nodeId = change.id;
+                const modifiedNode = newNodes.find((n) => n.id === nodeId);
+                if (modifiedNode) {
+                  state.modifiedNodesDuringChat.set(
+                    nodeId,
+                    JSON.parse(JSON.stringify(modifiedNode)),
+                  );
+                }
+              }
+            });
+          }
+
+          state.nodes = newNodes;
         });
       },
       onEdgesChange: (changes: EdgeChange[]) => {
@@ -635,6 +677,12 @@ export const useFlowStore = create<FlowState>()(
       addNode: (node: Node) => {
         set((state) => {
           state.nodes.push(node);
+
+          // Record added nodes during chat
+          const isChatting = useChatStore.getState().isChatting;
+          if (isChatting) {
+            state.modifiedNodesDuringChat.set(node.id, JSON.parse(JSON.stringify(node)));
+          }
         });
       },
       updateNodeData: (nodeId: string, data: any) => {
@@ -642,6 +690,12 @@ export const useFlowStore = create<FlowState>()(
           const node = state.nodes.find((n) => n.id === nodeId);
           if (node) {
             node.data = { ...node.data, ...data };
+
+            // Record modified nodes during chat
+            const isChatting = useChatStore.getState().isChatting;
+            if (isChatting) {
+              state.modifiedNodesDuringChat.set(nodeId, JSON.parse(JSON.stringify(node)));
+            }
           }
         });
       },

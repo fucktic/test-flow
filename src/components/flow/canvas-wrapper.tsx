@@ -16,6 +16,7 @@ import AssetNode from "./nodes/asset-node";
 import { useTheme } from "next-themes";
 import { useProjectStore } from "@/lib/store/use-projects";
 import { useTranslations } from "next-intl";
+import { useChatStore } from "@/lib/store/use-chat";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -43,6 +44,7 @@ const nodeTypes = {
 export const FlowCanvas = () => {
   const { nodes, edges, onNodesChange, onEdgesChange, onConnect, initFlow } = useFlowStore();
   const currentProject = useProjectStore((state) => state.currentProject);
+  const isChatting = useChatStore((state) => state.isChatting);
   const tCanvas = useTranslations("canvas");
   const [isMounted, setIsMounted] = useState(false);
   const [isLoading, setIsLoading] = useState(true); // 添加画布加载状态
@@ -83,6 +85,37 @@ export const FlowCanvas = () => {
       setIsLoading(false);
     }
   }, [currentProject?.id, initFlow]);
+
+  // Auto-save flow data
+  useEffect(() => {
+    if (!currentProject?.id || !isMounted || isLoading) return;
+    if (currentProject.id !== loadedProjectIdRef.current) return;
+
+    // 如果正在聊天中，暂停自动保存
+    if (isChatting) return;
+
+    const timer = setTimeout(() => {
+      // Clean nodes: remove functions and expanded state
+      const cleanNodes = nodes.map((node) => {
+        const { isExpanded: _isExpanded, ...restData } = node.data as any;
+
+        // Strip out functions from data
+        const cleanData = Object.fromEntries(
+          Object.entries(restData).filter(([_, v]) => typeof v !== "function"),
+        );
+
+        return { ...node, data: cleanData };
+      });
+
+      fetch(`/api/projects/${currentProject.id}/flow`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nodes: cleanNodes, edges }),
+      }).catch((err) => console.error("Failed to save flow:", err));
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [nodes, edges, currentProject?.id, isMounted, isLoading, isChatting]);
 
   if (!isMounted) {
     return null;

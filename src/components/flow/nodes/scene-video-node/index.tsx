@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { Upload, Save, Maximize2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { LazyImage } from "@/components/common/lazy-image";
 import { MediaPreviewModal } from "@/components/common/media-preview-modal";
 import { getNodeWrapperClassName } from "../utils";
 import { useFlowStore } from "@/lib/store/use-flow";
@@ -178,11 +179,10 @@ const SceneVideoNode = ({ id, data, selected }: SceneVideoNodeProps) => {
                   onClick={() => data.onVideoSelect?.(video.id)}
                 >
                   {video.poster ? (
-                    <img
+                    <LazyImage
                       src={video.poster}
                       alt={video.id}
                       className="w-full h-full object-cover"
-                      loading="lazy"
                     />
                   ) : video.url.match(/\.(mp4|webm|mov)$/i) ||
                     video.url.startsWith("data:video/") ? (
@@ -193,11 +193,10 @@ const SceneVideoNode = ({ id, data, selected }: SceneVideoNodeProps) => {
                       playsInline
                     />
                   ) : (
-                    <img
+                    <LazyImage
                       src={video.url}
                       alt={video.id}
                       className="w-full h-full object-cover"
-                      loading="lazy"
                     />
                   )}
                   {video.selected && (

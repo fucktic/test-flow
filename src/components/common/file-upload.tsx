@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { Upload, Music } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { LazyImage } from "@/components/common/lazy-image";
 
 interface FileUploadProps {
   accept?: string;
@@ -64,7 +65,11 @@ export function FileUpload({
       {fileUrl ? (
         <div className="relative group rounded-lg overflow-hidden border border-border/60 bg-muted/30 aspect-video flex items-center justify-center">
           {mediaType === "image" && (
-            <img src={fileUrl} alt={fileName} className="w-full h-full object-contain bg-black/5" />
+            <LazyImage
+              src={fileUrl}
+              alt={fileName}
+              className="w-full h-full object-contain bg-black/5"
+            />
           )}
           {mediaType === "audio" && (
             <div className="flex flex-col items-center gap-2">

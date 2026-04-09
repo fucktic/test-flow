@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import { Download, Film, Maximize2 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
+import { LazyImage } from "@/components/common/lazy-image";
 import { MediaPreviewModal, MediaItem } from "@/components/common/media-preview-modal";
 import { toast } from "sonner";
 import { getNodeWrapperClassName } from "../utils";
@@ -151,11 +152,10 @@ const VideoPreviewNode = ({ data }: VideoPreviewNodeProps) => {
 
                         {item.status === "generated" && item.url ? (
                           <>
-                            <img
+                            <LazyImage
                               src={item.poster || item.url}
                               alt={item.id}
                               className="w-full h-full object-cover"
-                              loading="lazy"
                             />
                             {/* 悬浮查看按钮 */}
                             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/preview:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-[2px]">

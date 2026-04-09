@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { Upload, Save, Maximize2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { LazyImage } from "@/components/common/lazy-image";
 import { MediaPreviewModal } from "@/components/common/media-preview-modal";
 import { getNodeWrapperClassName } from "../utils";
 import { useFlowStore } from "@/lib/store/use-flow";
@@ -124,12 +125,7 @@ const SceneImageNode = ({ id, data, selected }: SceneImageNodeProps) => {
                     updateNodeData(id, { imageUrl: (img as any).originalUrl });
                   }}
                 >
-                  <img
-                    src={img.url}
-                    alt={img.id}
-                    className="w-full h-full object-cover"
-                    loading="lazy"
-                  />
+                  <LazyImage src={img.url} alt={img.id} className="w-full h-full object-cover" />
                   <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/image:opacity-100 transition-opacity z-20">
                     <Button
                       variant="secondary"

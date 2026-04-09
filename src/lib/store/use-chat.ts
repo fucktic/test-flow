@@ -21,6 +21,7 @@ interface ChatState {
   isAgentModalOpen: boolean; // 智能体管理弹窗是否打开
   isChatOpen: boolean; // 聊天窗口是否打开（目前不可关闭，仅为保留字段）
   size: { width: number; height: number }; // 悬浮窗尺寸
+  isChatting: boolean; // 当前是否正在聊天执行中
 
   // Actions
   setIsMinimized: (minimized: boolean) => void;
@@ -34,6 +35,7 @@ interface ChatState {
   fetchAgents: () => Promise<void>; // 获取智能体列表
   saveAgents: (agents: Agent[]) => Promise<void>; // 保存智能体列表
   setSize: (width: number, height: number) => void;
+  setIsChatting: (isChatting: boolean) => void;
 }
 
 export const useChatStore = create<ChatState>()(
@@ -46,6 +48,12 @@ export const useChatStore = create<ChatState>()(
     isAgentModalOpen: false,
     isChatOpen: true,
     size: { width: 400, height: 600 },
+    isChatting: false,
+
+    setIsChatting: (isChatting) =>
+      set((state) => {
+        state.isChatting = isChatting;
+      }),
 
     setIsMinimized: (minimized) =>
       set((state) => {
