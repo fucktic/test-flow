@@ -199,9 +199,7 @@ const SceneVideoNode = ({ id, data, selected }: SceneVideoNodeProps) => {
                       className="w-full h-full object-cover"
                     />
                   )}
-                  {video.selected && (
-                    <div className="absolute inset-0 border-2 border-primary rounded-lg pointer-events-none z-10" />
-                  )}
+
                   {/* Hover Actions */}
                   <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/video:opacity-100 transition-opacity z-20">
                     <Button

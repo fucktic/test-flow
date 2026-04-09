@@ -92,7 +92,9 @@ export const FlowCanvas = () => {
     if (currentProject.id !== loadedProjectIdRef.current) return;
 
     // 如果正在聊天中，暂停自动保存
-    if (isChatting) return;
+    if (isChatting) {
+      return;
+    }
 
     const timer = setTimeout(() => {
       // Clean nodes: remove functions and expanded state

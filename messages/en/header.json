@@ -3,5 +3,9 @@
   "newProject": "New Project",
   "importSkill": "Import Skill",
   "toggleTheme": "Toggle Theme",
-  "switchLanguage": "切换为中文"
+  "switchLanguage": "切换为中文",
+  "switchProjectConfirmTitle": "Confirm Project Switch",
+  "switchProjectConfirmDesc": "A skill is currently running. Switching projects will stop the current skill. Do you want to proceed?",
+  "cancel": "Cancel",
+  "confirmSwitch": "Confirm Switch"
 }

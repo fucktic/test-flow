@@ -64,50 +64,11 @@ export function ChatWidget() {
         if (!res.ok) return;
         const data = await res.json();
         if (data && data.nodes && data.edges) {
-          const { modifiedNodesDuringChat, setModifiedNodesDuringChat } = useFlowStore.getState();
-
-          let newNodes = data.nodes;
-          // Merge modified nodes during chat
-          if (modifiedNodesDuringChat.size > 0) {
-            const serverNodeIds = new Set(data.nodes.map((n: any) => n.id));
-
-            newNodes = data.nodes.map((node: any) => {
-              if (modifiedNodesDuringChat.has(node.id)) {
-                return modifiedNodesDuringChat.get(node.id);
-              }
-              return node;
-            });
-
-            // Add new nodes created by user during chat that are not on the server
-            modifiedNodesDuringChat.forEach((node, id) => {
-              if (!serverNodeIds.has(id)) {
-                newNodes.push(node);
-              }
-            });
-
-            // Auto save merged nodes
-            setTimeout(() => {
-              const cleanNodes = newNodes.map((node: any) => {
-                const { isExpanded: _isExpanded, ...restData } = node.data as any;
-                const cleanData = Object.fromEntries(
-                  Object.entries(restData).filter(([_, v]) => typeof v !== "function"),
-                );
-                return { ...node, data: cleanData };
-              });
-
-              fetch(`/api/projects/${currentProject.id}/flow`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ nodes: cleanNodes, edges: data.edges }),
-              }).catch((err) => console.error("Failed to save merged flow:", err));
-            }, 1000);
-          }
-
-          initFlow(newNodes, data.edges);
+          initFlow(data.nodes, data.edges);
 
           // Clear modified nodes after merging when execution stops
           if (!isExecuting) {
-            setModifiedNodesDuringChat(new Map());
+            useFlowStore.getState().setModifiedNodesDuringChat(new Map());
           }
         }
       } catch (err) {
@@ -171,6 +132,20 @@ export function ChatWidget() {
   useEffect(() => {
     handleSendRef.current = handleSend;
   });
+
+  // Listen for external stop command (e.g. from project switcher)
+  useEffect(() => {
+    const handleExternalStop = () => {
+      if (isExecuting) {
+        stopCommand();
+        setIsChatting(false);
+      }
+    };
+    window.addEventListener("stop-chat-command", handleExternalStop);
+    return () => {
+      window.removeEventListener("stop-chat-command", handleExternalStop);
+    };
+  }, [isExecuting, stopCommand, setIsChatting]);
 
   // 初始化加载智能体列表
   useEffect(() => {

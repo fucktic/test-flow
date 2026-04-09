@@ -15,6 +15,7 @@ import { ImageDeleteDialog } from "./components/image-delete-dialog";
 
 interface SceneImageNodeProps {
   id: string;
+
   data: SceneImageNodeData;
   selected?: boolean;
 }
@@ -102,7 +103,7 @@ const SceneImageNode = ({ id, data, selected }: SceneImageNodeProps) => {
       <div className="flex items-center gap-2 px-1">
         <span className="text-sm font-semibold text-foreground">{tFlow("title")}</span>
         <span className="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded-sm font-medium">
-          {data.id}
+          {data.id || data?.sceneId || "S"}
         </span>
       </div>
       {/* Main Container */}

@@ -1,5 +1,9 @@
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
+import { enableMapSet } from "immer";
+
+enableMapSet();
+
 import { useChatStore } from "./use-chat";
 import { v4 as uuidv4 } from "uuid";
 import {
