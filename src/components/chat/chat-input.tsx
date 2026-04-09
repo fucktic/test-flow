@@ -38,7 +38,6 @@ const SELECTED_NODE_TYPES = [
   "assetItem",
   // 分镜图片节点
   "sceneImageNode",
-  "",
 ];
 
 export function ChatInput({

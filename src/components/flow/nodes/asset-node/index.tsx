@@ -22,6 +22,15 @@ interface AssetNodeProps {
   selected?: boolean;
 }
 
+const getMediaTypeFromUrl = (url?: string, defaultType?: string) => {
+  if (!url) return defaultType;
+  const ext = url.split("?")[0].split(".").pop()?.toLowerCase() || "";
+  if (["jpg", "jpeg", "png", "gif", "webp", "svg"].includes(ext)) return "image";
+  if (["mp4", "webm", "ogg", "mov"].includes(ext)) return "video";
+  if (["mp3", "wav", "aac", "m4a"].includes(ext)) return "audio";
+  return defaultType;
+};
+
 const AssetNode = ({ data, selected }: AssetNodeProps) => {
   const tFlow = useTranslations("flow.assetNode");
   const currentProject = useProjectStore((state) => state.currentProject);
@@ -72,7 +81,10 @@ const AssetNode = ({ data, selected }: AssetNodeProps) => {
     { id: "audio", label: tFlow("audio") },
   ];
 
-  const currentAssets = data.assets?.[activeTab] || [];
+  const currentAssets = useMemo(() => {
+    console.log(data.assets[activeTab]);
+    return data.assets?.[activeTab] || [];
+  }, [data.assets, activeTab]);
   const deleteAsset = useMemo(
     () => currentAssets.find((item) => item.id === deleteId),
     [currentAssets, deleteId],
@@ -80,23 +92,27 @@ const AssetNode = ({ data, selected }: AssetNodeProps) => {
   const isEditMode = editingId !== null;
 
   const previewItems: MediaItem[] = currentAssets
-    .filter((item: AssetItem) => (item.type === "image" || item.type === "video") && !!item.url)
+    .filter((item: AssetItem) => {
+      const type = getMediaTypeFromUrl(item.url, item.type);
+      return (type === "image" || type === "video") && !!item.url;
+    })
     .map((item: AssetItem) => ({
       id: item.id,
       url: item.url,
-      type: item.type as "image" | "video",
+      type: getMediaTypeFromUrl(item.url, item.type) as "image" | "video",
       poster: item.poster,
     }));
 
   const handlePreview = (index: number) => {
     const item = currentAssets[index];
-    if (item.type === "image" || item.type === "video") {
+    const type = getMediaTypeFromUrl(item.url, item.type);
+    if (type === "image" || type === "video") {
       const pIndex = previewItems.findIndex((p: MediaItem) => p.id === item.id);
       if (pIndex !== -1) {
         setPreviewIndex(pIndex);
         setPreviewOpen(true);
       }
-    } else if (item.type === "audio") {
+    } else if (type === "audio") {
       if (!item.url) return;
       const audioUrl = item.url;
       const audio = new Audio(audioUrl);
@@ -267,105 +283,108 @@ const AssetNode = ({ data, selected }: AssetNodeProps) => {
             </div>
           ) : (
             <div className="grid grid-cols-4 gap-4">
-              {currentAssets.map((item: AssetItem, index: number) => (
-                <div
-                  key={item.id}
-                  className="flex flex-col gap-1 group/asset cursor-pointer"
-                  onClick={() => data.onAssetSelect?.(item.id)}
-                  onDoubleClick={() => handlePreview(index)}
-                >
+              {currentAssets.map((item: AssetItem, index: number) => {
+                const itemType = getMediaTypeFromUrl(item.url, item.type);
+                return (
                   <div
-                    className={cn(
-                      "aspect-square bg-muted rounded-lg overflow-hidden relative border transition-colors",
-                      data.selectedId === item.id
-                        ? "border-primary ring-1 ring-primary/40"
-                        : "border-border/50 group-hover/asset:border-primary/50",
-                    )}
+                    key={item.id}
+                    className="flex flex-col gap-1 group/asset cursor-pointer"
+                    onClick={() => data.onAssetSelect?.(item.id)}
+                    onDoubleClick={() => handlePreview(index)}
                   >
-                    {item.type === "image" && item.url ? (
-                      <LazyImage
-                        src={item.url}
-                        alt={item.name}
-                        className="w-full h-full object-cover transition-transform group-hover/asset:scale-105"
-                      />
-                    ) : item.type === "video" && item.url ? (
-                      item.poster ? (
+                    <div
+                      className={cn(
+                        "aspect-square bg-muted rounded-lg overflow-hidden relative border transition-colors",
+                        data.selectedId === item.id
+                          ? "border-primary ring-1 ring-primary/40"
+                          : "border-border/50 group-hover/asset:border-primary/50",
+                      )}
+                    >
+                      {itemType === "image" && item.url ? (
                         <LazyImage
-                          src={item.poster}
+                          src={item.url}
                           alt={item.name}
                           className="w-full h-full object-cover transition-transform group-hover/asset:scale-105"
                         />
+                      ) : itemType === "video" && item.url ? (
+                        item.poster ? (
+                          <LazyImage
+                            src={item.poster}
+                            alt={item.name}
+                            className="w-full h-full object-cover transition-transform group-hover/asset:scale-105"
+                          />
+                        ) : (
+                          <video
+                            src={item.url}
+                            className="w-full h-full object-cover transition-transform group-hover/asset:scale-105"
+                            muted
+                            playsInline
+                          />
+                        )
                       ) : (
-                        <video
-                          src={item.url}
-                          className="w-full h-full object-cover transition-transform group-hover/asset:scale-105"
-                          muted
-                          playsInline
-                        />
-                      )
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-secondary/30">
-                        <Music className="w-8 h-8 text-primary/50" />
-                      </div>
-                    )}
+                        <div className="w-full h-full flex items-center justify-center bg-secondary/30">
+                          <Music className="w-8 h-8 text-primary/50" />
+                        </div>
+                      )}
 
-                    {(item.type === "image" || item.type === "video") && item.url && (
-                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/asset:opacity-100 transition-opacity flex items-center justify-center space-x-2">
+                      {(itemType === "image" || itemType === "video") && item.url && (
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/asset:opacity-100 transition-opacity flex items-center justify-center space-x-2">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                className="h-7 w-7 rounded-md bg-black/50 text-white flex items-center justify-center hover:bg-black/70"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  handlePreview(index);
+                                }}
+                              >
+                                <Maximize2 className="w-4 h-4" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>{tFlow("tooltipPreview")}</TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                className="h-7 w-7 rounded-md bg-background/90 border border-border/60 text-foreground flex items-center justify-center hover:bg-background"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  openEditDialog(item);
+                                }}
+                              >
+                                <Pencil className="w-4 h-4" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>{tFlow("tooltipEdit")}</TooltipContent>
+                          </Tooltip>
+                        </div>
+                      )}
+                      <div className="absolute -top-1 -right-1 flex items-center gap-1 opacity-0 group-hover/asset:opacity-100 transition-opacity">
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <button
-                              className="h-7 w-7 rounded-md bg-black/50 text-white flex items-center justify-center hover:bg-black/70"
+                              className="h-7 w-7 rounded-bl-xl bg-background/90 border border-border/60 text-destructive flex items-center justify-center hover:bg-background"
                               onClick={(event) => {
                                 event.stopPropagation();
-                                handlePreview(index);
+                                openDeleteDialog(item);
                               }}
                             >
-                              <Maximize2 className="w-4 h-4" />
+                              <Trash2 className="w-3.5 h-3.5" />
                             </button>
                           </TooltipTrigger>
-                          <TooltipContent>{tFlow("tooltipPreview")}</TooltipContent>
-                        </Tooltip>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <button
-                              className="h-7 w-7 rounded-md bg-background/90 border border-border/60 text-foreground flex items-center justify-center hover:bg-background"
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                openEditDialog(item);
-                              }}
-                            >
-                              <Pencil className="w-4 h-4" />
-                            </button>
-                          </TooltipTrigger>
-                          <TooltipContent>{tFlow("tooltipEdit")}</TooltipContent>
+                          <TooltipContent>{tFlow("tooltipDelete")}</TooltipContent>
                         </Tooltip>
                       </div>
-                    )}
-                    <div className="absolute -top-1 -right-1 flex items-center gap-1 opacity-0 group-hover/asset:opacity-100 transition-opacity">
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <button
-                            className="h-7 w-7 rounded-bl-xl bg-background/90 border border-border/60 text-destructive flex items-center justify-center hover:bg-background"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              openDeleteDialog(item);
-                            }}
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </TooltipTrigger>
-                        <TooltipContent>{tFlow("tooltipDelete")}</TooltipContent>
-                      </Tooltip>
                     </div>
+                    <span
+                      className="text-xs text-center truncate text-muted-foreground group-hover/asset:text-foreground transition-colors"
+                      title={item.name}
+                    >
+                      {item.name}
+                    </span>
                   </div>
-                  <span
-                    className="text-xs text-center truncate text-muted-foreground group-hover/asset:text-foreground transition-colors"
-                    title={item.name}
-                  >
-                    {item.name}
-                  </span>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </ScrollArea>
