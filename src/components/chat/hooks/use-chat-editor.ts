@@ -96,7 +96,7 @@ export function useChatEditor({
                   characters: tFlow("categoryMap.characters") || "角色",
                   scenes: tFlow("categoryMap.scenes") || "场景",
                   props: tFlow("categoryMap.props") || "道具",
-                  storyboard: tFlow("categoryMap.storyboard") || "分镜",
+                  storyboard: tFlow("categoryMap.storyboard") || "分镜图",
                   audio: tFlow("categoryMap.audio") || "音频",
                   image: tFlow("categoryMap.image") || "图片",
                   video: tFlow("categoryMap.video") || "视频",

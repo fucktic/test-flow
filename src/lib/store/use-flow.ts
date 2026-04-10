@@ -411,6 +411,7 @@ const getVideoHandlers = (set: any, nodeId: string) => ({
             v.selected = v.id === id;
           });
         }
+        syncGraph(state, set);
       }
     });
   },
@@ -701,6 +702,7 @@ export const useFlowStore = create<FlowState>()(
               state.modifiedNodesDuringChat.set(nodeId, JSON.parse(JSON.stringify(node)));
             }
           }
+          syncGraph(state, set);
         });
       },
       initFlow: (nodes: Node[], edges: Edge[]) => {

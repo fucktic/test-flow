@@ -24,10 +24,12 @@ export function MediaPreviewModal({
   initialIndex = 0,
 }: MediaPreviewModalProps) {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
+  const [timestamp, setTimestamp] = useState(Date.now());
 
   useEffect(() => {
     if (open) {
       setCurrentIndex(initialIndex >= 0 && initialIndex < items.length ? initialIndex : 0);
+      setTimestamp(Date.now());
     }
   }, [open, initialIndex, items.length]);
 
@@ -38,11 +40,23 @@ export function MediaPreviewModal({
   const handlePrevious = (e: React.MouseEvent) => {
     e.stopPropagation();
     setCurrentIndex((prev) => (prev > 0 ? prev - 1 : items.length - 1));
+    setTimestamp(Date.now());
   };
 
   const handleNext = (e: React.MouseEvent) => {
     e.stopPropagation();
     setCurrentIndex((prev) => (prev < items.length - 1 ? prev + 1 : 0));
+    setTimestamp(Date.now());
+  };
+
+  const getUrlWithTimestamp = (url?: string) => {
+    if (!url) return url;
+    // 如果是 data 或 blob 开头的本地对象 URL，则不添加时间戳
+    if (url.startsWith("data:") || url.startsWith("blob:")) return url;
+
+    // 添加时间戳参数以绕过浏览器缓存，确保能实时加载被修改后的最新文件
+    const separator = url.includes("?") ? "&" : "?";
+    return `${url}${separator}t=${timestamp}`;
   };
 
   return (
@@ -86,15 +100,15 @@ export function MediaPreviewModal({
         <div className="relative w-full h-full flex items-center justify-center">
           {currentItem.type === "video" || currentItem.url.endsWith(".mp4") ? (
             <video
-              src={currentItem.url}
-              poster={currentItem.poster}
+              src={getUrlWithTimestamp(currentItem.url)}
+              poster={getUrlWithTimestamp(currentItem.poster)}
               controls
               autoPlay
               className="w-full h-full object-contain rounded-md shadow-2xl"
             />
           ) : (
             <img
-              src={currentItem.url}
+              src={getUrlWithTimestamp(currentItem.url)}
               alt={currentItem.id}
               className="w-full h-full object-contain rounded-md shadow-2xl"
             />

@@ -9,6 +9,7 @@ import { MediaPreviewModal, MediaItem } from "@/components/common/media-preview-
 import { toast } from "sonner";
 import { getNodeWrapperClassName } from "../utils";
 import { useProjectStore } from "@/lib/store/use-projects";
+import { generateId } from "@/lib/utils/uuid";
 
 interface VideoPreviewNodeProps {
   data: VideoPreviewNodeData;
@@ -51,12 +52,20 @@ const VideoPreviewNode = ({ data }: VideoPreviewNodeProps) => {
       }
 
       try {
-        // @ts-ignore: File System Access API
-        const dirHandle = await window.showDirectoryPicker({
+        const dirHandle = await (window as any).showDirectoryPicker({
           mode: "readwrite",
         });
 
+        // 获取当前时间格式化字符串，作为时间戳
+        const now = new Date();
+        const timestamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}_${String(now.getHours()).padStart(2, "0")}${String(now.getMinutes()).padStart(2, "0")}${String(now.getSeconds()).padStart(2, "0")}`;
+        const folderName = `${episode.episodeName}_${timestamp}`;
+
+        // 在用户选择的目录下，创建一个以“分集名称+时间戳”命名的新文件夹
+        const episodeDirHandle = await dirHandle.getDirectoryHandle(folderName, { create: true });
+
         let successCount = 0;
+        let index = 1;
         for (const item of episodeItems) {
           if (!item.url) continue;
           try {
@@ -65,17 +74,21 @@ const VideoPreviewNode = ({ data }: VideoPreviewNodeProps) => {
             if (!response.ok) throw new Error(`Failed to fetch ${fetchUrl}`);
             const blob = await response.blob();
 
-            let filename = item.url.split("/").pop() || `${item.id}`;
+            const urlMatch = item.url.match(/\.([a-zA-Z0-9]+)(?:[?#]|$)/);
             const defaultExt = item.type === "video" ? ".mp4" : ".png";
-            if (!filename.includes(".")) {
-              filename += defaultExt;
-            }
+            const ext = urlMatch ? `.${urlMatch[1]}` : defaultExt;
 
-            const fileHandle = await dirHandle.getFileHandle(filename, { create: true });
+            // 使用序号作为文件名，并结合国际化的分镜前缀 (格式如: 分镜1.mp4 或 Scene 1.mp4)
+            const scenePrefix = tFlow("scenePrefix") || "分镜";
+            const filename = `${scenePrefix}${index}${ext}`;
+
+            // 将文件保存到刚创建的分集文件夹中
+            const fileHandle = await episodeDirHandle.getFileHandle(filename, { create: true });
             const writable = await fileHandle.createWritable();
             await writable.write(blob);
             await writable.close();
             successCount++;
+            index++;
           } catch (err) {
             console.error(`Failed to download item ${item.id}:`, err);
           }
@@ -102,6 +115,14 @@ const VideoPreviewNode = ({ data }: VideoPreviewNodeProps) => {
     [tFlow, data, currentProject],
   );
 
+  const getUrlWithTimestamp = (url?: string) => {
+    if (!url) return url;
+    if (url.startsWith("data:") || url.startsWith("blob:")) return url;
+    const timestamp = Date.now();
+    const separator = url.includes("?") ? "&" : "?";
+    return `${url}${separator}t=${timestamp}`;
+  };
+
   return (
     <div className="flex flex-col gap-2 w-lg relative group/node">
       <div className="text-sm font-semibold text-foreground px-1">{tFlow("title")}</div>
@@ -110,7 +131,7 @@ const VideoPreviewNode = ({ data }: VideoPreviewNodeProps) => {
           <ul className="flex flex-col gap-2 mt-2 w-full max-w-full">
             {(data.episodes || []).map((episode) => (
               <li
-                key={episode.id}
+                key={generateId()}
                 className="flex flex-col group w-full gap-3 relative overflow-hidden mb-4 border-b border-border/50 pb-4 last:border-0 last:pb-0 last:mb-0"
               >
                 <div className="flex items-center justify-between w-full gap-2">
@@ -142,23 +163,34 @@ const VideoPreviewNode = ({ data }: VideoPreviewNodeProps) => {
                   <div className="grid grid-cols-3 gap-2 pb-2">
                     {(episode.items || []).map((item) => (
                       <div
-                        key={item.id}
-                        className="relative aspect-square rounded-lg overflow-hidden border border-border/50 group/preview bg-black"
+                        key={generateId()}
+                        className="relative aspect-square rounded-lg overflow-hidden border border-border/50 group/preview "
                       >
-                        {/* 左上角 ID 徽章 */}
-                        <div className="absolute top-1.5 left-1.5 px-1 py-0.5 bg-black/60 backdrop-blur-sm text-white/90 rounded text-[9px] font-medium z-10">
-                          {item.id}
-                        </div>
-
                         {item.status === "generated" && item.url ? (
                           <>
-                            <LazyImage
-                              src={item.poster || item.url}
-                              alt={item.id}
-                              className="w-full h-full object-cover"
-                            />
+                            {item.poster ? (
+                              <LazyImage
+                                src={getUrlWithTimestamp(item.poster)}
+                                alt={item.id}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : item.url.match(/\.(mp4|webm|mov)$/i) ||
+                              item.url.startsWith("data:video/") ? (
+                              <video
+                                src={getUrlWithTimestamp(item.url)}
+                                className="w-full h-full object-cover"
+                                muted
+                                playsInline
+                              />
+                            ) : (
+                              <LazyImage
+                                src={getUrlWithTimestamp(item.url)}
+                                alt={item.id}
+                                className="w-full h-full object-cover"
+                              />
+                            )}
                             {/* 悬浮查看按钮 */}
-                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/preview:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-[2px]">
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/preview:opacity-100 transition-opacity flex items-center justify-center rounded-lg backdrop-blur-[2px]">
                               <Button
                                 variant="secondary"
                                 size="icon"
@@ -174,12 +206,6 @@ const VideoPreviewNode = ({ data }: VideoPreviewNodeProps) => {
                                 <Maximize2 className="w-4 h-4" />
                               </Button>
                             </div>
-                            {/* 右下角时长徽章 */}
-                            {item.duration && (
-                              <div className="absolute bottom-1.5 right-1.5 px-1 py-0.5 bg-black/60 backdrop-blur-sm text-white/90 rounded text-[9px] font-medium z-10">
-                                {item.duration}
-                              </div>
-                            )}
                           </>
                         ) : (
                           <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs bg-muted/30">

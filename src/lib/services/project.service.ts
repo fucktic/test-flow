@@ -9,8 +9,11 @@ export async function saveFlow(id: string, data: any) {
   const prefix = `/api/projects/${id}`;
   // 转义正则特殊字符
   const escapedPrefix = prefix.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  // 匹配类似 "/api/projects/123/episode/" 或 \"/api/projects/123/assets/\" 的情况
-  const writePattern = new RegExp(`(["']|\\\\\\")${escapedPrefix}\\/(episode|assets)\\/`, "g");
+  // 匹配类似 "/api/projects/123/episode/"、"/api/projects/123/ep-01/" 或 \"/api/projects/123/assets/\" 的情况
+  const writePattern = new RegExp(
+    `(["']|\\\\\\")${escapedPrefix}\\/(episode|assets|ep-\\d+)\\/`,
+    "g",
+  );
   // 替换为 "/episode/" 或 \"/assets/\"
   jsonString = jsonString.replace(writePattern, "$1/$2/");
 
@@ -22,9 +25,9 @@ export async function loadFlow(id: string) {
   try {
     let content = await fs.readFile(filePath, "utf-8");
 
-    // 匹配类似 "/episode/" 或 \"/assets/\" 的情况
-    const readPattern = /(["']|\\")\/(episode|assets)\//g;
-    // 替换为 "/api/projects/123/episode/" 或 \"/api/projects/123/assets/\"
+    // 匹配类似 "/episode/"、"/ep-01/" 或 \"/assets/\" 的情况
+    const readPattern = /(["']|\\")\/(episode|assets|ep-\d+)\//g;
+    // 替换为 "/api/projects/123/episode/"、"/api/projects/123/ep-01/" 或 \"/api/projects/123/assets/\"
     content = content.replace(readPattern, `$1/api/projects/${id}/$2/`);
 
     return JSON.parse(content);

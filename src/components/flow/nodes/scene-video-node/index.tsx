@@ -12,6 +12,7 @@ import { getNodeWrapperClassName } from "../utils";
 import { useFlowStore } from "@/lib/store/use-flow";
 import { useProjectStore } from "@/lib/store/use-projects";
 import { VideoDeleteDialog } from "./components/video-delete-dialog";
+import { generateId } from "@/lib/utils/uuid";
 
 interface SceneVideoNodeProps {
   id: string;
@@ -169,7 +170,7 @@ const SceneVideoNode = ({ id, data, selected }: SceneVideoNodeProps) => {
             <div className="w-full h-full grid grid-cols-2 gap-4 ">
               {data.videos.map((video, index) => (
                 <div
-                  key={video.id}
+                  key={generateId()}
                   className={cn(
                     "aspect-square relative rounded-lg overflow-hidden border-2 cursor-pointer transition-all group/video",
                     video.selected
@@ -246,7 +247,8 @@ const SceneVideoNode = ({ id, data, selected }: SceneVideoNodeProps) => {
               onChange={handleFileChange}
             />
             <button
-              onClick={() => {
+              onClick={(e) => {
+                e.stopPropagation();
                 fileInputRef.current?.click();
                 data.onUploadCustom?.();
               }}

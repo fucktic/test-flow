@@ -32,7 +32,7 @@
       "characters": "Characters",
       "scenes": "Scenes",
       "props": "Props",
-      "storyboard": "Storyboard",
+      "storyboard": "Storyboard Image",
       "audio": "Audio",
       "image": "Image",
       "video": "Video",
@@ -80,7 +80,8 @@
     "downloadSuccess": "Successfully downloaded {count} files",
     "downloadFailed": "Download failed",
     "directorySelectionFailed": "Directory selection failed",
-    "downloadEpisode": "Download Episode"
+    "downloadEpisode": "Download Episode",
+    "scenePrefix": "Scene "
   },
   "assetNode": {
     "title": "Project Assets",

@@ -58,19 +58,22 @@ export function useCurrentSelection(uploadedFiles: UploadedFile[]) {
       }
     }
 
-    // 收集所有场景分镜（scene）到 allAssets 中
-    const sceneNodes = nodes.filter((n) => n.type === "sceneNode" || n.type === "scene-node");
+    // 收集所有场景分镜图（sceneImageNode 的 images）到 allAssets 中
+    const sceneNodes = nodes.filter(
+      (n) => n.type === "sceneImageNode" || n.type === "scene-image-node",
+    );
     sceneNodes.forEach((n) => {
-      const scenesData = n.data.scenes as any[];
-      if (Array.isArray(scenesData)) {
-        scenesData.forEach((scene) => {
+      const imagesData = n.data.images as { id: string; url: string }[] | undefined;
+
+      if (Array.isArray(imagesData) && imagesData.length > 0) {
+        imagesData.forEach((img, index) => {
           list.push({
-            id: scene.id,
-            name: scene.name || t("scenePrefix") || "分镜",
+            id: img.id || `${n.id}-${index}`, // 如果图片没有 id，生成一个兜底 id
+            name: `${t("scenePrefix") || "分镜图"}-${n.data.id || n.id}-${index + 1}`,
             category: "storyboard", // 给一个 category 标识，以生成 @uuidprops
-            type: "scene",
-            prompt: scene.prompt,
-            content: scene.content,
+            type: "image",
+            url: img.url,
+            prompt: n.data.prompt,
           });
         });
       }

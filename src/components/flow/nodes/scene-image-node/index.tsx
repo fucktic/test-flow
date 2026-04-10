@@ -12,6 +12,7 @@ import { getNodeWrapperClassName } from "../utils";
 import { useFlowStore } from "@/lib/store/use-flow";
 import { useProjectStore } from "@/lib/store/use-projects";
 import { ImageDeleteDialog } from "./components/image-delete-dialog";
+import { generateId } from "@/lib/utils/uuid";
 
 interface SceneImageNodeProps {
   id: string;
@@ -114,7 +115,7 @@ const SceneImageNode = ({ id, data, selected }: SceneImageNodeProps) => {
             <div className="w-full h-full grid grid-cols-2 gap-4">
               {previewItems.map((img, index) => (
                 <div
-                  key={img.id}
+                  key={generateId()}
                   className={cn(
                     "aspect-square relative rounded-lg overflow-hidden border-2 cursor-pointer transition-all group/image",
                     (img as any).originalUrl === data.imageUrl
@@ -172,7 +173,8 @@ const SceneImageNode = ({ id, data, selected }: SceneImageNodeProps) => {
               onChange={handleFileChange}
             />
             <button
-              onClick={() => {
+              onClick={(e) => {
+                e.stopPropagation();
                 fileInputRef.current?.click();
                 data.onUploadCustom?.();
               }}
