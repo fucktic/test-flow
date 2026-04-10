@@ -239,7 +239,7 @@ const AssetNode = ({ data, selected }: AssetNodeProps) => {
   return (
     <div className="flex flex-col gap-2 w-lg h-160 relative group/node">
       <div className="flex items-center gap-2 px-1">
-        <span className="text-lg font-semibold text-foreground">{tFlow("title")}</span>
+        <span className="text-sm font-semibold text-foreground">{tFlow("title")}</span>
       </div>
 
       <div className={getNodeWrapperClassName(selected, "flex-1 flex flex-col p-4 gap-4")}>

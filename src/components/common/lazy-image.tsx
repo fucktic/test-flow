@@ -36,12 +36,6 @@ export const LazyImage = ({
   }
 
   return (
-    <img
-      {...props}
-      alt={alt || "Image"}
-      className={className}
-      loading="lazy"
-      onError={() => setError(true)}
-    />
+    <img {...props} alt={alt || "Image"} className={className} onError={() => setError(true)} />
   );
 };
