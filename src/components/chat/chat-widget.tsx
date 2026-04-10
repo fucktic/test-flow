@@ -267,17 +267,35 @@ export function ChatWidget() {
       });
 
       // 如果是 opencode，需要使用 run 子命令
-      const agentCmd = agent.endpoint || agent.name;
+      // 如果是 claude (Claude Code CLI)，需要使用 -p 参数
+      // 如果是 codex，需要使用对应的非交互式参数（根据 codex 实际支持的情况配置，这里假设它支持类似 -p 或直接跟 prompt）
+      let agentCmd = agent.endpoint || agent.name;
 
       // 使用单引号包裹，并转义内部的单引号以防 shell 注入
       const safeCommandText = commandText.replace(/'/g, "'\"'\"'");
       // 如果对话框中没有聊天记录（即这是第一条消息），则不加 --continue
       const isFirstMessage = messages.length === 0;
       const continueArg = isFirstMessage ? "" : "--continue ";
-      const cmdArgs =
-        agentCmd.trim() === "opencode"
-          ? `run ${continueArg}'${safeCommandText}'`
-          : `'${safeCommandText}'`;
+
+      let cmdArgs = `'${safeCommandText}'`;
+      const normalizedCmd = agentCmd.trim().toLowerCase();
+      if (normalizedCmd === "opencode") {
+        cmdArgs = `run ${continueArg}'${safeCommandText}'`;
+      } else if (
+        normalizedCmd === "claude" ||
+        normalizedCmd === "claude-code" ||
+        normalizedCmd === "cloude"
+      ) {
+        agentCmd = "claude"; // 自动修正拼写错误
+        cmdArgs = `-p '${safeCommandText}'`;
+      } else if (normalizedCmd === "codex") {
+        // 假设 codex 的执行命令格式与 opencode 类似，如果它有特殊的参数（如 -p），可以在此处修改
+        cmdArgs = `'${safeCommandText}'`;
+      } else if (normalizedCmd === "openclaw") {
+        // openclaw 通过 agent --message 接收指令，并需要 --session-id 来保持上下文
+        const sessionId = "local-chat";
+        cmdArgs = `agent --session-id ${sessionId} --message '${safeCommandText}'`;
+      }
 
       // 先添加一条空的 agent 消息，并拿到 id
       const agentMsgId = addMessage({

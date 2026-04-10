@@ -202,7 +202,7 @@ export function useChatEditor({
       const promptText = currentSelection?.prompt || "";
       if (promptText) {
         const regex =
-          /@([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})([a-zA-Z]+)?/gi;
+          /@([0-9a-z]{8}-[0-9a-z]{4}-[0-9a-z]{4}-[0-9a-z]{4}-[0-9a-z]{12})([a-zA-Z]+)?/gi;
         let lastIndex = 0;
         let match;
         const content: any[] = [];
