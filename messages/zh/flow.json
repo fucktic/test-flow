@@ -77,6 +77,7 @@
     "refresh": "刷新",
     "pending": "未生成",
     "noVideosToDownload": "暂无视频可下载",
+    "noVideosSelected": "暂无选中的分集视频",
     "downloadSuccess": "成功下载 {count} 个文件",
     "downloadFailed": "下载失败",
     "directorySelectionFailed": "目录选择失败",

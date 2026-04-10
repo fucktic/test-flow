@@ -5,5 +5,12 @@
     "endpoint": "opencode",
     "description": "",
     "icon": "https://opencode.ai/docs/_astro/logo-dark.DOStV66V.svg"
+  },
+  {
+    "id": "20a2160f-fb0d-407d-916e-19cea1361f38",
+    "name": "cloudeCode",
+    "endpoint": "cloude",
+    "description": "",
+    "icon": "https://cdn.prod.website-files.com/6889473510b50328dbb70ae6/689f4a9aff1f63fde75cf733_favicon.png"
   }
 ]

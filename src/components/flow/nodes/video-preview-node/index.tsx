@@ -8,8 +8,23 @@ import { LazyImage } from "@/components/common/lazy-image";
 import { MediaPreviewModal, MediaItem } from "@/components/common/media-preview-modal";
 import { toast } from "sonner";
 import { getNodeWrapperClassName } from "../utils";
-import { useProjectStore } from "@/lib/store/use-projects";
-import { generateId } from "@/lib/utils/uuid";
+
+interface FileSystemWritableFileStream {
+  write(data: Blob | string): Promise<void>;
+  close(): Promise<void>;
+}
+
+interface FileSystemFileHandle {
+  createWritable(): Promise<FileSystemWritableFileStream>;
+}
+
+interface FileSystemDirectoryHandle {
+  getDirectoryHandle(
+    name: string,
+    options?: { create?: boolean },
+  ): Promise<FileSystemDirectoryHandle>;
+  getFileHandle(name: string, options?: { create?: boolean }): Promise<FileSystemFileHandle>;
+}
 
 interface VideoPreviewNodeProps {
   data: VideoPreviewNodeData;
@@ -20,7 +35,6 @@ const VideoPreviewNode = ({ data }: VideoPreviewNodeProps) => {
   const tFlow = useTranslations("flow.videoPreviewNode");
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewIndex, setPreviewIndex] = useState(0);
-  const currentProject = useProjectStore((state) => state.currentProject);
 
   // Flatten all items across episodes for the preview modal
   const allPreviewItems: MediaItem[] = useMemo(() => {
@@ -34,7 +48,7 @@ const VideoPreviewNode = ({ data }: VideoPreviewNodeProps) => {
           poster: item.poster,
         })),
     );
-  }, [data.episodes, currentProject]);
+  }, [data.episodes]);
 
   const handleDownloadEpisode = useCallback(
     async (episode: EpisodeVideoData) => {
@@ -47,12 +61,22 @@ const VideoPreviewNode = ({ data }: VideoPreviewNodeProps) => {
         }));
 
       if (episodeItems.length === 0) {
-        toast.warning(tFlow("noVideosToDownload") || "暂无视频可下载");
+        toast.warning(tFlow("noVideosToDownload"));
         return;
       }
 
       try {
-        const dirHandle = await (window as any).showDirectoryPicker({
+        const picker = (
+          window as unknown as {
+            showDirectoryPicker: (options?: { mode: string }) => Promise<FileSystemDirectoryHandle>;
+          }
+        ).showDirectoryPicker;
+        if (!picker) {
+          toast.error(tFlow("directorySelectionFailed"));
+          return;
+        }
+
+        const dirHandle = await picker({
           mode: "readwrite",
         });
 
@@ -79,7 +103,7 @@ const VideoPreviewNode = ({ data }: VideoPreviewNodeProps) => {
             const ext = urlMatch ? `.${urlMatch[1]}` : defaultExt;
 
             // 使用序号作为文件名，并结合国际化的分镜前缀 (格式如: 分镜1.mp4 或 Scene 1.mp4)
-            const scenePrefix = tFlow("scenePrefix") || "分镜";
+            const scenePrefix = tFlow("scenePrefix");
             const filename = `${scenePrefix}${index}${ext}`;
 
             // 将文件保存到刚创建的分集文件夹中
@@ -95,33 +119,34 @@ const VideoPreviewNode = ({ data }: VideoPreviewNodeProps) => {
         }
 
         if (successCount > 0) {
-          toast.success(
-            tFlow("downloadSuccess", { count: successCount }) || `成功下载 ${successCount} 个文件`,
-          );
+          toast.success(tFlow("downloadSuccess", { count: successCount }));
           if (data.onDownloadEpisode) {
             data.onDownloadEpisode(episode.id);
           }
         } else {
-          toast.error(tFlow("downloadFailed") || "下载失败");
+          toast.error(tFlow("downloadFailed"));
         }
       } catch (err) {
         if ((err as Error).name === "AbortError") {
           return; // 用户取消选择目录
         }
         console.error("Directory selection failed:", err);
-        toast.error(tFlow("directorySelectionFailed") || "目录选择失败");
+        toast.error(tFlow("directorySelectionFailed"));
       }
     },
-    [tFlow, data, currentProject],
+    [tFlow, data],
   );
 
-  const getUrlWithTimestamp = (url?: string) => {
-    if (!url) return url;
-    if (url.startsWith("data:") || url.startsWith("blob:")) return url;
-    const timestamp = Date.now();
-    const separator = url.includes("?") ? "&" : "?";
-    return `${url}${separator}t=${timestamp}`;
-  };
+  const mountTimestamp = useMemo(() => Date.now(), []);
+  const getUrlWithTimestamp = useCallback(
+    (url?: string) => {
+      if (!url) return url;
+      if (url.startsWith("data:") || url.startsWith("blob:")) return url;
+      const separator = url.includes("?") ? "&" : "?";
+      return `${url}${separator}t=${mountTimestamp}`;
+    },
+    [mountTimestamp],
+  );
 
   return (
     <div className="flex flex-col gap-2 w-lg relative group/node">
@@ -131,7 +156,7 @@ const VideoPreviewNode = ({ data }: VideoPreviewNodeProps) => {
           <ul className="flex flex-col gap-2 mt-2 w-full max-w-full">
             {(data.episodes || []).map((episode) => (
               <li
-                key={generateId()}
+                key={episode.id || episode.episodeName}
                 className="flex flex-col group w-full gap-3 relative overflow-hidden mb-4 border-b border-border/50 pb-4 last:border-0 last:pb-0 last:mb-0"
               >
                 <div className="flex items-center justify-between w-full gap-2">
@@ -153,7 +178,7 @@ const VideoPreviewNode = ({ data }: VideoPreviewNodeProps) => {
                       onClick={() => handleDownloadEpisode(episode)}
                     >
                       <Download className="w-3.5 h-3.5 mr-1.5" />
-                      {tFlow("downloadEpisode") || "分集下载"}
+                      {tFlow("downloadEpisode")}
                     </Button>
                   </div>
                 </div>
@@ -163,7 +188,7 @@ const VideoPreviewNode = ({ data }: VideoPreviewNodeProps) => {
                   <div className="grid grid-cols-3 gap-2 pb-2">
                     {(episode.items || []).map((item) => (
                       <div
-                        key={generateId()}
+                        key={item.id}
                         className="relative aspect-square rounded-lg overflow-hidden border border-border/50 group/preview "
                       >
                         {item.status === "generated" && item.url ? (
@@ -223,7 +248,7 @@ const VideoPreviewNode = ({ data }: VideoPreviewNodeProps) => {
           {(!data.episodes || data.episodes.length === 0) && (
             <div className="flex flex-col items-center justify-center h-40 text-muted-foreground">
               <Film className="w-8 h-8 opacity-20 mb-2" />
-              <span className="text-sm">暂无选中的分集视频</span>
+              <span className="text-sm">{tFlow("noVideosSelected")}</span>
             </div>
           )}
         </ScrollArea>

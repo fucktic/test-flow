@@ -118,14 +118,8 @@ const SceneImageNode = ({ id, data, selected }: SceneImageNodeProps) => {
                   key={generateId()}
                   className={cn(
                     "aspect-square relative rounded-lg overflow-hidden border-2 cursor-pointer transition-all group/image",
-                    (img as any).originalUrl === data.imageUrl
-                      ? "border-primary shadow-[0_0_0_2px_rgba(0,163,255,0.3)]"
-                      : "border-transparent hover:border-border",
+                    "border-transparent hover:border-border",
                   )}
-                  onClick={() => {
-                    // Update main imageUrl when clicking an image in the grid
-                    updateNodeData(id, { imageUrl: (img as any).originalUrl });
-                  }}
                 >
                   <LazyImage src={img.url} alt={img.id} className="w-full h-full object-cover" />
                   <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/image:opacity-100 transition-opacity z-20">

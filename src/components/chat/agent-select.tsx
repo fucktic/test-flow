@@ -68,7 +68,7 @@ export function AgentSelect({
           <div className="p-2 text-sm text-center text-muted-foreground">{t("noAgentFound")}</div>
         ) : (
           agents.map((agent) => (
-            <SelectItem key={agent.id} value={agent.id} className="text-xs w-full pr-8">
+            <SelectItem key={agent.id} value={agent.id} className="text-xs w-full pr-8 mb-2">
               <div className="flex items-center justify-between w-full">
                 <div className="flex items-center gap-2">
                   {agent.icon ? (
@@ -106,7 +106,7 @@ export function AgentSelect({
           value="manage_agents_action"
           className="text-primary text-xs font-medium cursor-pointer flex items-center justify-center py-2"
         >
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 ">
             <Settings className="w-3.5 h-3.5" />
             {t("manageAgents")}
           </div>

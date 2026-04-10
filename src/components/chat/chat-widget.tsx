@@ -446,17 +446,20 @@ export function ChatWidget() {
           </Button>
         </div>
 
-        <div className="flex flex-col flex-1 overflow-hidden">
+        <div className="flex flex-col flex-1 overflow-hidden w-full">
           {/* Messages Area */}
           {/* 使用 min-h-0 限制 flex 子元素高度，确保 ScrollArea 正常出现滚动条 */}
-          <ScrollArea className="flex-1 min-h-0 bg-muted/10">
-            <div className="space-y-5 p-4">
+          <ScrollArea className="flex-1 min-h-0 bg-muted/10 w-full">
+            <div className="space-y-5 p-4 w-full overflow-x-hidden">
               {messages.map((msg) => {
                 const isUser = msg.role === "user";
                 return (
                   <div
                     key={msg.id}
-                    className={cn("flex gap-3 text-sm", isUser ? "flex-row-reverse" : "flex-row")}
+                    className={cn(
+                      "flex w-full gap-3 text-sm",
+                      isUser ? "flex-row-reverse" : "flex-row",
+                    )}
                   >
                     <div
                       className={cn(
@@ -472,14 +475,14 @@ export function ChatWidget() {
                         <img
                           src={"/mantur-logo.svg"}
                           alt={"mantur-logo"}
-                          className="w-full h-full object-cover"
+                          className="w-4 h-4 object-cover"
                           loading="lazy"
                         />
                       )}
                     </div>
                     <div
                       className={cn(
-                        "px-4 py-2.5 max-w-[75%] min-w-0 whitespace-pre-wrap wrap-break-word leading-relaxed",
+                        "px-4 py-2.5 max-w-[75%] min-w-0 whitespace-pre-wrap break-words break-all leading-relaxed",
                         isUser ? "rounded-tr-sm" : "rounded-tl-sm text-foreground/90",
                       )}
                     >
@@ -489,13 +492,13 @@ export function ChatWidget() {
                 );
               })}
               {isExecuting && (
-                <div className="flex gap-3 text-sm flex-row">
+                <div className="flex w-full gap-3 text-sm flex-row">
                   <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 shadow-sm overflow-hidden bg-muted border border-border/50 text-muted-foreground">
                     {currentAgent?.icon ? (
                       <img
                         src={currentAgent.icon}
                         alt="agent"
-                        className="w-full h-full object-cover"
+                        className="w-4 h-4 object-cover"
                         loading="lazy"
                       />
                     ) : (
