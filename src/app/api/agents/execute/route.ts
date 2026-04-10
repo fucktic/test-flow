@@ -8,12 +8,15 @@ export async function POST(req: NextRequest) {
   try {
     const { agentName, command, cwd } = await req.json();
 
-    // 实际应根据 agentName 组装安全命令
-    const fullCommand = `${agentName} ${command}`;
-
     // 处理 cwd，如果未提供则使用当前项目目录
     const targetCwd = cwd || process.cwd();
 
+    // 替换绝对路径占位符
+    const finalCommand = command.replace(/\{\{PROJECT_ROOT\}\}/g, targetCwd);
+
+    // 实际应根据 agentName 组装安全命令
+    const fullCommand = `${agentName} ${finalCommand}`;
+    console.log(`Executing command: ${fullCommand}`);
     const encoder = new TextEncoder();
 
     const stream = new ReadableStream({

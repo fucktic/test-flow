@@ -8,9 +8,23 @@
   },
   {
     "id": "20a2160f-fb0d-407d-916e-19cea1361f38",
-    "name": "cloudeCode",
-    "endpoint": "cloude",
+    "name": "claudeCode",
+    "endpoint": "claude",
     "description": "",
     "icon": "https://cdn.prod.website-files.com/6889473510b50328dbb70ae6/689f4a9aff1f63fde75cf733_favicon.png"
+  },
+  {
+    "id": "da970cae-2b71-4333-999f-aa83c130a65a",
+    "name": "codex",
+    "endpoint": "codex",
+    "description": "",
+    "icon": "https://persistent.oaistatic.com/codex/icon.png"
+  },
+  {
+    "id": "abdb6c3d-edd8-458d-b771-55727b8dc3d5",
+    "name": "openclaw",
+    "endpoint": "openclaw",
+    "description": "",
+    "icon": "https://openclaw.ai/favicon-32.png"
   }
 ]

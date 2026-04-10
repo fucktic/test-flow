@@ -130,7 +130,12 @@ export function ImportSkillButton({ defaultOpen = false }: { defaultOpen?: boole
               directory="true"
               onChange={handleUpload}
             />
-            <Button size="sm" onClick={() => inputRef.current?.click()} disabled={uploading}>
+            <Button
+              size="sm"
+              onClick={() => inputRef.current?.click()}
+              disabled={uploading}
+              className="text-foreground"
+            >
               {uploading ? t("creating") : t("uploadSkillBtn")}
             </Button>
           </div>

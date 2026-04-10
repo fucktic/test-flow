@@ -1,11 +1,11 @@
 {
-  "switchProject": "切换项目",
-  "newProject": "新建项目",
+  "switchProject": "无画布，请先新建画布",
+  "newProject": "新建画布",
   "importSkill": "导入 Skill",
   "toggleTheme": "切换主题",
   "switchLanguage": "切换为 English",
-  "switchProjectConfirmTitle": "切换项目确认",
-  "switchProjectConfirmDesc": "当前有正在执行的 skill，切换项目将停止当前 skill 的工作。是否确认切换？",
+  "switchProjectConfirmTitle": "切换画布确认",
+  "switchProjectConfirmDesc": "当前有正在执行的 skill，切换画布将停止当前 skill 的工作。是否确认切换？",
   "cancel": "取消",
   "confirmSwitch": "确认切换"
 }

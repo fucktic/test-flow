@@ -16,11 +16,19 @@ import { toast } from "sonner";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { UploadedFile } from "./chat-upload";
 import { useUpload } from "@/lib/hooks/use-upload";
+import { getSkillFolders } from "@/lib/actions/canvas";
 
 import { useWidgetDragResize } from "./hooks/use-widget-drag-resize";
 import { useCurrentSelection } from "./hooks/use-current-selection";
 import { useChatEditor } from "./hooks/use-chat-editor";
-
+const SELECTED_NODE_TYPES = [
+  // 分镜视频节点
+  "sceneVideoNode",
+  // 资产item节点
+  "assetItem",
+  // 分镜图片节点
+  "sceneImageNode",
+];
 export function ChatWidget() {
   const t = useTranslations("chat");
   const {
@@ -211,7 +219,7 @@ export function ChatWidget() {
       }
     });
 
-    if (currentSelection) {
+    if (currentSelection && SELECTED_NODE_TYPES.includes(currentSelection.type)) {
       const selectedNodeIds = currentSelection.id;
       const prompt = t("selectedNodesPrompt", { id: selectedNodeIds });
       finalTransformedInput += (finalTransformedInput ? "\n" : "") + prompt;
@@ -259,7 +267,7 @@ export function ChatWidget() {
         ? t("selectedProjectIdContext", { id: currentProject.id })
         : "";
 
-      const systemPrompt = `${t("systemPromptContext")}${idContext}`;
+      const systemPrompt = `${t("systemPromptContext", { projectRoot: "{{PROJECT_ROOT}}" })}${idContext}`;
 
       const commandText = t("latestCommandContext", {
         systemPrompt,
@@ -293,7 +301,7 @@ export function ChatWidget() {
         cmdArgs = `'${safeCommandText}'`;
       } else if (normalizedCmd === "openclaw") {
         // openclaw 通过 agent --message 接收指令，并需要 --session-id 来保持上下文
-        const sessionId = "local-chat";
+        const sessionId = currentProject?.id;
         cmdArgs = `agent --session-id ${sessionId} --message '${safeCommandText}'`;
       }
 
@@ -364,7 +372,20 @@ export function ChatWidget() {
                   "fixed top-20 right-5 z-50 flex items-center justify-center bg-background border border-primary shadow-lg cursor-pointer hover:bg-muted/50 transition-colors w-14 h-14 rounded-full",
                   isExecuting && "shadow-primary/20",
                 )}
-                onClick={() => {
+                onClick={async () => {
+                  // 如果没有选中项目，弹出提示窗口并阻止展开
+                  if (!currentProject) {
+                    toast.error(t("noProjectSelectedPrompt"));
+                    return;
+                  }
+
+                  // 如果没有读到skills文件（文件夹），弹出提示窗口并阻止展开
+                  const skills = await getSkillFolders();
+                  if (!skills || skills.length === 0) {
+                    toast.error(t("noSkillsPrompt"));
+                    return;
+                  }
+
                   let newX = position.x;
 
                   // 首次展开或判断到右边框的距离是否小于对话框宽度，如果是，则向左平移

@@ -1,11 +1,11 @@
 {
-  "switchProject": "Switch Project",
-  "newProject": "New Project",
+  "switchProject": "No canvas selected, please create a new canvas first",
+  "newProject": "New Canvas",
   "importSkill": "Import Skill",
   "toggleTheme": "Toggle Theme",
   "switchLanguage": "切换为中文",
-  "switchProjectConfirmTitle": "Confirm Project Switch",
-  "switchProjectConfirmDesc": "A skill is currently running. Switching projects will stop the current skill. Do you want to proceed?",
+  "switchProjectConfirmTitle": "Confirm Canvas Switch",
+  "switchProjectConfirmDesc": "A skill is currently running. Switching canvas will stop the current skill. Do you want to proceed?",
   "cancel": "Cancel",
   "confirmSwitch": "Confirm Switch"
 }
