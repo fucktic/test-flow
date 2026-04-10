@@ -226,7 +226,7 @@ export function ChatWidget() {
     }
 
     let displayInput = input.trim() ? input : t("sentAttachment");
-    if (currentSelection) {
+    if (currentSelection && SELECTED_NODE_TYPES.includes(currentSelection.type)) {
       displayInput = `${t("onlyModifyNodePrefix", { title: currentSelection.title })}\n${displayInput}`;
     }
 
