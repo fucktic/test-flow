@@ -17,6 +17,7 @@ import { useTheme } from "next-themes";
 import { useProjectStore } from "@/lib/store/use-projects";
 import { useTranslations } from "next-intl";
 import { useChatStore } from "@/lib/store/use-chat";
+import { initFlowTranslations } from "@/lib/i18n-client";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -46,6 +47,7 @@ export const FlowCanvas = () => {
   const currentProject = useProjectStore((state) => state.currentProject);
   const isChatting = useChatStore((state) => state.isChatting);
   const tCanvas = useTranslations("canvas");
+  const tFlow = useTranslations("flow");
   const [isMounted, setIsMounted] = useState(false);
   const [isLoading, setIsLoading] = useState(true); // 添加画布加载状态
   const loadedProjectIdRef = useRef<string | null>(null);
@@ -54,6 +56,10 @@ export const FlowCanvas = () => {
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  useEffect(() => {
+    initFlowTranslations(tFlow as (key: string, values?: Record<string, unknown>) => string);
+  }, [tFlow]);
 
   // 当项目切换时加载画布数据，并在加载期间显示 loading 过渡
   useEffect(() => {

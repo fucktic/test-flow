@@ -27,6 +27,8 @@
     "delete": "删除当前分镜",
     "add": "当前位置手动增加分镜",
     "sceneList": "分镜列表",
+    "maxScenesError": "最多只能选择3个分镜",
+    "newSceneContent": "新增的分镜内容...",
     "noMatchedAssets": "无匹配资产",
     "categoryMap": {
       "characters": "角色",

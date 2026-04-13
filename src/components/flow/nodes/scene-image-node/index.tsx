@@ -1,4 +1,4 @@
-import { memo, useState, useRef } from "react";
+import { memo, useState, useRef, useMemo, useCallback } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { Handle, Position } from "@xyflow/react";
 import { SceneImageNodeData } from "@/lib/types/flow.types";
@@ -12,7 +12,6 @@ import { getNodeWrapperClassName } from "../utils";
 import { useFlowStore } from "@/lib/store/use-flow";
 import { useProjectStore } from "@/lib/store/use-projects";
 import { ImageDeleteDialog } from "./components/image-delete-dialog";
-import { generateId } from "@/lib/utils/uuid";
 
 interface SceneImageNodeProps {
   id: string;
@@ -30,6 +29,16 @@ const SceneImageNode = ({ id, data, selected }: SceneImageNodeProps) => {
   const updateNodeData = useFlowStore((state) => state.updateNodeData);
   const currentProject = useProjectStore((state) => state.currentProject);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const refreshTimestamp = useMemo(() => Date.now(), [data.images]);
+  const bustUrl = useCallback(
+    (url: string | undefined) => {
+      if (!url || url.startsWith("data:") || url.startsWith("blob:")) return url;
+      const sep = url.includes("?") ? "&" : "?";
+      return `${url}${sep}t=${refreshTimestamp}`;
+    },
+    [refreshTimestamp],
+  );
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -115,13 +124,17 @@ const SceneImageNode = ({ id, data, selected }: SceneImageNodeProps) => {
             <div className="w-full h-full grid grid-cols-2 gap-4">
               {previewItems.map((img, index) => (
                 <div
-                  key={generateId()}
+                  key={img.id || img.url || index}
                   className={cn(
                     "aspect-square relative rounded-lg overflow-hidden border-2 cursor-pointer transition-all group/image",
                     "border-transparent hover:border-border",
                   )}
                 >
-                  <LazyImage src={img.url} alt={img.id} className="w-full h-full object-cover" />
+                  <LazyImage
+                    src={bustUrl(img.url)}
+                    alt={img.id}
+                    className="w-full h-full object-cover"
+                  />
                   <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/image:opacity-100 transition-opacity z-20">
                     <Button
                       variant="secondary"

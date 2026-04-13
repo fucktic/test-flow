@@ -61,7 +61,7 @@ export default async function RootLayout({
             enableSystem={false}
             disableTransitionOnChange
           >
-            <Toaster />
+            <Toaster position="top-center" />
             <TooltipProvider>
               <Header isSkillsEmpty={isSkillsEmpty} />
               <div className="flex-1 w-full overflow-hidden relative">

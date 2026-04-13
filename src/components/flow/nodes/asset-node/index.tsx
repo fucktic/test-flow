@@ -6,7 +6,7 @@ import { AssetNodeData, AssetCategory, AssetItem } from "@/lib/types/flow.types"
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Image as ImageIcon, Music, Maximize2, Pencil, Plus, Trash2 } from "lucide-react";
+import { Image as ImageIcon, Music, Video, Maximize2, Pencil, Plus, Trash2 } from "lucide-react";
 import { MediaPreviewModal, MediaItem } from "@/components/common/media-preview-modal";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -16,8 +16,6 @@ import { useProjectStore } from "@/lib/store/use-projects";
 import { LazyImage } from "@/components/common/lazy-image";
 import { AssetFormDialog } from "./components/asset-form-dialog";
 import { AssetDeleteDialog } from "./components/asset-delete-dialog";
-import { generateId } from "@/lib/utils/uuid";
-
 interface AssetNodeProps {
   data: AssetNodeData;
   selected?: boolean;
@@ -287,7 +285,7 @@ const AssetNode = ({ data, selected }: AssetNodeProps) => {
                 const itemType = getMediaTypeFromUrl(item.url, item.type);
                 return (
                   <div
-                    key={generateId()}
+                    key={item.id || item.url || index}
                     className="flex flex-col gap-1 group/asset cursor-pointer"
                     onClick={() => data.onAssetSelect?.(item.id)}
                     onDoubleClick={() => handlePreview(index)}
@@ -321,9 +319,17 @@ const AssetNode = ({ data, selected }: AssetNodeProps) => {
                             playsInline
                           />
                         )
-                      ) : (
+                      ) : itemType === "audio" ? (
                         <div className="w-full h-full flex items-center justify-center bg-secondary/30">
                           <Music className="w-8 h-8 text-primary/50" />
+                        </div>
+                      ) : itemType === "video" ? (
+                        <div className="w-full h-full flex items-center justify-center bg-secondary/30">
+                          <Video className="w-8 h-8 text-primary/50" />
+                        </div>
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-secondary/30">
+                          <ImageIcon className="w-8 h-8 text-primary/50" />
                         </div>
                       )}
 

@@ -8,8 +8,6 @@ import { LazyImage } from "@/components/common/lazy-image";
 import { MediaPreviewModal, MediaItem } from "@/components/common/media-preview-modal";
 import { toast } from "sonner";
 import { getNodeWrapperClassName } from "../utils";
-import { generateId } from "@/lib/utils/uuid";
-
 interface FileSystemWritableFileStream {
   write(data: Blob | string): Promise<void>;
   close(): Promise<void>;
@@ -138,15 +136,15 @@ const VideoPreviewNode = ({ data }: VideoPreviewNodeProps) => {
     [tFlow, data],
   );
 
-  const mountTimestamp = useMemo(() => Date.now(), []);
+  const refreshTimestamp = useMemo(() => Date.now(), [data.episodes]);
   const getUrlWithTimestamp = useCallback(
     (url?: string) => {
       if (!url) return url;
       if (url.startsWith("data:") || url.startsWith("blob:")) return url;
       const separator = url.includes("?") ? "&" : "?";
-      return `${url}${separator}t=${mountTimestamp}`;
+      return `${url}${separator}t=${refreshTimestamp}`;
     },
-    [mountTimestamp],
+    [refreshTimestamp],
   );
 
   return (
@@ -187,9 +185,9 @@ const VideoPreviewNode = ({ data }: VideoPreviewNodeProps) => {
                 {/* 视频宫格内容 */}
                 <ScrollArea className="h-48 w-full pr-3 shrink-0 overflow-y-auto">
                   <div className="grid grid-cols-3 gap-2 pb-2">
-                    {(episode.items || []).map((item) => (
+                    {(episode.items || []).map((item, itemIndex) => (
                       <div
-                        key={generateId()}
+                        key={item.id || item.url || itemIndex}
                         className="relative aspect-square rounded-lg overflow-hidden border border-border/50 group/preview "
                       >
                         {item.status === "generated" && item.url ? (

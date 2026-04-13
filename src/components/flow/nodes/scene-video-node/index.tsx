@@ -1,4 +1,4 @@
-import { memo, useState, useRef } from "react";
+import { memo, useState, useRef, useMemo, useCallback } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { Handle, Position } from "@xyflow/react";
 import { SceneVideoNodeData } from "@/lib/types/flow.types";
@@ -12,7 +12,6 @@ import { getNodeWrapperClassName } from "../utils";
 import { useFlowStore } from "@/lib/store/use-flow";
 import { useProjectStore } from "@/lib/store/use-projects";
 import { VideoDeleteDialog } from "./components/video-delete-dialog";
-import { generateId } from "@/lib/utils/uuid";
 
 interface SceneVideoNodeProps {
   id: string;
@@ -29,6 +28,16 @@ const SceneVideoNode = ({ id, data, selected }: SceneVideoNodeProps) => {
   const updateNodeData = useFlowStore((state) => state.updateNodeData);
   const currentProject = useProjectStore((state) => state.currentProject);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const refreshTimestamp = useMemo(() => Date.now(), [data.videos]);
+  const bustUrl = useCallback(
+    (url: string | undefined) => {
+      if (!url || url.startsWith("data:") || url.startsWith("blob:")) return url;
+      const sep = url.includes("?") ? "&" : "?";
+      return `${url}${sep}t=${refreshTimestamp}`;
+    },
+    [refreshTimestamp],
+  );
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -170,7 +179,7 @@ const SceneVideoNode = ({ id, data, selected }: SceneVideoNodeProps) => {
             <div className="w-full h-full grid grid-cols-2 gap-4 ">
               {data.videos.map((video, index) => (
                 <div
-                  key={generateId()}
+                  key={video.id || video.url || index}
                   className={cn(
                     "aspect-square relative rounded-lg overflow-hidden border-2 cursor-pointer transition-all group/video",
                     video.selected
@@ -181,21 +190,21 @@ const SceneVideoNode = ({ id, data, selected }: SceneVideoNodeProps) => {
                 >
                   {video.poster ? (
                     <LazyImage
-                      src={video.poster}
+                      src={bustUrl(video.poster)}
                       alt={video.id}
                       className="w-full h-full object-cover"
                     />
                   ) : video.url.match(/\.(mp4|webm|mov)$/i) ||
                     video.url.startsWith("data:video/") ? (
                     <video
-                      src={video.url}
+                      src={bustUrl(video.url)}
                       className="w-full h-full object-cover"
                       muted
                       playsInline
                     />
                   ) : (
                     <LazyImage
-                      src={video.url}
+                      src={bustUrl(video.url)}
                       alt={video.id}
                       className="w-full h-full object-cover"
                     />

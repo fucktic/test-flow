@@ -16,6 +16,8 @@ import {
   NodeChange,
   EdgeChange,
 } from "@xyflow/react";
+import { toast } from "sonner";
+import { tFlow } from "@/lib/i18n-client";
 
 interface FlowState {
   nodes: Node[];
@@ -69,7 +71,7 @@ const syncGraph = (state: any, set: any) => {
           type: "sceneNode",
           position: { x: episodeNode.position.x + 400, y: currentY },
           data: {
-            title: `分镜列表 ${epPrefix}`,
+            title: `${tFlow("sceneNode.sceneList")} ${epPrefix}`,
             scenes: [],
             ...getSceneHandlers(set, sceneNodeId),
           },
@@ -291,7 +293,10 @@ const getSceneHandlers = (set: any, nodeId: string) => ({
         if (scene) {
           if (!scene.selected) {
             const selectedCount = scenes.filter((s: any) => s.selected).length;
-            if (selectedCount >= 3) return;
+            if (selectedCount >= 3) {
+              toast.error(tFlow("sceneNode.maxScenesError"));
+              return;
+            }
           }
           scene.selected = !scene.selected;
         }
@@ -337,7 +342,7 @@ const getSceneHandlers = (set: any, nodeId: string) => ({
         const newScene = {
           id: newId,
           name: `S-New`,
-          content: "新增的分镜内容...",
+          content: tFlow("sceneNode.newSceneContent"),
           selected: false,
         };
         (node.data as any).scenes.splice(index, 0, newScene);

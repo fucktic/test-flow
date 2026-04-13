@@ -27,6 +27,8 @@
     "delete": "Delete current scene",
     "add": "Add scene at current position",
     "sceneList": "Scene List",
+    "maxScenesError": "You can only select up to 3 scenes",
+    "newSceneContent": "New scene content...",
     "noMatchedAssets": "No matched assets",
     "categoryMap": {
       "characters": "Characters",
