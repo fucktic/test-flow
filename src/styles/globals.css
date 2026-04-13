@@ -134,6 +134,20 @@
   }
 }
 
+/* Chat Markdown Styles */
+.chat-markdown {
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+.chat-markdown > *:first-child {
+  margin-top: 0 !important;
+}
+.chat-markdown > *:last-child {
+  margin-bottom: 0 !important;
+}
+
 /* TipTap Editor Styles */
 .tiptap p.is-editor-empty:first-child::before {
   color: var(--color-muted-foreground);

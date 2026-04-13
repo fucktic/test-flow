@@ -8,6 +8,7 @@ import { useFlowStore } from "@/lib/store/use-flow";
 import { useAgent } from "@/lib/hooks/use-agent";
 import { AgentManagerModal } from "./agent-manager-modal";
 import { ChatInput } from "./chat-input";
+import { MessageContent } from "./message-content";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Minus, User, ArrowDownRight, ArrowDownLeft } from "lucide-react";
@@ -297,8 +298,7 @@ export function ChatWidget() {
         agentCmd = "claude"; // 自动修正拼写错误
         cmdArgs = `-p '${safeCommandText}'`;
       } else if (normalizedCmd === "codex") {
-        // 假设 codex 的执行命令格式与 opencode 类似，如果它有特殊的参数（如 -p），可以在此处修改
-        cmdArgs = `'${safeCommandText}'`;
+        cmdArgs = `exec '${safeCommandText}'`;
       } else if (normalizedCmd === "openclaw") {
         // openclaw 通过 agent --message 接收指令，并需要 --session-id 来保持上下文
         const sessionId = currentProject?.id;
@@ -521,11 +521,13 @@ export function ChatWidget() {
                     </div>
                     <div
                       className={cn(
-                        "px-4 py-2.5 max-w-[75%] min-w-0 whitespace-pre-wrap break-words break-all leading-relaxed",
-                        isUser ? "rounded-tr-sm" : "rounded-tl-sm text-foreground/90",
+                        "px-4 py-2.5 max-w-[75%] min-w-0 overflow-hidden text-sm",
+                        isUser
+                          ? "rounded-tr-sm bg-primary/10 rounded-2xl"
+                          : "rounded-tl-sm text-foreground/90",
                       )}
                     >
-                      {msg.content}
+                      <MessageContent content={msg.content} isUser={isUser} allAssets={allAssets} />
                     </div>
                   </div>
                 );
