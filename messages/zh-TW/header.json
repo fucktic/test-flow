@@ -1,0 +1,11 @@
+{
+  "switchProject": "無畫布，請先新建畫布",
+  "newProject": "新建畫布",
+  "importSkill": "匯入 Skill",
+  "toggleTheme": "切換主題",
+  "switchLanguage": "切換語言",
+  "switchProjectConfirmTitle": "切換畫布確認",
+  "switchProjectConfirmDesc": "目前有正在執行的 skill，切換畫布將停止目前 skill 的工作。是否確認切換？",
+  "cancel": "取消",
+  "confirmSwitch": "確認切換"
+}

@@ -1,0 +1,11 @@
+{
+  "switchProject": "Нет холста. Сначала создайте новый холст",
+  "newProject": "Новый холст",
+  "importSkill": "Импорт навыка",
+  "toggleTheme": "Переключить тему",
+  "switchLanguage": "Переключить язык",
+  "switchProjectConfirmTitle": "Подтверждение переключения холста",
+  "switchProjectConfirmDesc": "Навык выполняется. Переключение холста остановит текущий навык. Вы уверены?",
+  "cancel": "Отмена",
+  "confirmSwitch": "Подтвердить переключение"
+}

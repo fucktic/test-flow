@@ -1,0 +1,11 @@
+{
+  "switchProject": "Chưa có canvas, vui lòng tạo canvas mới trước",
+  "newProject": "Canvas mới",
+  "importSkill": "Nhập Skill",
+  "toggleTheme": "Đổi giao diện",
+  "switchLanguage": "Chuyển ngôn ngữ",
+  "switchProjectConfirmTitle": "Xác nhận chuyển canvas",
+  "switchProjectConfirmDesc": "Có skill đang chạy, chuyển canvas sẽ dừng skill hiện tại. Bạn có chắc chắn muốn chuyển không?",
+  "cancel": "Hủy",
+  "confirmSwitch": "Xác nhận chuyển"
+}

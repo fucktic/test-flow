@@ -3,7 +3,7 @@
   "newProject": "New Canvas",
   "importSkill": "Import Skill",
   "toggleTheme": "Toggle Theme",
-  "switchLanguage": "切换为中文",
+  "switchLanguage": "Switch Language",
   "switchProjectConfirmTitle": "Confirm Canvas Switch",
   "switchProjectConfirmDesc": "A skill is currently running. Switching canvas will stop the current skill. Do you want to proceed?",
   "cancel": "Cancel",

@@ -1,0 +1,130 @@
+{
+  "resultNode": {
+    "skillFile": "Файл навыка:",
+    "notSet": "Не задан",
+    "resourceOutput": "Вывод ресурса:"
+  },
+  "commandNode": {
+    "textCommand": "Текстовая команда",
+    "noContent": "Нет содержимого",
+    "placeholder": "Введите команду...",
+    "executing": "Выполняется..."
+  },
+  "episodeNode": {
+    "title": "Эпизод"
+  },
+  "scriptNode": {
+    "title": "Детали сценария"
+  },
+  "sceneNode": {
+    "title": "Сцена",
+    "edit": "Редактировать текущую сцену",
+    "editScene": "Редактировать сцену",
+    "sceneName": "Название сцены",
+    "sceneNamePlaceholder": "Введите название сцены",
+    "promptLabel": "Подсказка",
+    "promptPlaceholder": "Введите подсказку",
+    "delete": "Удалить текущую сцену",
+    "add": "Добавить сцену вручную в текущей позиции",
+    "sceneList": "Список сцен",
+    "maxScenesError": "Можно выбрать не более 3 сцен",
+    "newSceneContent": "Содержимое новой сцены...",
+    "noMatchedAssets": "Нет подходящих ресурсов",
+    "categoryMap": {
+      "characters": "Персонажи",
+      "scenes": "Сцены",
+      "props": "Реквизит",
+      "storyboard": "Раскадровка",
+      "audio": "Аудио",
+      "image": "Изображение",
+      "video": "Видео",
+      "file": "Файл",
+      "temp": "Временная категория"
+    }
+  },
+  "sceneImageNode": {
+    "title": "Генерация изображений",
+    "referenceImage": "Опорное изображение",
+    "img": "IMG",
+    "ratioAndResolution": "Соотношение/Разрешение",
+    "generate": "Генерировать",
+    "promptPlaceholder": "Генерация изображений на основе предоставленных опорных изображений и сценария раскадровки. Высококачественное финальное изображение с соответствующей структурой сцены, световой атмосферой, выразительным повествованием, соответствующее стандартам кино- и анимационной раскадровки.",
+    "format": {
+      "9grid": "Сетка 9",
+      "single": "Один кадр",
+      "first": "Первый кадр",
+      "last": "Последний кадр"
+    },
+    "deleteConfirmTitle": "Подтверждение удаления изображения",
+    "deleteConfirmDescription": "Вы уверены, что хотите удалить это изображение?"
+  },
+  "sceneVideoNode": {
+    "title": "Генерация видео",
+    "vid": "VID",
+    "ratioAndResolution": "Соотношение/Разрешение",
+    "generate": "Генерировать",
+    "promptPlaceholder": "Генерация видео на основе предоставленных материалов. Строго соблюдать содержание, композицию и стиль оригинального изображения. Создать динамичное видео с логически последовательными действиями, естественными движениями, реалистичным освещением и плавными переходами.",
+    "refTypes": {
+      "single": "Один",
+      "grid": "Сетка",
+      "first": "Первый кадр",
+      "last": "Последний кадр"
+    },
+    "img": "+ IMG",
+    "deleteConfirmTitle": "Подтверждение удаления видео",
+    "deleteConfirmDescription": "Вы уверены, что хотите удалить это видео?"
+  },
+  "videoPreviewNode": {
+    "title": "Видео эпизода",
+    "refresh": "Обновить",
+    "pending": "Не создано",
+    "noVideosToDownload": "Нет видео для скачивания",
+    "noVideosSelected": "Нет выбранных видео эпизода",
+    "downloadSuccess": "Скачано {count} файлов",
+    "downloadFailed": "Ошибка скачивания",
+    "directorySelectionFailed": "Ошибка выбора директории",
+    "downloadEpisode": "Скачать эпизод",
+    "scenePrefix": "Сцена"
+  },
+  "assetNode": {
+    "title": "Ресурсы проекта",
+    "characters": "Персонажи",
+    "scenes": "Сцены",
+    "props": "Реквизит",
+    "audio": "Аудио",
+    "empty": "Нет ресурсов",
+    "createTitle": "Создать ресурс",
+    "nameLabel": "Название",
+    "nameRequired": "Введите название ресурса",
+    "categoryLabel": "Категория ресурса",
+    "typeLabel": "Тип ресурса",
+    "descriptionLabel": "Описание",
+    "promptLabel": "Подсказка",
+    "promptPlaceholder": "Введите подсказку",
+    "uploadLabel": "Загрузить файл",
+    "uploadHint": "Нажмите или перетащите файл для загрузки",
+    "replaceFile": "Заменить",
+    "clearFile": "Удалить",
+    "uploadAcceptImage": "Поддерживаются файлы изображений",
+    "uploadAcceptAudio": "Поддерживаются аудиофайлы",
+    "uploadSelected": "Выбран: {name}",
+    "uploadOnlyImageError": "Эта категория поддерживает только файлы изображений",
+    "uploadOnlyAudioError": "Эта категория поддерживает только аудиофайлы",
+    "uploadReadError": "Не удалось прочитать файл. Повторите попытку",
+    "typeImage": "Изображение",
+    "typeVideo": "Видео",
+    "typeAudio": "Аудио",
+    "cancel": "Отмена",
+    "create": "Создать",
+    "save": "Сохранить",
+    "delete": "Удалить",
+    "editTitle": "Редактировать ресурс",
+    "deleteConfirmTitle": "Подтверждение удаления ресурса",
+    "deleteConfirmDescription": "После удаления восстановление невозможно. Продолжить?",
+    "deleteConfirmDescriptionWithName": "Удалить ресурс «{name}»? После удаления восстановление невозможно.",
+    "tooltipAdd": "Добавить ресурс",
+    "tooltipEdit": "Редактировать ресурс",
+    "tooltipDelete": "Удалить ресурс",
+    "tooltipPreview": "Предпросмотр ресурса"
+  }
+}

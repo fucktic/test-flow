@@ -1,0 +1,130 @@
+{
+  "resultNode": {
+    "skillFile": "Tệp Skill:",
+    "notSet": "Chưa đặt",
+    "resourceOutput": "Đầu ra tài nguyên:"
+  },
+  "commandNode": {
+    "textCommand": "Lệnh văn bản",
+    "noContent": "Chưa có nội dung",
+    "placeholder": "Nhập lệnh...",
+    "executing": "Đang thực thi..."
+  },
+  "episodeNode": {
+    "title": "Tập phim"
+  },
+  "scriptNode": {
+    "title": "Chi tiết kịch bản"
+  },
+  "sceneNode": {
+    "title": "Cảnh quay",
+    "edit": "Chỉnh sửa cảnh hiện tại",
+    "editScene": "Chỉnh sửa cảnh",
+    "sceneName": "Tên cảnh",
+    "sceneNamePlaceholder": "Nhập tên cảnh",
+    "promptLabel": "Gợi ý",
+    "promptPlaceholder": "Nhập gợi ý",
+    "delete": "Xóa cảnh hiện tại",
+    "add": "Thêm cảnh thủ công tại vị trí này",
+    "sceneList": "Danh sách cảnh",
+    "maxScenesError": "Chỉ có thể chọn tối đa 3 cảnh",
+    "newSceneContent": "Nội dung cảnh mới...",
+    "noMatchedAssets": "Không có tài sản phù hợp",
+    "categoryMap": {
+      "characters": "Nhân vật",
+      "scenes": "Cảnh",
+      "props": "Đạo cụ",
+      "storyboard": "Bảng phân cảnh",
+      "audio": "Âm thanh",
+      "image": "Hình ảnh",
+      "video": "Video",
+      "file": "Tệp",
+      "temp": "Danh mục tạm"
+    }
+  },
+  "sceneImageNode": {
+    "title": "Tạo hình ảnh",
+    "referenceImage": "Ảnh tham chiếu",
+    "img": "IMG",
+    "ratioAndResolution": "Tỷ lệ/Độ phân giải",
+    "generate": "Tạo",
+    "promptPlaceholder": "Tạo hình ảnh dựa trên ảnh tham chiếu và kịch bản phân cảnh. Cấu trúc cảnh hợp lý, bầu không khí ánh sáng, tính tự sự cao, hình ảnh chất lượng cao đáp ứng tiêu chuẩn phân cảnh phim và hoạt hình.",
+    "format": {
+      "9grid": "Lưới 9",
+      "single": "Khung đơn",
+      "first": "Khung đầu",
+      "last": "Khung cuối"
+    },
+    "deleteConfirmTitle": "Xác nhận xóa hình ảnh",
+    "deleteConfirmDescription": "Bạn có chắc chắn muốn xóa hình ảnh này không?"
+  },
+  "sceneVideoNode": {
+    "title": "Tạo video",
+    "vid": "VID",
+    "ratioAndResolution": "Tỷ lệ/Độ phân giải",
+    "generate": "Tạo",
+    "promptPlaceholder": "Tạo video dựa trên hình ảnh tài liệu cung cấp. Tuân thủ chặt chẽ nội dung, bố cục và phong cách của ảnh gốc. Tạo video động với hành động liền mạch, tự nhiên, ánh sáng chân thực, chuyển cảnh mượt mà.",
+    "refTypes": {
+      "single": "Đơn",
+      "grid": "Lưới",
+      "first": "Khung đầu",
+      "last": "Khung cuối"
+    },
+    "img": "+ IMG",
+    "deleteConfirmTitle": "Xác nhận xóa video",
+    "deleteConfirmDescription": "Bạn có chắc chắn muốn xóa video này không?"
+  },
+  "videoPreviewNode": {
+    "title": "Video tập phim",
+    "refresh": "Làm mới",
+    "pending": "Chưa tạo",
+    "noVideosToDownload": "Chưa có video để tải",
+    "noVideosSelected": "Chưa chọn video tập phim",
+    "downloadSuccess": "Đã tải thành công {count} tệp",
+    "downloadFailed": "Tải xuống thất bại",
+    "directorySelectionFailed": "Chọn thư mục thất bại",
+    "downloadEpisode": "Tải tập phim",
+    "scenePrefix": "Cảnh"
+  },
+  "assetNode": {
+    "title": "Tài sản dự án",
+    "characters": "Nhân vật",
+    "scenes": "Cảnh",
+    "props": "Đạo cụ",
+    "audio": "Âm thanh",
+    "empty": "Chưa có tài sản",
+    "createTitle": "Tạo tài sản",
+    "nameLabel": "Tên",
+    "nameRequired": "Vui lòng nhập tên tài sản",
+    "categoryLabel": "Danh mục tài sản",
+    "typeLabel": "Loại tài sản",
+    "descriptionLabel": "Mô tả",
+    "promptLabel": "Gợi ý",
+    "promptPlaceholder": "Nhập gợi ý",
+    "uploadLabel": "Tải lên tệp",
+    "uploadHint": "Nhấp hoặc kéo thả tệp vào đây để tải lên",
+    "replaceFile": "Thay thế",
+    "clearFile": "Xóa",
+    "uploadAcceptImage": "Hỗ trợ tệp hình ảnh",
+    "uploadAcceptAudio": "Hỗ trợ tệp âm thanh",
+    "uploadSelected": "Đã chọn: {name}",
+    "uploadOnlyImageError": "Danh mục này chỉ hỗ trợ tệp hình ảnh",
+    "uploadOnlyAudioError": "Danh mục này chỉ hỗ trợ tệp âm thanh",
+    "uploadReadError": "Đọc tệp thất bại, vui lòng thử lại",
+    "typeImage": "Hình ảnh",
+    "typeVideo": "Video",
+    "typeAudio": "Âm thanh",
+    "cancel": "Hủy",
+    "create": "Tạo",
+    "save": "Lưu",
+    "delete": "Xóa",
+    "editTitle": "Chỉnh sửa tài sản",
+    "deleteConfirmTitle": "Xác nhận xóa tài sản",
+    "deleteConfirmDescription": "Không thể khôi phục sau khi xóa. Bạn có chắc muốn tiếp tục không?",
+    "deleteConfirmDescriptionWithName": "Xóa tài sản「{name}」? Không thể khôi phục sau khi xóa.",
+    "tooltipAdd": "Thêm tài sản",
+    "tooltipEdit": "Chỉnh sửa tài sản",
+    "tooltipDelete": "Xóa tài sản",
+    "tooltipPreview": "Xem trước tài sản"
+  }
+}

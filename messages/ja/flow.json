@@ -1,0 +1,130 @@
+{
+  "resultNode": {
+    "skillFile": "スキルファイル:",
+    "notSet": "未設定",
+    "resourceOutput": "リソース出力:"
+  },
+  "commandNode": {
+    "textCommand": "テキストコマンド",
+    "noContent": "コンテンツなし",
+    "placeholder": "コマンドを入力してください...",
+    "executing": "実行中..."
+  },
+  "episodeNode": {
+    "title": "エピソード"
+  },
+  "scriptNode": {
+    "title": "スクリプト詳細"
+  },
+  "sceneNode": {
+    "title": "シーン",
+    "edit": "現在のシーンを編集",
+    "editScene": "シーンを編集",
+    "sceneName": "シーン名",
+    "sceneNamePlaceholder": "シーン名を入力してください",
+    "promptLabel": "プロンプト",
+    "promptPlaceholder": "プロンプトを入力してください",
+    "delete": "現在のシーンを削除",
+    "add": "現在の位置にシーンを手動追加",
+    "sceneList": "シーン一覧",
+    "maxScenesError": "最大3つのシーンしか選択できません",
+    "newSceneContent": "新しいシーンのコンテンツ...",
+    "noMatchedAssets": "マッチするアセットなし",
+    "categoryMap": {
+      "characters": "キャラクター",
+      "scenes": "シーン",
+      "props": "小道具",
+      "storyboard": "絵コンテ",
+      "audio": "音声",
+      "image": "画像",
+      "video": "動画",
+      "file": "ファイル",
+      "temp": "一時カテゴリ"
+    }
+  },
+  "sceneImageNode": {
+    "title": "画像生成",
+    "referenceImage": "参照画像",
+    "img": "IMG",
+    "ratioAndResolution": "比率/解像度",
+    "generate": "生成",
+    "promptPlaceholder": "参照画像と絵コンテスクリプトに基づいて画像を生成します。適切なシーン構造、光と影の雰囲気、強い叙事性を持ち、映像・アニメーションの絵コンテ基準に適合した高品質な画像。",
+    "format": {
+      "9grid": "9グリッド",
+      "single": "シングルフレーム",
+      "first": "最初のフレーム",
+      "last": "最後のフレーム"
+    },
+    "deleteConfirmTitle": "画像削除の確認",
+    "deleteConfirmDescription": "この画像を削除してもよろしいですか？"
+  },
+  "sceneVideoNode": {
+    "title": "動画生成",
+    "vid": "VID",
+    "ratioAndResolution": "比率/解像度",
+    "generate": "生成",
+    "promptPlaceholder": "提供された素材画像に基づいて動画を生成します。元の画像のコンテンツ、構図、スタイルを厳守し、論理的に一貫した、自然な動き、リアルな光と影、スムーズなトランジションを持つ動的動画を生成します。",
+    "refTypes": {
+      "single": "シングル",
+      "grid": "グリッド",
+      "first": "最初のフレーム",
+      "last": "最後のフレーム"
+    },
+    "img": "+ IMG",
+    "deleteConfirmTitle": "動画削除の確認",
+    "deleteConfirmDescription": "この動画を削除してもよろしいですか？"
+  },
+  "videoPreviewNode": {
+    "title": "エピソード動画",
+    "refresh": "更新",
+    "pending": "未生成",
+    "noVideosToDownload": "ダウンロード可能な動画なし",
+    "noVideosSelected": "選択されたエピソード動画なし",
+    "downloadSuccess": "{count}個のファイルをダウンロードしました",
+    "downloadFailed": "ダウンロード失敗",
+    "directorySelectionFailed": "ディレクトリ選択失敗",
+    "downloadEpisode": "エピソードダウンロード",
+    "scenePrefix": "シーン"
+  },
+  "assetNode": {
+    "title": "プロジェクトアセット",
+    "characters": "キャラクター",
+    "scenes": "シーン",
+    "props": "小道具",
+    "audio": "音声",
+    "empty": "アセットなし",
+    "createTitle": "アセットを作成",
+    "nameLabel": "名前",
+    "nameRequired": "アセット名を入力してください",
+    "categoryLabel": "アセットカテゴリ",
+    "typeLabel": "アセットタイプ",
+    "descriptionLabel": "説明",
+    "promptLabel": "プロンプト",
+    "promptPlaceholder": "プロンプトを入力してください",
+    "uploadLabel": "ファイルをアップロード",
+    "uploadHint": "クリックまたはドラッグしてファイルをアップロード",
+    "replaceFile": "置換",
+    "clearFile": "削除",
+    "uploadAcceptImage": "画像ファイル対応",
+    "uploadAcceptAudio": "音声ファイル対応",
+    "uploadSelected": "選択済み：{name}",
+    "uploadOnlyImageError": "このカテゴリは画像ファイルのみ対応しています",
+    "uploadOnlyAudioError": "このカテゴリは音声ファイルのみ対応しています",
+    "uploadReadError": "ファイルの読み込みに失敗しました。再試行してください",
+    "typeImage": "画像",
+    "typeVideo": "動画",
+    "typeAudio": "音声",
+    "cancel": "キャンセル",
+    "create": "作成",
+    "save": "保存",
+    "delete": "削除",
+    "editTitle": "アセットを編集",
+    "deleteConfirmTitle": "アセット削除の確認",
+    "deleteConfirmDescription": "削除後は復元できません。続行しますか？",
+    "deleteConfirmDescriptionWithName": "アセット「{name}」を削除しますか？削除後は復元できません。",
+    "tooltipAdd": "アセットを追加",
+    "tooltipEdit": "アセットを編集",
+    "tooltipDelete": "アセットを削除",
+    "tooltipPreview": "アセットをプレビュー"
+  }
+}

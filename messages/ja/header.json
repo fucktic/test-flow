@@ -1,0 +1,11 @@
+{
+  "switchProject": "キャンバスがありません。先にキャンバスを作成してください",
+  "newProject": "新しいキャンバス",
+  "importSkill": "スキルをインポート",
+  "toggleTheme": "テーマを切り替え",
+  "switchLanguage": "言語を切り替え",
+  "switchProjectConfirmTitle": "キャンバス切り替えの確認",
+  "switchProjectConfirmDesc": "現在スキルが実行中です。キャンバスを切り替えると現在のスキルが停止します。切り替えを確認しますか？",
+  "cancel": "キャンセル",
+  "confirmSwitch": "切り替えを確認"
+}

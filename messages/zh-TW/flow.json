@@ -1,0 +1,130 @@
+{
+  "resultNode": {
+    "skillFile": "Skill 檔案:",
+    "notSet": "未設定",
+    "resourceOutput": "資源輸出:"
+  },
+  "commandNode": {
+    "textCommand": "文字指令",
+    "noContent": "暫無內容",
+    "placeholder": "請輸入指令...",
+    "executing": "執行中..."
+  },
+  "episodeNode": {
+    "title": "劇集"
+  },
+  "scriptNode": {
+    "title": "劇本詳情"
+  },
+  "sceneNode": {
+    "title": "分鏡",
+    "edit": "編輯目前分鏡",
+    "editScene": "編輯分鏡",
+    "sceneName": "分鏡名稱",
+    "sceneNamePlaceholder": "請輸入分鏡名稱",
+    "promptLabel": "提示詞",
+    "promptPlaceholder": "請輸入提示詞",
+    "delete": "刪除目前分鏡",
+    "add": "目前位置手動增加分鏡",
+    "sceneList": "分鏡列表",
+    "maxScenesError": "最多只能選擇3個分鏡",
+    "newSceneContent": "新增的分鏡內容...",
+    "noMatchedAssets": "無匹配資產",
+    "categoryMap": {
+      "characters": "角色",
+      "scenes": "場景",
+      "props": "道具",
+      "storyboard": "分鏡圖",
+      "audio": "音訊",
+      "image": "圖片",
+      "video": "影片",
+      "file": "檔案",
+      "temp": "臨時類別"
+    }
+  },
+  "sceneImageNode": {
+    "title": "生成圖像",
+    "referenceImage": "參考圖",
+    "img": "IMG",
+    "ratioAndResolution": "比例/解析度",
+    "generate": "生成",
+    "promptPlaceholder": "按照提供的參考圖與分鏡腳本進行生成圖像，合理的場景結構、光影氛圍，敘事感強，符合影視動畫分鏡標準的高品質成品圖。",
+    "format": {
+      "9grid": "9宮格",
+      "single": "單幀圖",
+      "first": "首幀",
+      "last": "尾幀"
+    },
+    "deleteConfirmTitle": "確認刪除圖像",
+    "deleteConfirmDescription": "確認刪除目前圖像嗎？"
+  },
+  "sceneVideoNode": {
+    "title": "生成影片",
+    "vid": "VID",
+    "ratioAndResolution": "比例/解析度",
+    "generate": "生成",
+    "promptPlaceholder": "請根據提供的素材圖像進行影片生成，嚴格遵循原圖的內容、構圖與風格，生成邏輯連貫、動作自然、光影真實、過渡流暢的動態影片。",
+    "refTypes": {
+      "single": "單圖",
+      "grid": "宮格",
+      "first": "首幀",
+      "last": "尾幀"
+    },
+    "img": "+ IMG",
+    "deleteConfirmTitle": "確認刪除影片",
+    "deleteConfirmDescription": "確認刪除目前影片嗎？"
+  },
+  "videoPreviewNode": {
+    "title": "分集影片",
+    "refresh": "重新整理",
+    "pending": "未生成",
+    "noVideosToDownload": "暫無影片可下載",
+    "noVideosSelected": "暫無選中的分集影片",
+    "downloadSuccess": "成功下載 {count} 個檔案",
+    "downloadFailed": "下載失敗",
+    "directorySelectionFailed": "目錄選擇失敗",
+    "downloadEpisode": "分集下載",
+    "scenePrefix": "分鏡"
+  },
+  "assetNode": {
+    "title": "專案資產",
+    "characters": "角色",
+    "scenes": "場景",
+    "props": "道具",
+    "audio": "音訊",
+    "empty": "暫無資產",
+    "createTitle": "建立資產",
+    "nameLabel": "名稱",
+    "nameRequired": "請輸入資產名稱",
+    "categoryLabel": "資產分類",
+    "typeLabel": "資產類型",
+    "descriptionLabel": "描述",
+    "promptLabel": "提示詞",
+    "promptPlaceholder": "請輸入提示詞",
+    "uploadLabel": "上傳檔案",
+    "uploadHint": "點擊或拖曳檔案至此處上傳",
+    "replaceFile": "替換",
+    "clearFile": "刪除",
+    "uploadAcceptImage": "支援圖片檔案",
+    "uploadAcceptAudio": "支援音訊檔案",
+    "uploadSelected": "已選擇：{name}",
+    "uploadOnlyImageError": "目前分類僅支援上傳圖片檔案",
+    "uploadOnlyAudioError": "目前分類僅支援上傳音訊檔案",
+    "uploadReadError": "讀取檔案失敗，請重試",
+    "typeImage": "圖片",
+    "typeVideo": "影片",
+    "typeAudio": "音訊",
+    "cancel": "取消",
+    "create": "建立",
+    "save": "儲存",
+    "delete": "刪除",
+    "editTitle": "編輯資產",
+    "deleteConfirmTitle": "確認刪除資產",
+    "deleteConfirmDescription": "刪除後將無法恢復，請確認是否繼續。",
+    "deleteConfirmDescriptionWithName": "確認刪除資產「{name}」？刪除後將無法恢復。",
+    "tooltipAdd": "新增資產",
+    "tooltipEdit": "編輯資產",
+    "tooltipDelete": "刪除資產",
+    "tooltipPreview": "預覽資產"
+  }
+}
