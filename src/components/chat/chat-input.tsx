@@ -145,8 +145,16 @@ export function ChatInput({
         </div>
       </div>
 
-      <div className="text-[10px] text-muted-foreground/60 text-center mt-2 font-medium">
-        {t("pressEnterToSend")}
+      <div className="text-xs text-muted-foreground/60 text-center mt-2 font-medium">
+        {t("assetImageGuidePrefix")}
+        <a
+          href="#"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline underline-offset-2 hover:text-foreground/80 transition-colors"
+        >
+          {t("assetImageGuideLink")}
+        </a>
       </div>
     </div>
   );

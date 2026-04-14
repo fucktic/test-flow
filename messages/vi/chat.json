@@ -40,6 +40,8 @@
   "onlyModifyNodePrefix": "Chỉ chỉnh sửa node: {title}",
   "clearSelection": "Bỏ chọn",
   "pressEnterToSend": "Nhấn Enter để gửi, Shift + Enter để xuống dòng",
+  "assetImageGuidePrefix": "Vui lòng @hình ảnh tài sản trong prompt theo mô hình đã cấu hình 👉🏻",
+  "assetImageGuideLink": "Hướng dẫn chi tiết",
   "selectedNodesPrompt": "Chỉ thao tác với node id {id}, không thao tác với node khác",
   "skillInProgressWarning": "Skill đang chạy, thoát sẽ mất nội dung liên quan. Bạn có chắc muốn rời không?",
   "noProjectSelectedPrompt": "Chưa chọn canvas, không thể mở rộng",

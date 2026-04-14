@@ -40,6 +40,8 @@
   "onlyModifyNodePrefix": "Only modify node: {title}",
   "clearSelection": "Clear Selection",
   "pressEnterToSend": "Press Enter to send, Shift + Enter for new line",
+  "assetImageGuidePrefix": "Please mention @asset image in the prompt based on the configured model 👉🏻",
+  "assetImageGuideLink": "Guide",
   "selectedNodesPrompt": "Only operate on node ids {id}, do not operate on other nodes",
   "skillInProgressWarning": "A skill is currently in progress. Leaving will cause related content to be lost. Are you sure you want to leave?",
   "noProjectSelectedPrompt": "Cannot expand without a selected canvas",

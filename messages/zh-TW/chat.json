@@ -40,6 +40,8 @@
   "onlyModifyNodePrefix": "只修改節點：{title}",
   "clearSelection": "清除選擇",
   "pressEnterToSend": "按 Enter 傳送，Shift + Enter 換行",
+  "assetImageGuidePrefix": "請依據配置的模型在提示詞內@資產圖像 👉🏻",
+  "assetImageGuideLink": "詳情指南",
   "selectedNodesPrompt": "只操作節點id為{id}，不操作其它節點",
   "skillInProgressWarning": "Skill正在進行中，退出將遺失相關內容，確定要離開嗎？",
   "noProjectSelectedPrompt": "如果沒有選中畫布，無法展開",

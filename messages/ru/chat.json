@@ -40,6 +40,8 @@
   "onlyModifyNodePrefix": "Изменить только узел: {title}",
   "clearSelection": "Сбросить выбор",
   "pressEnterToSend": "Enter для отправки, Shift + Enter для переноса строки",
+  "assetImageGuidePrefix": "Укажите @изображение актива в промпте в соответствии с настроенной моделью 👉🏻",
+  "assetImageGuideLink": "Подробное руководство",
   "selectedNodesPrompt": "Работать только с узлом id {id}, не трогать другие узлы",
   "skillInProgressWarning": "Навык выполняется. Выход приведёт к потере связанного содержимого. Вы уверены?",
   "noProjectSelectedPrompt": "Без выбранного холста невозможно развернуть",

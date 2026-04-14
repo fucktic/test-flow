@@ -11,7 +11,7 @@ import { ChatInput } from "./chat-input";
 import { MessageContent } from "./message-content";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Minus, User, ArrowDownRight, ArrowDownLeft } from "lucide-react";
+import { Minus, User, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -586,18 +586,18 @@ export function ChatWidget() {
 
         {/* 调整大小手柄 (右下) */}
         <div
-          className="absolute bottom-0 right-0 w-5 h-5 cursor-se-resize flex items-end justify-end p-1 text-muted-foreground/50 hover:text-muted-foreground transition-colors z-50"
+          className="absolute bottom-0 right-0 w-6 h-6 cursor-se-resize flex items-end justify-end p-1 text-muted-foreground/50 hover:text-muted-foreground transition-colors z-50"
           onMouseDown={(e) => handleResizeMouseDown(e, "se")}
         >
-          <ArrowDownRight className="w-4 h-4" />
+          <ChevronDown className="size-5 -rotate-45" />
         </div>
 
         {/* 调整大小手柄 (左下) */}
         <div
-          className="absolute bottom-0 left-0 w-5 h-5 cursor-sw-resize flex items-end justify-start p-1 text-muted-foreground/50 hover:text-muted-foreground transition-colors z-50"
+          className="absolute bottom-0 left-0 w-6 h-6 cursor-sw-resize flex items-end justify-start p-1 text-muted-foreground/50 hover:text-muted-foreground transition-colors z-50"
           onMouseDown={(e) => handleResizeMouseDown(e, "sw")}
         >
-          <ArrowDownLeft className="w-4 h-4" />
+          <ChevronDown className="size-5 rotate-45" />
         </div>
       </div>
 

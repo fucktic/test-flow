@@ -40,6 +40,8 @@
   "onlyModifyNodePrefix": "ノードのみ変更：{title}",
   "clearSelection": "選択をクリア",
   "pressEnterToSend": "Enterで送信、Shift + Enterで改行",
+  "assetImageGuidePrefix": "設定されたモデルに従って、プロンプト内で@アセット画像を指定してください 👉🏻",
+  "assetImageGuideLink": "詳細ガイド",
   "selectedNodesPrompt": "ID {id} のノードのみ操作し、他のノードは操作しないこと",
   "skillInProgressWarning": "スキルが進行中です。終了すると関連コンテンツが失われます。本当に離れますか？",
   "noProjectSelectedPrompt": "キャンバスが選択されていない場合、展開できません",
