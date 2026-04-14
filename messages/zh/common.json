@@ -1,5 +1,7 @@
 {
   "appTitle": "漫途无限画布",
+  "skillsList": "Skills 列表",
+  "loading": "加载中...",
   "title": "项目",
   "testCanvas": "进入测试画布",
   "skillsTitle": "Skills 管理",

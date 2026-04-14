@@ -120,7 +120,7 @@ export function ImportSkillButton({ defaultOpen = false }: { defaultOpen?: boole
 
         <div className="flex flex-col gap-4 py-4">
           <div className="flex justify-between items-center">
-            <h4 className="text-sm font-medium">Skills List</h4>
+            <h4 className="text-sm font-medium">{t("skillsList")}</h4>
             <input
               type="file"
               ref={inputRef}
@@ -142,7 +142,7 @@ export function ImportSkillButton({ defaultOpen = false }: { defaultOpen?: boole
 
           <ScrollArea className="h-[200px] w-full rounded-md border p-4">
             {loadingSkills ? (
-              <div className="text-center text-sm text-muted-foreground py-4">Loading...</div>
+              <div className="text-center text-sm text-muted-foreground py-4">{t("loading")}</div>
             ) : skills.length === 0 ? (
               <div className="text-center text-sm text-muted-foreground py-4">{t("noSkills")}</div>
             ) : (
