@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, forwardRef, useImperativeHandle } from "react";
+import { useState, useEffect, useRef, useMemo, forwardRef, useImperativeHandle } from "react";
 import { SceneItem } from "@/lib/types/flow.types";
 import { useTranslations } from "next-intl";
 import {
@@ -140,6 +140,7 @@ export const AssetMention = Mention.extend({
 // --- Mention List Component ---
 export const MentionList = forwardRef((props: any, ref) => {
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const categoryMap: Record<string, string> = props.categoryMap || {};
 
@@ -192,6 +193,12 @@ export const MentionList = forwardRef((props: any, ref) => {
 
   useEffect(() => setSelectedIndex(0), [props.items]);
 
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const buttons = containerRef.current.querySelectorAll<HTMLButtonElement>("button[data-index]");
+    buttons[selectedIndex]?.scrollIntoView({ block: "nearest" });
+  }, [selectedIndex]);
+
   useImperativeHandle(ref, () => ({
     onKeyDown: ({ event }: any) => {
       if (event.key === "ArrowUp") {
@@ -219,7 +226,10 @@ export const MentionList = forwardRef((props: any, ref) => {
   }
 
   return (
-    <div className="bg-popover text-popover-foreground border border-border/50 shadow-xl rounded-xl overflow-hidden flex flex-col w-64 max-h-75 overflow-y-auto z-99999 p-1.5 ring-1 ring-black/5 gap-x-2">
+    <div
+      ref={containerRef}
+      className="bg-popover text-popover-foreground border border-border/50 shadow-xl rounded-xl overflow-hidden flex flex-col w-64 max-h-75 overflow-y-auto z-99999 p-1.5 ring-1 ring-black/5 gap-x-2"
+    >
       {props.items.map((item: any, index: number) => {
         const itemType = item.category || item.type;
         const typeText = categoryMap[itemType] || itemType;
@@ -241,6 +251,7 @@ export const MentionList = forwardRef((props: any, ref) => {
               </div>
             )}
             <button
+              data-index={index}
               className={cn(
                 "flex items-center gap-3 w-full text-left px-2 py-1.5 text-sm transition-all rounded-md outline-none select-none",
                 index === selectedIndex
