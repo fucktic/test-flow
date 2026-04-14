@@ -83,19 +83,16 @@ export function useCurrentSelection(uploadedFiles: UploadedFile[]) {
   }, [nodes, edges, t]);
 
   const mentionItems = useMemo(() => {
-    let imageIndex = 1;
-    let fileIndex = 1;
     const fileItems = uploadedFiles.map((f) => {
-      const isImage = f.type === "image";
-      const name = isImage
-        ? `${t("imagePrefix") || "图片"}${imageIndex++}`
-        : `${t("filePrefix") || "文件"}${fileIndex++}`;
+      const fallbackName =
+        f.type === "image" ? `${t("imagePrefix") || "图片"}` : `${t("filePrefix") || "文件"}`;
+      const name = f.file.name?.trim() || fallbackName;
       return {
         id: f.id,
         name,
         category: "temp",
         type: f.type,
-        url: f.previewUrl || f.file.name,
+        url: f.previewUrl,
       };
     });
     return [...allAssets, ...fileItems];

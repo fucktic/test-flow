@@ -16,6 +16,7 @@ import { useProjectStore } from "@/lib/store/use-projects";
 import { LazyImage } from "@/components/common/lazy-image";
 import { AssetFormDialog } from "./components/asset-form-dialog";
 import { AssetDeleteDialog } from "./components/asset-delete-dialog";
+import { generateId } from "@/lib/utils/uuid";
 interface AssetNodeProps {
   data: AssetNodeData;
   selected?: boolean;
@@ -285,7 +286,7 @@ const AssetNode = ({ data, selected }: AssetNodeProps) => {
                 const itemType = getMediaTypeFromUrl(item.url, item.type);
                 return (
                   <div
-                    key={item.id || item.url || index}
+                    key={generateId()}
                     className="flex flex-col gap-1 group/asset cursor-pointer"
                     onClick={() => data.onAssetSelect?.(item.id)}
                     onDoubleClick={() => handlePreview(index)}

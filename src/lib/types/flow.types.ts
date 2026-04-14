@@ -119,6 +119,7 @@ export interface SceneVideoNodeData {
 
 export interface VideoPreviewItem {
   id: string; // e.g., S-1
+  uuid: string;
   url?: string;
   poster?: string;
   duration?: string; // e.g., 10s
@@ -127,6 +128,7 @@ export interface VideoPreviewItem {
 
 export interface EpisodeVideoData {
   id: string;
+  uuid: string;
   episodeName: string;
   totalScenes: number;
   selectedVideos: number;
@@ -144,6 +146,7 @@ export type AssetCategory = "characters" | "scenes" | "props" | "audio";
 
 export interface AssetItem {
   id: string;
+  uuid: string;
   name: string;
   type: "image" | "audio" | "video";
   url: string;

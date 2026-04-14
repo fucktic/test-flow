@@ -71,20 +71,28 @@ export function useChatEditor({
             };
           },
           items: ({ query }: { query: string }) => {
-            const list = mentionItemsRef.current
-              .filter((item) =>
-                (item.name || "").toLowerCase().includes((query || "").toLowerCase()),
-              )
-              .sort((a, b) => {
-                const typeA = a.category || a.type || "";
-                const typeB = b.category || b.type || "";
-                if (typeA !== typeB) {
-                  return typeA.localeCompare(typeB);
-                }
-                return (a.name || "").localeCompare(b.name || "");
-              })
-              .slice(0, 10);
-            return list;
+            const normalizedQuery = (query || "").toLowerCase();
+            const matchedItems = mentionItemsRef.current.filter((item) =>
+              (item.name || "").toLowerCase().includes(normalizedQuery),
+            );
+
+            const sortByTypeAndName = (a: any, b: any) => {
+              const typeA = a.category || a.type || "";
+              const typeB = b.category || b.type || "";
+              if (typeA !== typeB) {
+                return typeA.localeCompare(typeB);
+              }
+              return (a.name || "").localeCompare(b.name || "");
+            };
+
+            const tempItems = matchedItems
+              .filter((item) => (item.category || item.type) === "temp")
+              .sort(sortByTypeAndName);
+            const normalItems = matchedItems
+              .filter((item) => (item.category || item.type) !== "temp")
+              .sort(sortByTypeAndName);
+
+            return [...tempItems, ...normalItems].slice(0, 10);
           },
           render: () => {
             let component: any;
