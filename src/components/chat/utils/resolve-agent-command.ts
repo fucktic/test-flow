@@ -15,7 +15,7 @@ export const resolveAgentCommand = (
   commandText: string,
   options: ResolveAgentCommandOptions,
 ): ResolvedAgentCommand => {
-  let executable = (agent.endpoint || agent.name || "").trim();
+  const executable = (agent.endpoint || agent.name || "").trim();
   const normalizedCmd = executable.toLowerCase();
 
   if (normalizedCmd === "opencode") {
