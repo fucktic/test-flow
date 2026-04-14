@@ -17,7 +17,6 @@ export const resolveAgentCommand = (
 ): ResolvedAgentCommand => {
   let executable = (agent.endpoint || agent.name || "").trim();
   const normalizedCmd = executable.toLowerCase();
-  const claudeAliases = new Set(["claude", "claude-code", "cloude", "cloude-code"]);
 
   if (normalizedCmd === "opencode") {
     const args = ["run"];
@@ -28,9 +27,8 @@ export const resolveAgentCommand = (
     return { executable, args };
   }
 
-  if (claudeAliases.has(normalizedCmd)) {
+  if (normalizedCmd === "claude") {
     // 保持历史兼容：自动修正 cloude，并统一走 claude 命令
-    executable = "claude";
     return { executable, args: ["-p", commandText] };
   }
 
