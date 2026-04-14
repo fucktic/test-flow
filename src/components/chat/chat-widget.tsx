@@ -22,6 +22,7 @@ import { getSkillFolders } from "@/lib/actions/canvas";
 import { useWidgetDragResize } from "./hooks/use-widget-drag-resize";
 import { useCurrentSelection } from "./hooks/use-current-selection";
 import { useChatEditor } from "./hooks/use-chat-editor";
+import { resolveAgentCommand } from "./utils/resolve-agent-command";
 const SELECTED_NODE_TYPES = [
   // 分镜视频节点
   "sceneVideoNode",
@@ -30,6 +31,20 @@ const SELECTED_NODE_TYPES = [
   // 分镜图片节点
   "sceneImageNode",
 ];
+
+const FIXED_SYSTEM_PROMPT_TEMPLATE =
+  "[System Instruction] You are in the project root (absolute path: {projectRoot}), " +
+  "which contains 'projects' and 'skills'. Skills are located in {projectRoot}/skills/. " +
+  "Before responding to the user, you must proactively run 'ls' to inspect all " +
+  "subdirectories under {projectRoot}/skills/, then read each subdirectory's SKILL.md " +
+  "(and related files) to identify the best-matching skill for the user's intent. " +
+  "You must choose and execute the matching skill directly, and never ask the user to " +
+  "provide a skill folder name. The currently selected project's absolute path is: " +
+  "{projectDir}. For all project file reads/writes, operate directly within {projectDir}/ " +
+  "only. Never create a 'projects' directory inside 'skills/'. Important: whenever a " +
+  "skill generates nodes, it must generate an episode-node first, including core fields " +
+  "such as title, core plot points, emotional rhythm, and main characters.";
+
 export function ChatWidget() {
   const t = useTranslations("chat");
   const {
@@ -265,45 +280,22 @@ export function ChatWidget() {
       // 构建包含 skills 文件夹上下文的命令提示
       // 添加系统提示：强制让 opencode 主动寻找技能，而不是依赖用户提供确切文件夹名
       const idContext = currentProject
-        ? t("selectedProjectIdContext", { id: currentProject.id })
+        ? `\nCurrent selected project ID is: ${currentProject.id}.`
         : "";
+      const projectRootPlaceholder = "{{PROJECT_ROOT}}";
+      const dynamicProjectDir = currentProject
+        ? `${projectRootPlaceholder}/projects/${currentProject.id}`
+        : `${projectRootPlaceholder}/projects`;
+      const systemPrompt = FIXED_SYSTEM_PROMPT_TEMPLATE.replaceAll(
+        "{projectRoot}",
+        projectRootPlaceholder,
+      ).replaceAll("{projectDir}", dynamicProjectDir);
+      const commandText = `${systemPrompt}${idContext}\n[Latest Command]\nUser: ${currentInputForCommand}`;
 
-      const systemPrompt = `${t("systemPromptContext", { projectRoot: "{{PROJECT_ROOT}}" })}${idContext}`;
-
-      const commandText = t("latestCommandContext", {
-        systemPrompt,
-        command: currentInputForCommand,
+      const { executable, args } = resolveAgentCommand(agent, commandText, {
+        isFirstMessage: messages.length === 0,
+        sessionId: currentProject?.id,
       });
-
-      // 如果是 opencode，需要使用 run 子命令
-      // 如果是 claude (Claude Code CLI)，需要使用 -p 参数
-      // 如果是 codex，需要使用对应的非交互式参数（根据 codex 实际支持的情况配置，这里假设它支持类似 -p 或直接跟 prompt）
-      let agentCmd = agent.endpoint || agent.name;
-
-      // 使用单引号包裹，并转义内部的单引号以防 shell 注入
-      const safeCommandText = commandText.replace(/'/g, "'\"'\"'");
-      // 如果对话框中没有聊天记录（即这是第一条消息），则不加 --continue
-      const isFirstMessage = messages.length === 0;
-      const continueArg = isFirstMessage ? "" : "--continue ";
-
-      let cmdArgs = `'${safeCommandText}'`;
-      const normalizedCmd = agentCmd.trim().toLowerCase();
-      if (normalizedCmd === "opencode") {
-        cmdArgs = `run ${continueArg}'${safeCommandText}'`;
-      } else if (
-        normalizedCmd === "claude" ||
-        normalizedCmd === "claude-code" ||
-        normalizedCmd === "cloude"
-      ) {
-        agentCmd = "claude"; // 自动修正拼写错误
-        cmdArgs = `-p '${safeCommandText}'`;
-      } else if (normalizedCmd === "codex") {
-        cmdArgs = `exec '${safeCommandText}'`;
-      } else if (normalizedCmd === "openclaw") {
-        // openclaw 通过 agent --message 接收指令，并需要 --session-id 来保持上下文
-        const sessionId = currentProject?.id;
-        cmdArgs = `agent --session-id ${sessionId} --message '${safeCommandText}'`;
-      }
 
       // 先添加一条空的 agent 消息，并拿到 id
       const agentMsgId = addMessage({
@@ -311,7 +303,7 @@ export function ChatWidget() {
         content: "...",
       });
 
-      const result = await runCommand(agentCmd, cmdArgs, "", (chunk) => {
+      const result = await runCommand(executable, args, "", (chunk) => {
         // 每次收到流式输出，追加到消息内容中
         updateMessage(agentMsgId, (msg) => {
           if (msg.content === "...") {
@@ -335,7 +327,9 @@ export function ChatWidget() {
       // 如果没有，或者流根本没启动，我们就新建一条消息
       addMessage({
         role: "agent",
-        content: t("executionFailedMessage", { message: error.message || t("unknownError") }),
+        content: t("executionFailedMessage", {
+          message: error.message || t("unknownError"),
+        }),
       });
     } finally {
       setIsChatting(false); // 聊天结束，恢复状态

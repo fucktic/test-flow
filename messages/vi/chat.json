@@ -34,8 +34,6 @@
   "executionFailedMessage": "Thực thi thất bại: {message}",
   "unknownError": "Lỗi không xác định",
   "selectedProjectIdContext": "\nID dự án đang chọn: {id}.",
-  "systemPromptContext": "【Lệnh hệ thống】Thư mục hiện tại của bạn là thư mục gốc dự án (đường dẫn tuyệt đối: {projectRoot}), chứa các thư mục projects và skills. Các kỹ năng được lưu trong thư mục {projectRoot}/skills/. Trước khi trả lời người dùng, hãy chủ động dùng ls để xem tất cả thư mục con trong {projectRoot}/skills/, đọc SKILL.md hoặc các tệp liên quan trong từng thư mục con để khớp với ý định của người dùng. Tự tìm kỹ năng phù hợp nhất và thực thi, tuyệt đối không yêu cầu người dùng cung cấp tên thư mục kỹ năng cụ thể! Khi đọc/ghi tệp dự án, hãy truy cập trực tiếp thư mục {projectRoot}/projects/, không tạo thư mục projects trong thư mục skills/! Lưu ý: khi skill tạo node, phải tạo node episode-node trước (cần có tiêu đề, điểm cốt truyện chính, nhịp cảm xúc, nhân vật chính và các trường cốt lõi khác; tham khảo dòng 22 và định nghĩa liên quan trong {projectRoot}/skills/episode-plan/SKILL.md).\n",
-  "latestCommandContext": "{systemPrompt}\n【Lệnh mới nhất】\nUser: {command}",
   "currentOperationNode": "Node đang thao tác",
   "onlyModifyNodePrefix": "Chỉ chỉnh sửa node: {title}",
   "clearSelection": "Bỏ chọn",

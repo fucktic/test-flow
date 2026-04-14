@@ -1,6 +1,6 @@
 export const executeAgentCommand = async (
   agentName: string,
-  command: string,
+  args: string[],
   cwd: string,
   onProgress?: (chunk: string) => void,
   signal?: AbortSignal,
@@ -12,7 +12,7 @@ export const executeAgentCommand = async (
     const response = await fetch("/api/agents/execute", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ agentName, command, cwd }),
+      body: JSON.stringify({ agentName, args, cwd }),
       signal: effectiveSignal,
     });
 

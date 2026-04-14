@@ -34,8 +34,6 @@
   "executionFailedMessage": "実行失敗: {message}",
   "unknownError": "不明なエラー",
   "selectedProjectIdContext": "\n現在選択されているプロジェクトIDは: {id} です。",
-  "systemPromptContext": "【システム指示】現在のディレクトリはプロジェクトルートディレクトリ（絶対パス：{projectRoot}）で、projectsとskillsフォルダが含まれています。スキルは{projectRoot}/skills/ディレクトリに保存されています。回答する前に、必ずlsを使用して{projectRoot}/skills/配下のすべてのサブディレクトリを確認し、各サブディレクトリのSKILL.mdまたは関連ファイルを読み取ってユーザーの意図に合致するスキルを探してください。最も適切なスキルを自分で見つけて実行してください。ユーザーに具体的なスキルフォルダ名を尋ねないでください！プロジェクトファイルを読み書きする際は、{projectRoot}/projects/フォルダに直接アクセスしてください。skills/ディレクトリにprojectsフォルダを新規作成しないでください！注意：スキルがノードを生成する際は、必ずepisode-nodeノード（タイトル、主要なプロットポイント、感情のリズム、主要キャラクターなどのコアフィールドを含む。{projectRoot}/skills/episode-plan/SKILL.md 22行目および関連定義を参照）を最初に生成する必要があります。\n",
-  "latestCommandContext": "{systemPrompt}\n【最新指示】\nUser: {command}",
   "currentOperationNode": "現在の操作ノード",
   "onlyModifyNodePrefix": "ノードのみ変更：{title}",
   "clearSelection": "選択をクリア",

@@ -34,8 +34,6 @@
   "executionFailedMessage": "執行失敗: {message}",
   "unknownError": "未知錯誤",
   "selectedProjectIdContext": "\n目前選中的專案ID為: {id}。",
-  "systemPromptContext": "【系統指令】你目前所在的目錄為專案根目錄（絕對路徑：{projectRoot}），包含 projects 和 skills 資料夾。技能存放在 {projectRoot}/skills/ 目錄下。在回答使用者之前，請務必主動使用 ls 查看 {projectRoot}/skills/ 下的所有子目錄，並讀取各個子目錄中的 SKILL.md 或相關檔案來匹配使用者的意圖。請自行找到最匹配的技能並執行，絕對不要要求使用者提供具體的技能資料夾名稱！在讀寫專案檔案時，請直接訪問 {projectRoot}/projects/ 資料夾，不要在 skills/ 目錄下新建 projects 資料夾！注意：任何 skill 生成節點時，必須先生成 episode-node 節點（需包含標題、核心情節點、情緒節奏、主要角色等核心欄位，具體參考 {projectRoot}/skills/episode-plan/SKILL.md 第22行及相關定義）。\n",
-  "latestCommandContext": "{systemPrompt}\n【最新指令】\nUser: {command}",
   "currentOperationNode": "目前操作節點",
   "onlyModifyNodePrefix": "只修改節點：{title}",
   "clearSelection": "清除選擇",

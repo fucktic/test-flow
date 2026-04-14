@@ -4,19 +4,37 @@ import { spawn } from "child_process";
 export const dynamic = "force-dynamic";
 export const maxDuration = 300; // 允许最长 5 分钟的执行时间（如果部署在 Vercel 等平台会有用）
 
+const splitExecutable = (raw: string) => {
+  const parts = Array.from(raw.matchAll(/"([^"]*)"|'([^']*)'|[^\s]+/g)).map((match) => {
+    if (match[1] !== undefined) return match[1];
+    if (match[2] !== undefined) return match[2];
+    return match[0];
+  });
+  const executable = parts[0] || "";
+  const prependArgs = parts.slice(1);
+  return { executable, prependArgs };
+};
+
 export async function POST(req: NextRequest) {
   try {
-    const { agentName, command, cwd } = await req.json();
+    const { agentName, args, cwd } = await req.json();
 
     // 处理 cwd，如果未提供则使用当前项目目录
     const targetCwd = cwd || process.cwd();
 
-    // 替换绝对路径占位符
-    const finalCommand = command.replace(/\{\{PROJECT_ROOT\}\}/g, targetCwd);
+    const rawAgentName = typeof agentName === "string" ? agentName : "";
+    const rawArgs = Array.isArray(args) ? args : [];
 
-    // 实际应根据 agentName 组装安全命令
-    const fullCommand = `${agentName} ${finalCommand}`;
-    console.log(`Executing command: ${fullCommand}`);
+    // 替换绝对路径占位符
+    const finalArgs = rawArgs.map((arg) => String(arg).replace(/\{\{PROJECT_ROOT\}\}/g, targetCwd));
+
+    const { executable, prependArgs } = splitExecutable(rawAgentName);
+    if (!executable) {
+      return NextResponse.json({ success: false, error: "Invalid agent command" }, { status: 400 });
+    }
+
+    const spawnArgs = [...prependArgs, ...finalArgs];
+    console.log(`Executing command: ${executable} ${spawnArgs.join(" ")}`);
     const encoder = new TextEncoder();
 
     const stream = new ReadableStream({
@@ -37,12 +55,13 @@ export async function POST(req: NextRequest) {
         // 【关键修复1】：立即发送第一段数据！这会强制 Next.js 立即刷新 HTTP 响应头，结束浏览器的 Pending 状态
         safeEnqueue(`[系统] 🚀 正在启动任务...\n\n`);
 
-        // 【关键修复2】：stdio 设置 ignore 忽略 stdin，防止命令等待用户输入（例如 y/n）而无限挂起
-        const child = spawn(fullCommand, {
-          shell: true,
+        // 使用参数数组执行，避免 Windows shell 对单引号和换行的截断问题
+        const child = spawn(executable, spawnArgs, {
           cwd: targetCwd,
           env: process.env,
           stdio: ["ignore", "pipe", "pipe"],
+          shell: false,
+          windowsHide: true,
         });
 
         child.stdout.on("data", (data) => {

@@ -8,7 +8,7 @@ export const useAgent = () => {
 
   const runCommand = async (
     agentName: string,
-    command: string,
+    args: string[],
     cwd: string,
     onProgress?: (chunk: string) => void,
   ) => {
@@ -19,7 +19,7 @@ export const useAgent = () => {
     try {
       const result = await executeAgentCommand(
         agentName,
-        command,
+        args,
         cwd,
         onProgress,
         abortController.signal,
