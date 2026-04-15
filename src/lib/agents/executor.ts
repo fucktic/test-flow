@@ -39,6 +39,14 @@ export const executeAgentCommand = async (
           onProgress(chunk);
         }
       }
+
+      const tailChunk = decoder.decode();
+      if (tailChunk) {
+        fullOutput += tailChunk;
+        if (onProgress) {
+          onProgress(tailChunk);
+        }
+      }
     } finally {
       reader.releaseLock();
     }

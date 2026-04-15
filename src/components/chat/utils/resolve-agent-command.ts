@@ -28,7 +28,8 @@ export const resolveAgentCommand = (
   }
 
   if (normalizedCmd === "claude") {
-    // 保持历史兼容：自动修正 cloude，并统一走 claude 命令
+    // prompt 很长时在 Windows cmd.exe 下会被 8191 字符限制截断。
+    // 后端（route.ts）会将 -p 后面的正文移走、改由 stdin 传入，规避这个限制。
     return { executable, args: ["-p", commandText] };
   }
 
