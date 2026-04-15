@@ -18,7 +18,7 @@ export const resolveAgentCommand = (
   const executable = (agent.endpoint || agent.name || "").trim();
   const normalizedCmd = executable.toLowerCase();
 
-  const flatText = commandText.replace(/\r?\n/g, " ").trim();
+  const flatText = `"${commandText.replace(/\r?\n/g, " ").trim()}"`;
 
   if (normalizedCmd === "opencode") {
     const args = ["run"];
