@@ -1,0 +1,6 @@
+{
+  "systemStart": "[システム] 🚀 タスク開始: {executable}\n\n",
+  "processExitCode": "\n[プロセス終了コード: {code}]",
+  "errorMessage": "\n[エラー: {message}]",
+  "invalidAgentCommand": "無効なエージェントコマンド"
+}

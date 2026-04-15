@@ -1,0 +1,6 @@
+{
+  "systemStart": "[Hệ thống] 🚀 Bắt đầu tác vụ: {executable}\n\n",
+  "processExitCode": "\n[Mã thoát tiến trình: {code}]",
+  "errorMessage": "\n[Lỗi: {message}]",
+  "invalidAgentCommand": "Lệnh agent không hợp lệ"
+}

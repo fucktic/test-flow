@@ -1,10 +1,12 @@
 import { useState, useRef } from "react";
+import { useLocale } from "next-intl";
 import { executeAgentCommand } from "../agents/executor";
 
 export const useAgent = () => {
   const [executingCount, setExecutingCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const locale = useLocale();
 
   const runCommand = async (
     agentName: string,
@@ -23,6 +25,7 @@ export const useAgent = () => {
         cwd,
         onProgress,
         abortController.signal,
+        locale,
       );
       return result;
     } catch (err: any) {

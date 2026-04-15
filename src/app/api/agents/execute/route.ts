@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { spawn } from "child_process";
 import * as fs from "fs";
 import * as path from "path";
+import { getTranslations } from "next-intl/server";
+import { routing } from "@/i18n/routing";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -20,11 +22,8 @@ const splitExecutable = (raw: string) => {
 const isClaudeCommand = (executable: string) =>
   /(^|[\\/])claude(?:\.(cmd|exe|bat))?$/i.test(executable.trim());
 
-// 🔁 修复：明确区分 Claude 和非 Claude 的处理
 const resolveClaudePromptToStdin = (executable: string, args: string[], cwd: string) => {
-  // 🔥 关键：只有 claude 命令才走文件引用逻辑
   if (!isClaudeCommand(executable)) {
-    // 对于 opencode 等其他命令，保持原有 stdin 逻辑
     const printFlagIndex = args.findIndex((arg) => arg === "-p" || arg === "--print");
     if (printFlagIndex < 0) {
       return { args, stdinText: null, tempFilePath: null };
@@ -38,7 +37,6 @@ const resolveClaudePromptToStdin = (executable: string, args: string[], cwd: str
     return { args, stdinText: promptArg, tempFilePath: null };
   }
 
-  // 🔥 以下是专为 Claude 的文件引用逻辑
   const printFlagIndex = args.findIndex((arg) => arg === "-p" || arg === "--print");
   if (printFlagIndex < 0) {
     return { args, stdinText: null, tempFilePath: null };
@@ -49,7 +47,6 @@ const resolveClaudePromptToStdin = (executable: string, args: string[], cwd: str
     return { args, stdinText: null, tempFilePath: null };
   }
 
-  // 生成临时文件
   const tempDir = path.join(cwd, ".claude_tmp");
   if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
 
@@ -60,16 +57,15 @@ const resolveClaudePromptToStdin = (executable: string, args: string[], cwd: str
     fs.writeFileSync(tempFilePath, promptArg, "utf8");
   } catch (writeErr) {
     console.error("Failed to write temp file for Claude:", writeErr);
-    return { args, stdinText: promptArg, tempFilePath: null }; // 降级回 stdin
+    return { args, stdinText: promptArg, tempFilePath: null };
   }
 
-  // 构造文件引用参数，在 -p 前插入 --permission-mode acceptEdits 授权文件写入
   const relativeFilePath = `.claude_tmp/${tempFileName}`;
   const argsWithoutPrompt = [
     ...args.slice(0, printFlagIndex),
     "--permission-mode",
     "acceptEdits",
-    args[printFlagIndex], // -p / --print flag
+    args[printFlagIndex],
     `@${relativeFilePath}`,
     ...args.slice(printFlagIndex + 2),
   ];
@@ -85,8 +81,11 @@ export async function POST(req: NextRequest) {
   let tempFilePathToCleanup: string | null = null;
 
   try {
-    const { agentName, args, cwd } = await req.json();
+    const { agentName, args, cwd, locale: reqLocale } = await req.json();
     const targetCwd = cwd || process.cwd();
+
+    const locale = routing.locales.includes(reqLocale) ? reqLocale : routing.defaultLocale;
+    const t = await getTranslations({ locale, namespace: "agents" });
 
     const rawAgentName = typeof agentName === "string" ? agentName : "";
     const rawArgs = Array.isArray(args) ? args : [];
@@ -94,7 +93,10 @@ export async function POST(req: NextRequest) {
 
     const { executable, prependArgs } = splitExecutable(rawAgentName);
     if (!executable) {
-      return NextResponse.json({ success: false, error: "Invalid agent command" }, { status: 400 });
+      return NextResponse.json(
+        { success: false, error: t("invalidAgentCommand") },
+        { status: 400 },
+      );
     }
 
     const rawSpawnArgs = [...prependArgs, ...finalArgs];
@@ -123,17 +125,15 @@ export async function POST(req: NextRequest) {
           }
         };
 
-        safeEnqueue(`[系统] 🚀 启动任务: ${executable}\n\n`);
+        safeEnqueue(t("systemStart", { executable }));
 
         const isWindows = process.platform === "win32";
 
-        // 🔥 关键修复：Windows 下全局命令需要 shell:true
         let useShell = isWindows;
-        let finalExecutable = executable;
+        const finalExecutable = executable;
 
-        // 如果是 Windows 且命令不含路径分隔符（如直接是 'opencode'）
         if (isWindows && !/[\\/]/.test(executable)) {
-          useShell = true; // 必须用 shell 解析 .cmd/.bat
+          useShell = true;
         }
 
         const child = spawn(finalExecutable, spawnArgs, {
@@ -144,7 +144,6 @@ export async function POST(req: NextRequest) {
           windowsHide: true,
         });
 
-        // 🔥 修复 stdin 处理：区分有无内容
         if (stdinText !== null && child.stdin) {
           child.stdin.end(stdinText);
         } else {
@@ -160,7 +159,6 @@ export async function POST(req: NextRequest) {
         });
 
         child.on("close", (code) => {
-          // 清理临时文件
           if (tempFilePathToCleanup && fs.existsSync(tempFilePathToCleanup)) {
             try {
               fs.unlinkSync(tempFilePathToCleanup);
@@ -172,7 +170,7 @@ export async function POST(req: NextRequest) {
 
           if (!isClosed) {
             if (code !== 0) {
-              safeEnqueue(`\n[进程退出码: ${code}]`);
+              safeEnqueue(t("processExitCode", { code: String(code) }));
             }
             isClosed = true;
             controller.close();
@@ -181,7 +179,7 @@ export async function POST(req: NextRequest) {
 
         child.on("error", (error) => {
           if (!isClosed) {
-            safeEnqueue(`\n[错误: ${error.message}]`);
+            safeEnqueue(t("errorMessage", { message: error.message }));
             isClosed = true;
             controller.close();
           }
@@ -191,7 +189,6 @@ export async function POST(req: NextRequest) {
           if (!isClosed) {
             isClosed = true;
             child.kill("SIGKILL");
-            // 清理临时文件
             if (tempFilePathToCleanup && fs.existsSync(tempFilePathToCleanup)) {
               try {
                 fs.unlinkSync(tempFilePathToCleanup);
@@ -213,7 +210,6 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch (error: any) {
-    // 异常清理
     if (tempFilePathToCleanup && fs.existsSync(tempFilePathToCleanup)) {
       try {
         fs.unlinkSync(tempFilePathToCleanup);

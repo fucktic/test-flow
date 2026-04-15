@@ -1,0 +1,6 @@
+{
+  "systemStart": "[System] 🚀 Starting task: {executable}\n\n",
+  "processExitCode": "\n[Process exit code: {code}]",
+  "errorMessage": "\n[Error: {message}]",
+  "invalidAgentCommand": "Invalid agent command"
+}

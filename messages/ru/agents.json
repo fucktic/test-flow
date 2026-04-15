@@ -1,0 +1,6 @@
+{
+  "systemStart": "[Система] 🚀 Запуск задачи: {executable}\n\n",
+  "processExitCode": "\n[Код завершения процесса: {code}]",
+  "errorMessage": "\n[Ошибка: {message}]",
+  "invalidAgentCommand": "Недопустимая команда агента"
+}

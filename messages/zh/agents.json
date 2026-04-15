@@ -1,0 +1,6 @@
+{
+  "systemStart": "[系统] 🚀 启动任务: {executable}\n\n",
+  "processExitCode": "\n[进程退出码: {code}]",
+  "errorMessage": "\n[错误: {message}]",
+  "invalidAgentCommand": "无效的 Agent 命令"
+}
