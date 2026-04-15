@@ -33,17 +33,12 @@ const SELECTED_NODE_TYPES = [
 ];
 
 const FIXED_SYSTEM_PROMPT_TEMPLATE =
-  "[System Instruction] You are in the project root (absolute path: {projectRoot}), " +
-  "which contains 'projects' and 'skills'. Skills are located in {projectRoot}/skills/. " +
-  "Before responding to the user, you must proactively run 'ls' to inspect all " +
-  "subdirectories under {projectRoot}/skills/, then read each subdirectory's SKILL.md " +
-  "(and related files) to identify the best-matching skill for the user's intent. " +
-  "You must choose and execute the matching skill directly, and never ask the user to " +
-  "provide a skill folder name. The currently selected project's absolute path is: " +
-  "{projectDir}. For all project file reads/writes, operate directly within {projectDir}/ " +
-  "only. Never create a 'projects' directory inside 'skills/'. Important: whenever a " +
-  "skill generates nodes, it must generate an episode-node first, including core fields " +
-  "such as title, core plot points, emotional rhythm, and main characters.";
+  "[System Instruction] " +
+  "Skills are located at {projectRoot}/skills/. Before responding, you must proactively run 'ls' to list all subdirectories under {projectRoot}/skills/, " +
+  "read each subdirectory's SKILL.md (and related files), identify the best-matching skill for the user's intent, and execute it directly. " +
+  "Never ask the user for a skill folder name. " +
+  "All file reads and writes must be performed exclusively within {projectRoot}/projects/{projectId}/. Never create or modify files outside this directory. " +
+  "Never generate any files inside the skills/ directory.";
 
 export function ChatWidget() {
   const t = useTranslations("chat");
@@ -73,6 +68,10 @@ export function ChatWidget() {
   const { initFlow } = useFlowStore();
 
   const handleSendRef = useRef<(() => void) | null>(null);
+
+  // 记录上一次发送消息时的项目和智能体，用于判断是否需要携带系统提示
+  const lastSentProjectIdRef = useRef<string | null | undefined>(undefined);
+  const lastSentAgentIdRef = useRef<string | null | undefined>(undefined);
 
   const currentAgent = agents.find((a) => a.id === selectedAgentId);
 
@@ -277,25 +276,38 @@ export function ChatWidget() {
         }
       }
 
-      // 构建包含 skills 文件夹上下文的命令提示
-      // 添加系统提示：强制让 opencode 主动寻找技能，而不是依赖用户提供确切文件夹名
+      // 仅在项目或智能体切换后的第一条消息时携带系统提示
+      const currentProjectId = currentProject?.id ?? null;
+      const isContextSwitched =
+        lastSentProjectIdRef.current === undefined ||
+        lastSentProjectIdRef.current !== currentProjectId ||
+        lastSentAgentIdRef.current !== selectedAgentId;
+
       const idContext = currentProject
         ? `\nCurrent selected project ID is: ${currentProject.id}.`
         : "";
       const projectRootPlaceholder = "{{PROJECT_ROOT}}";
-      const dynamicProjectDir = currentProject
-        ? `${projectRootPlaceholder}/projects/${currentProject.id}`
-        : `${projectRootPlaceholder}/projects`;
-      const systemPrompt = FIXED_SYSTEM_PROMPT_TEMPLATE.replaceAll(
-        "{projectRoot}",
-        projectRootPlaceholder,
-      ).replaceAll("{projectDir}", dynamicProjectDir);
-      const commandText = `${systemPrompt}${idContext}\n[Latest Command]\nUser: ${currentInputForCommand}`;
+      const projectIdValue = currentProject?.id ?? "";
+
+      let commandText: string;
+      if (isContextSwitched) {
+        const systemPrompt = FIXED_SYSTEM_PROMPT_TEMPLATE.replaceAll(
+          "{projectRoot}",
+          projectRootPlaceholder,
+        ).replaceAll("{projectId}", projectIdValue);
+        commandText = `${systemPrompt}${idContext}\n[Latest Command]\nUser: ${currentInputForCommand}`;
+      } else {
+        commandText = `${idContext}\n[Latest Command]\nUser: ${currentInputForCommand}`;
+      }
 
       const { executable, args } = resolveAgentCommand(agent, commandText, {
         isFirstMessage: messages.length === 0,
         sessionId: currentProject?.id,
       });
+
+      // 记录本次发送时的项目和智能体，后续消息不再携带系统提示
+      lastSentProjectIdRef.current = currentProjectId;
+      lastSentAgentIdRef.current = selectedAgentId;
 
       // 先添加一条空的 agent 消息，并拿到 id
       const agentMsgId = addMessage({

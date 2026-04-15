@@ -30,7 +30,10 @@ export const resolveAgentCommand = (
   if (normalizedCmd === "claude") {
     // prompt 很长时在 Windows cmd.exe 下会被 8191 字符限制截断。
     // 后端（route.ts）会将 -p 后面的正文移走、改由 stdin 传入，规避这个限制。
-    return { executable, args: ["-p", commandText] };
+    return {
+      executable,
+      args: ["-p", commandText, "--verbose", "--effort", "high"],
+    };
   }
 
   if (normalizedCmd === "codex") {

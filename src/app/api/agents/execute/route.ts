@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { spawn } from "child_process";
+import * as fs from "fs";
+import * as path from "path";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 300; // 允许最长 5 分钟的执行时间（如果部署在 Vercel 等平台会有用）
+export const maxDuration = 300;
 
 const splitExecutable = (raw: string) => {
   const parts = Array.from(raw.matchAll(/"([^"]*)"|'([^']*)'|[^\s]+/g)).map((match) => {
@@ -18,40 +20,76 @@ const splitExecutable = (raw: string) => {
 const isClaudeCommand = (executable: string) =>
   /(^|[\\/])claude(?:\.(cmd|exe|bat))?$/i.test(executable.trim());
 
-const resolveClaudePromptToStdin = (executable: string, args: string[]) => {
+// 🔁 修复：明确区分 Claude 和非 Claude 的处理
+const resolveClaudePromptToStdin = (executable: string, args: string[], cwd: string) => {
+  // 🔥 关键：只有 claude 命令才走文件引用逻辑
   if (!isClaudeCommand(executable)) {
-    return { args, stdinText: null as string | null };
+    // 对于 opencode 等其他命令，保持原有 stdin 逻辑
+    const printFlagIndex = args.findIndex((arg) => arg === "-p" || arg === "--print");
+    if (printFlagIndex < 0) {
+      return { args, stdinText: null, tempFilePath: null };
+    }
+
+    const promptArg = args[printFlagIndex + 1];
+    if (typeof promptArg !== "string") {
+      return { args, stdinText: null, tempFilePath: null };
+    }
+
+    return { args, stdinText: promptArg, tempFilePath: null };
   }
 
+  // 🔥 以下是专为 Claude 的文件引用逻辑
   const printFlagIndex = args.findIndex((arg) => arg === "-p" || arg === "--print");
   if (printFlagIndex < 0) {
-    return { args, stdinText: null as string | null };
+    return { args, stdinText: null, tempFilePath: null };
   }
 
   const promptArg = args[printFlagIndex + 1];
   if (typeof promptArg !== "string") {
-    return { args, stdinText: null as string | null };
+    return { args, stdinText: null, tempFilePath: null };
   }
 
+  // 生成临时文件
+  const tempDir = path.join(cwd, ".claude_tmp");
+  if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
+
+  const tempFileName = `claude_input_${Date.now()}_${Math.random().toString(36).slice(2)}.txt`;
+  const tempFilePath = path.join(tempDir, tempFileName);
+
+  try {
+    fs.writeFileSync(tempFilePath, promptArg, "utf8");
+  } catch (writeErr) {
+    console.error("Failed to write temp file for Claude:", writeErr);
+    return { args, stdinText: promptArg, tempFilePath: null }; // 降级回 stdin
+  }
+
+  // 构造文件引用参数，在 -p 前插入 --permission-mode acceptEdits 授权文件写入
+  const relativeFilePath = `.claude_tmp/${tempFileName}`;
   const argsWithoutPrompt = [
-    ...args.slice(0, printFlagIndex + 1),
+    ...args.slice(0, printFlagIndex),
+    "--permission-mode",
+    "acceptEdits",
+    args[printFlagIndex], // -p / --print flag
+    `@${relativeFilePath}`,
     ...args.slice(printFlagIndex + 2),
   ];
 
-  return { args: argsWithoutPrompt, stdinText: promptArg };
+  return {
+    args: argsWithoutPrompt,
+    stdinText: null,
+    tempFilePath,
+  };
 };
 
 export async function POST(req: NextRequest) {
+  let tempFilePathToCleanup: string | null = null;
+
   try {
     const { agentName, args, cwd } = await req.json();
-
-    // 处理 cwd，如果未提供则使用当前项目目录
     const targetCwd = cwd || process.cwd();
 
     const rawAgentName = typeof agentName === "string" ? agentName : "";
     const rawArgs = Array.isArray(args) ? args : [];
-
-    // 替换绝对路径占位符
     const finalArgs = rawArgs.map((arg) => String(arg).replace(/\{\{PROJECT_ROOT\}\}/g, targetCwd));
 
     const { executable, prependArgs } = splitExecutable(rawAgentName);
@@ -60,15 +98,21 @@ export async function POST(req: NextRequest) {
     }
 
     const rawSpawnArgs = [...prependArgs, ...finalArgs];
-    const { args: spawnArgs, stdinText } = resolveClaudePromptToStdin(executable, rawSpawnArgs);
-    console.log(`Executing command: ${executable} ${spawnArgs.join(" ")}`);
+    const {
+      args: spawnArgs,
+      stdinText,
+      tempFilePath,
+    } = resolveClaudePromptToStdin(executable, rawSpawnArgs, targetCwd);
+
+    tempFilePathToCleanup = tempFilePath;
+
+    console.log(`Executing: ${executable} ${spawnArgs.join(" ")}`);
     const encoder = new TextEncoder();
 
     const stream = new ReadableStream({
       start(controller) {
         let isClosed = false;
 
-        // 为了避免在 controller.close() 后继续 enqueue 报错
         const safeEnqueue = (data: string) => {
           if (!isClosed) {
             try {
@@ -79,24 +123,33 @@ export async function POST(req: NextRequest) {
           }
         };
 
-        // 立即发送第一段数据，强制 Next.js 立即刷新 HTTP 响应头，结束浏览器的 Pending 状态
-        safeEnqueue(`[系统] 🚀 正在启动任务...\n\n`);
+        safeEnqueue(`[系统] 🚀 启动任务: ${executable}\n\n`);
 
-        // Windows 上 npm 安装的 CLI（如 claude）以 .cmd 脚本形式存在，
-        // spawn 在 shell: false 时无法找到它们，必须借助 cmd.exe 解析。
         const isWindows = process.platform === "win32";
-        const child = spawn(executable, spawnArgs, {
+
+        // 🔥 关键修复：Windows 下全局命令需要 shell:true
+        let useShell = isWindows;
+        let finalExecutable = executable;
+
+        // 如果是 Windows 且命令不含路径分隔符（如直接是 'opencode'）
+        if (isWindows && !/[\\/]/.test(executable)) {
+          useShell = true; // 必须用 shell 解析 .cmd/.bat
+        }
+
+        const child = spawn(finalExecutable, spawnArgs, {
           cwd: targetCwd,
           env: process.env,
           stdio: ["pipe", "pipe", "pipe"],
-          shell: isWindows,
+          shell: useShell,
           windowsHide: true,
         });
 
+        // 🔥 修复 stdin 处理：区分有无内容
         if (stdinText !== null && child.stdin) {
-          child.stdin.write(stdinText);
+          child.stdin.end(stdinText);
+        } else {
+          child.stdin?.end();
         }
-        child.stdin?.end();
 
         child.stdout.on("data", (data) => {
           safeEnqueue(data.toString());
@@ -107,36 +160,45 @@ export async function POST(req: NextRequest) {
         });
 
         child.on("close", (code) => {
+          // 清理临时文件
+          if (tempFilePathToCleanup && fs.existsSync(tempFilePathToCleanup)) {
+            try {
+              fs.unlinkSync(tempFilePathToCleanup);
+              tempFilePathToCleanup = null;
+            } catch (cleanupErr) {
+              console.error("Cleanup failed:", cleanupErr);
+            }
+          }
+
           if (!isClosed) {
             if (code !== 0) {
-              safeEnqueue(`\n[Process exited with code ${code}]`);
+              safeEnqueue(`\n[进程退出码: ${code}]`);
             }
             isClosed = true;
-            try {
-              controller.close();
-            } catch (e) {
-              console.error("Stream close error:", e);
-            }
+            controller.close();
           }
         });
 
         child.on("error", (error) => {
           if (!isClosed) {
-            safeEnqueue(`\n[Error: ${error.message}]`);
+            safeEnqueue(`\n[错误: ${error.message}]`);
             isClosed = true;
-            try {
-              controller.close();
-            } catch (e) {
-              console.error("Stream close error:", e);
-            }
+            controller.close();
           }
         });
 
-        // 如果客户端主动断开连接，我们需要杀死子进程
         req.signal.addEventListener("abort", () => {
           if (!isClosed) {
             isClosed = true;
             child.kill("SIGKILL");
+            // 清理临时文件
+            if (tempFilePathToCleanup && fs.existsSync(tempFilePathToCleanup)) {
+              try {
+                fs.unlinkSync(tempFilePathToCleanup);
+              } catch (cleanupErr) {
+                console.error("Abort cleanup failed:", cleanupErr);
+              }
+            }
           }
         });
       },
@@ -148,17 +210,19 @@ export async function POST(req: NextRequest) {
         "Transfer-Encoding": "chunked",
         "Cache-Control": "no-cache, no-store, must-revalidate",
         "X-Content-Type-Options": "nosniff",
-        Connection: "keep-alive",
       },
     });
   } catch (error: any) {
+    // 异常清理
+    if (tempFilePathToCleanup && fs.existsSync(tempFilePathToCleanup)) {
+      try {
+        fs.unlinkSync(tempFilePathToCleanup);
+      } catch (cleanupErr) {
+        console.error("Catch cleanup failed:", cleanupErr);
+      }
+    }
+
     console.error("Execution error:", error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: error.message,
-      },
-      { status: 500 },
-    );
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
