@@ -313,7 +313,7 @@ export function ChatWidget() {
       }
 
       const normalizedAgentCmd = (agent.endpoint || agent.name || "").trim().toLowerCase();
-      const isHermesAgent = normalizedAgentCmd === "hermes";
+      const isHermesAgent = normalizedAgentCmd.includes("hermes");
 
       // hermes 使用自身的 session ID，切换 agent 或项目时重置
       const hermesContextKey = `${selectedAgentId}:${currentProject?.id}`;
