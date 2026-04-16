@@ -14,9 +14,13 @@ export async function uploadSkillFiles(formData: FormData) {
     const file = files[i];
     const relativePath = paths[i];
 
-    // 确保路径安全，防止跨目录攻击
+    // 规范化路径并确保最终路径仍在 skillsDir 内，防止路径穿越攻击
     const normalizedPath = path.normalize(relativePath).replace(/^(\.\.(\/|\\|$))+/, "");
-    const fullPath = path.join(skillsDir, normalizedPath);
+    const fullPath = path.resolve(skillsDir, normalizedPath);
+
+    if (!fullPath.startsWith(skillsDir + path.sep) && fullPath !== skillsDir) {
+      throw new Error(`Invalid file path: ${relativePath}`);
+    }
 
     // 确保目录存在
     await fs.mkdir(path.dirname(fullPath), { recursive: true });
@@ -47,9 +51,13 @@ export async function getSkillFolders() {
 export async function deleteSkillFolder(name: string) {
   try {
     const skillsDir = path.join(process.cwd(), "skills");
-    // 安全路径校验
+    // 安全路径校验，防止路径穿越
     const normalizedName = path.normalize(name).replace(/^(\.\.(\/|\\|$))+/, "");
-    const folderPath = path.join(skillsDir, normalizedName);
+    const folderPath = path.resolve(skillsDir, normalizedName);
+
+    if (!folderPath.startsWith(skillsDir + path.sep)) {
+      return { success: false, error: "Invalid folder name" };
+    }
 
     await fs.rm(folderPath, { recursive: true, force: true });
     return { success: true };

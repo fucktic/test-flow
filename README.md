@@ -1,95 +1,309 @@
-# Node Flow
+<div align="center">
+  <img src="public/mantur-logo.svg" alt="Node Flow" width="72" />
+  <h1>Node Flow</h1>
+  <p>Visual AI-agent workflow editor — script → storyboard → image → video</p>
 
-基于 Next.js 16 App Router 构建的节点可视化流编辑器和聊天工作流应用。
-本项目专为 `front-main` 主应用设计，通过基于画布（ReactFlow）的节点交互结合智能体对话，提供现代化的工作流编排与执行体验。
+  <p>
+    <a href="README.md">English</a> ·
+    <a href="README.zh.md">中文</a>
+  </p>
 
-## 🛠 技术栈
+  <p>
+    <img src="https://img.shields.io/badge/Next.js-16-black?logo=next.js" />
+    <img src="https://img.shields.io/badge/React-19-61DAFB?logo=react" />
+    <img src="https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript" />
+    <img src="https://img.shields.io/badge/license-MIT-22c55e" />
+  </p>
+</div>
 
-- **框架**: [Next.js 16](https://nextjs.org/) (App Router) + [React 19](https://react.dev/)
-- **UI 库**: [Tailwind CSS 4](https://tailwindcss.com/), [Shadcn/UI](https://ui.shadcn.com/), Lucide React
-- **状态管理**: [Zustand](https://zustand-demo.pmnd.rs/) + [Immer](https://immerjs.github.io/immer/)
-- **画布交互**: [ReactFlow (@xyflow/react)](https://reactflow.dev/)
-- **富文本编辑**: [Tiptap](https://tiptap.dev/) (包含 Mention @ 提及等插件)
-- **国际化**: [next-intl](https://next-intl-docs.vercel.app/)
-- **代码规范**: TypeScript, ESLint, [Oxlint](https://oxc.rs/docs/guide/usage/linter.html), [Oxfmt](https://oxc.rs/docs/guide/usage/formatter.html)
+---
 
-## 📦 环境要求
+## Overview
 
-- **Node.js**: >= 20.0.0
-- **包管理器**: npm (推荐) 或 pnpm/yarn
+**Node Flow** is an open-source, browser-based visual workflow editor that pairs a **ReactFlow canvas** with a **multi-agent streaming chat panel**. It is built for AI-driven content production pipelines and lets you orchestrate every step — from script writing to final video — through a drag-and-drop canvas while delegating real work to AI agent CLIs (Claude, OpenCode, Codex, etc.) via a pluggable **Skill** system.
 
-## 🚀 快速开始
+### Key Features
 
-### 1. 安装依赖
+| Feature          | Description                                                                  |
+| ---------------- | ---------------------------------------------------------------------------- |
+| Visual Canvas    | Node-based editor; episode → scene → image → video pipeline                  |
+| Multi-Agent Chat | Floating widget that streams CLI output in real time                         |
+| Skill System     | Drop a `SKILL.md` folder into `skills/`; agents auto-discover and execute it |
+| Multi-Project    | Create and switch between isolated projects                                  |
+| Auto-Save        | Canvas persists to `flow.json` and restores on reload                        |
+| i18n             | EN / 简体中文 / 繁體中文 / 日本語 / Русский / Tiếng Việt                     |
+
+---
+
+## Requirements
+
+| Runtime                 | Version                                                         |
+| ----------------------- | --------------------------------------------------------------- |
+| Node.js                 | ≥ 20.0.0                                                        |
+| Docker + Docker Compose | any recent version (optional)                                   |
+| AI agent CLI            | `claude`, `opencode`, `codex`, or `openclaw` installed globally |
+
+---
+
+## Installation & Running
+
+Choose **one** of the three methods below.
+
+---
+
+### Method 1 — One-click Script (Node.js)
+
+The fastest way to get started on any platform.
+
+**macOS / Linux**
 
 ```bash
+git clone https://github.com/your-org/node-flow.git
+cd node-flow
+./start.sh          # development mode  (hot reload, http://localhost:3000)
+./start.sh prod     # production mode   (build → start, http://localhost:3000)
+```
+
+**Windows**
+
+```bat
+git clone https://github.com/your-org/node-flow.git
+cd node-flow
+start.bat           :: development mode
+start.bat prod      :: production mode
+```
+
+The script automatically:
+
+1. Checks for Node.js ≥ 20
+2. Runs `npm install` if `node_modules` is missing
+3. Creates `projects/` and `skills/` directories
+4. Starts the server
+
+---
+
+### Method 2 — Docker (recommended for production)
+
+Requires [Docker Desktop](https://www.docker.com/products/docker-desktop/) or Docker Engine + Compose.
+
+#### Quick start (one command)
+
+```bash
+git clone https://github.com/your-org/node-flow.git
+cd node-flow
+docker compose up -d
+```
+
+Open [http://localhost:3000](http://localhost:3000).
+
+#### Common Docker commands
+
+```bash
+# Build image and start in the background
+docker compose up -d --build
+
+# View live logs
+docker compose logs -f
+
+# Stop
+docker compose down
+
+# Rebuild after code changes
+docker compose up -d --build --force-recreate
+```
+
+#### What gets mounted as volumes
+
+| Host path             | Container path           | Purpose                      |
+| --------------------- | ------------------------ | ---------------------------- |
+| `./projects/`         | `/app/projects`          | All project data (persisted) |
+| `./skills/`           | `/app/skills`            | Skill packages (persisted)   |
+| `./public/agent.json` | `/app/public/agent.json` | Agent configuration          |
+
+> **Note:** The AI agent CLI (e.g. `claude`) must be available **inside** the container if you want agents to execute. You can either install it in the Dockerfile or run Node Flow on the host and call the host-installed CLI via a mounted socket. For most users, running Node Flow natively (Method 1) is simpler when using local CLIs.
+
+---
+
+### Method 3 — Manual Node.js
+
+```bash
+# 1. Clone
+git clone https://github.com/your-org/node-flow.git
+cd node-flow
+
+# 2. Install
 npm install
-```
 
-### 2. 启动开发服务器
-
-```bash
+# 3a. Development server (hot reload)
 npm run dev
-```
 
-启动后，在浏览器中访问 [http://localhost:3000](http://localhost:3000) 即可预览项目。
-
-### 3. 构建生产版本
-
-```bash
+# 3b. OR: Production build + start
 npm run build
-```
-
-### 4. 运行生产版本
-
-```bash
 npm run start
 ```
 
-## 🧹 代码规范与检查
+---
 
-本项目强制使用 TypeScript，并配置了严格的校验工具：
+## Post-Installation Setup
 
-- **执行代码检查 (Lint)**:
+### 1. Configure an Agent
 
-  ```bash
-  npm run lint
-  ```
+Open the app → click the floating chat button → **Manage Agents** → add an entry:
 
-  基于 `oxlint` 实现极速代码静态分析。
-
-- **执行代码格式化 (Format)**:
-  ```bash
-  npm run format
-  ```
-  基于 `oxfmt` 进行代码格式化。
-
-> **注意**：项目集成了 Husky 并在提交代码前 (pre-commit / lint-staged) 会自动进行代码规范检查和格式化。
-
-## 📁 核心目录结构
-
-```text
-node-flow/
-├── messages/             # i18n 多语言翻译文件 (zh/en)
-├── src/
-│   ├── app/              # Next.js App Router 页面和 API 路由
-│   ├── components/       # React 组件
-│   │   ├── chat/         # 智能体聊天与富文本输入组件
-│   │   ├── flow/         # ReactFlow 画布及各类节点组件
-│   │   ├── layout/       # 全局布局组件 (Header, 切换器等)
-│   │   └── ui/           # Shadcn 基础 UI 组件
-│   ├── i18n/             # 国际化配置
-│   └── lib/
-│       ├── store/        # Zustand 全局状态管理
-│       ├── services/     # 业务与数据服务
-│       └── utils/        # 工具函数
-└── ...
+```json
+{
+  "name": "Claude",
+  "endpoint": "claude",
+  "description": "Claude AI coding assistant"
+}
 ```
 
-## ⚠️ 开发规范提醒
+The `endpoint` is the CLI command invoked on the server. Built-in adapters:
 
-1.  **代码规范**：所有文件需通过 `oxlint` 检查与 `oxfmt` 格式化，禁用 `any`，保持 TS 类型完整。
-2.  **国际化支持**：新增文案必须加入 `messages/[lang]/` 对应的 JSON 文件中，并通过 `useTranslations` 引用，禁止在代码中硬编码中文或英文。
-3.  **状态管理**：应用内全局状态通过 `zustand` + `immer` 管理，禁止跨应用直接共享状态。
-4.  **UI 使用**：新组件优先从 Shadcn/UI 引入或使用 Tailwind 原生类，图标统一使用 `lucide-react`。
-5.  **目录边界**：只读写 `node-flow/` 项目范围内的文件，严格遵守文件隔离规范。
+| `endpoint` value  | Command executed                             |
+| ----------------- | -------------------------------------------- |
+| `claude`          | `claude -p <prompt> --verbose --effort high` |
+| `opencode`        | `opencode run <prompt>`                      |
+| `codex`           | `codex exec <prompt>`                        |
+| `openclaw`        | `openclaw agent --message <prompt>`          |
+| _(anything else)_ | `<endpoint> "<prompt>"`                      |
+
+The config is saved to `public/agent.json`.
+
+### 2. Import a Skill
+
+Skill packages live in `skills/<skill-name>/SKILL.md`. You can:
+
+- **Import via UI**: click **"Import Skill"** in the header and upload a skill folder
+- **Copy manually**: place a folder containing `SKILL.md` into `skills/`
+
+```
+skills/
+└── my-pipeline/
+    ├── SKILL.md        ← required: what this skill does and how to invoke it
+    └── prompt.txt      ← any supporting files
+```
+
+The agent reads every `SKILL.md` before responding and picks the best match automatically.
+
+### 3. Create Your First Project
+
+Click **"New Project"** → enter a name → the canvas opens. The agent will populate nodes as it executes skills. You can also add/edit nodes manually.
+
+---
+
+## Node Types
+
+| Node                   | Role                                                       |
+| ---------------------- | ---------------------------------------------------------- |
+| **Episode Node**       | Manages episode list; check ≤ 3 to activate their pipeline |
+| **Scene Node**         | Lists scenes per episode; select ≤ 3 for generation        |
+| **Scene Image Node**   | Generate or upload storyboard images                       |
+| **Scene Video Node**   | Generate or upload video clips                             |
+| **Asset Node**         | Library of characters, scenes, props, audio                |
+| **Video Preview Node** | Aggregates selected clips for review and export            |
+
+---
+
+## Project Data Layout
+
+All data is stored locally. Nothing is sent to external servers.
+
+```
+projects/
+└── <uuid>/
+    ├── project.json        ← name, timestamps
+    ├── flow.json           ← canvas state (auto-saved)
+    ├── assets/
+    │   ├── characters/
+    │   ├── scenes/
+    │   ├── props/
+    │   └── audio/
+    ├── episode/
+    │   ├── image/
+    │   └── video/
+    └── temp/               ← chat upload attachments
+```
+
+> `projects/` and `skills/` are in `.gitignore`. Back them up separately.
+
+---
+
+## Development
+
+```bash
+npm run lint          # static analysis (Oxlint)
+npm run format        # auto-format (Oxfmt)
+npx tsc --noEmit      # type check
+npm run build         # production build
+```
+
+Pre-commit hooks (Husky + lint-staged) run lint and format automatically on every commit.
+
+---
+
+## Directory Structure
+
+```
+node-flow/
+├── Dockerfile
+├── docker-compose.yml
+├── start.sh / start.bat        ← one-click scripts
+├── messages/                   ← i18n (en / zh / zh-TW / ja / ru / vi)
+├── projects/                   ← runtime data (git-ignored)
+├── public/agent.json           ← agent config
+├── skills/                     ← skill packages (git-ignored)
+└── src/
+    ├── app/
+    │   ├── [locale]/           ← pages
+    │   └── api/
+    │       ├── agents/execute  ← POST streaming agent execution
+    │       ├── agents/manage   ← GET/POST agent list
+    │       └── projects/[id]/  ← flow, upload, temp, assets, episode
+    ├── components/
+    │   ├── chat/               ← chat widget & input
+    │   ├── flow/nodes/         ← all node components
+    │   ├── layout/             ← header, switchers
+    │   └── ui/                 ← Shadcn base components
+    └── lib/
+        ├── actions/            ← Server Actions
+        ├── agents/             ← command executor
+        ├── hooks/              ← custom hooks
+        ├── services/           ← project / agent / upload
+        ├── store/              ← Zustand (flow, chat, projects)
+        ├── types/              ← TypeScript definitions
+        └── utils/              ← helpers
+```
+
+---
+
+## API Reference
+
+| Method | Path                                   | Description               |
+| ------ | -------------------------------------- | ------------------------- |
+| `GET`  | `/api/projects/current`                | Get active project ID     |
+| `POST` | `/api/projects/current`                | Set active project ID     |
+| `GET`  | `/api/projects/[id]/flow`              | Load canvas data          |
+| `POST` | `/api/projects/[id]/flow`              | Save canvas data          |
+| `POST` | `/api/projects/[id]/upload`            | Upload media file         |
+| `POST` | `/api/projects/[id]/temp`              | Upload chat attachments   |
+| `GET`  | `/api/projects/[id]/assets/[...path]`  | Serve asset files         |
+| `GET`  | `/api/projects/[id]/episode/[...path]` | Serve episode media       |
+| `GET`  | `/api/agents/manage`                   | List agents               |
+| `POST` | `/api/agents/manage`                   | Save agents               |
+| `POST` | `/api/agents/execute`                  | Execute agent (streaming) |
+
+---
+
+## Contributing
+
+1. Fork the repo and create a feature branch (`git checkout -b feat/my-feature`)
+2. Follow conventions: TypeScript strict, no `any`, i18n for all visible text
+3. Run `npm run lint && npm run format` before committing
+4. Open a Pull Request with a clear description of the change
+
+---
+
+## License
+
+[MIT](LICENSE) © Node Flow Contributors

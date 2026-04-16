@@ -1,7 +1,7 @@
 import fs from "fs/promises";
 import path from "path";
 
-export async function saveFlow(id: string, data: any) {
+export async function saveFlow(id: string, data: unknown) {
   const dir = path.join(process.cwd(), "projects", id);
   await fs.mkdir(dir, { recursive: true });
 

@@ -1,0 +1,25 @@
+services:
+  node-flow:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: node-flow
+    ports:
+      - "3000:3000"
+    volumes:
+      # Persistent project data
+      - ./projects:/app/projects
+      # Skill packages
+      - ./skills:/app/skills
+      # Agent configuration (edit to add/remove agents)
+      - ./public/agent.json:/app/public/agent.json
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s

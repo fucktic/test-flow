@@ -56,5 +56,13 @@ export const resolveAgentCommand = (
     return { executable, args };
   }
 
+  if (normalizedCmd === "hermes") {
+    const args = ["chat", "-q", commandText];
+    if (options.sessionId) {
+      args.push("--resume", options.sessionId);
+    }
+    return { executable, args };
+  }
+
   return { executable, args: [flatText] };
 };

@@ -26,5 +26,12 @@
     "endpoint": "openclaw",
     "description": "",
     "icon": "https://openclaw.ai/favicon-32.png"
+  },
+  {
+    "id": "347d6e3b-6d4f-4d9c-92a9-75c84e24a14f",
+    "name": "hermes",
+    "endpoint": "hermes",
+    "description": "",
+    "icon": "https://hermes-agent.nousresearch.com/icon.png?icon.17972d59.png"
   }
 ]

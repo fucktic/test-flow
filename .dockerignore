@@ -1,0 +1,25 @@
+# Dependencies
+node_modules
+npm-debug.log*
+
+# Build output
+.next
+out
+build
+
+# Runtime data (mounted as volumes)
+projects
+skills
+
+# Dev/editor files
+.DS_Store
+.env*.local
+*.pem
+.git
+.gitignore
+
+# Test
+coverage
+
+# Docs
+*.md

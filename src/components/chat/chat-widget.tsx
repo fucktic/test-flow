@@ -73,6 +73,10 @@ export function ChatWidget() {
   const lastSentProjectIdRef = useRef<string | null | undefined>(undefined);
   const lastSentAgentIdRef = useRef<string | null | undefined>(undefined);
 
+  // hermes 会话 ID（从输出中解析，随 agent/project 切换而重置）
+  const hermesSessionIdRef = useRef<string | null>(null);
+  const hermesContextKeyRef = useRef<string | null>(null);
+
   const currentAgent = agents.find((a) => a.id === selectedAgentId);
 
   // 定时刷新画布或在执行结束时刷新
@@ -196,11 +200,19 @@ export function ChatWidget() {
       const doc = editor.getJSON();
       let result = "";
 
-      const traverse = (node: any) => {
+      interface EditorNode {
+        type?: string;
+        text?: string;
+        attrs?: Record<string, string>;
+        content?: EditorNode[];
+      }
+
+      const traverse = (node: EditorNode) => {
         if (node.type === "text") {
-          result += node.text;
+          result += node.text ?? "";
         } else if (node.type === "assetMention") {
-          const { id, assetType } = node.attrs;
+          const id = node.attrs?.id ?? "";
+          const assetType = node.attrs?.assetType ?? "";
           if (assetType === "props" || assetType === "scene" || assetType === "storyboard") {
             result += `@${id}props`;
           } else {
@@ -300,9 +312,19 @@ export function ChatWidget() {
         commandText = `${idContext}\n[Latest Command]\nUser: ${currentInputForCommand}`;
       }
 
+      const normalizedAgentCmd = (agent.endpoint || agent.name || "").trim().toLowerCase();
+      const isHermesAgent = normalizedAgentCmd === "hermes";
+
+      // hermes 使用自身的 session ID，切换 agent 或项目时重置
+      const hermesContextKey = `${selectedAgentId}:${currentProject?.id}`;
+      if (isHermesAgent && hermesContextKeyRef.current !== hermesContextKey) {
+        hermesSessionIdRef.current = null;
+        hermesContextKeyRef.current = hermesContextKey;
+      }
+
       const { executable, args } = resolveAgentCommand(agent, commandText, {
         isFirstMessage: messages.length === 0,
-        sessionId: currentProject?.id,
+        sessionId: isHermesAgent ? (hermesSessionIdRef.current ?? undefined) : currentProject?.id,
       });
 
       // 记录本次发送时的项目和智能体，后续消息不再携带系统提示
@@ -326,22 +348,29 @@ export function ChatWidget() {
         });
       });
 
+      // 从 hermes 输出中提取 session ID，用于后续对话恢复
+      if (isHermesAgent && result.stdout) {
+        const sessionMatch =
+          result.stdout.match(/--?-?resume\s+(\S+)/) ||
+          result.stdout.match(/Session:\s+(\S+)\s+Duration:/);
+        if (sessionMatch?.[1]) {
+          hermesSessionIdRef.current = sessionMatch[1];
+        }
+      }
+
       // 最终确保显示完整的结果
       updateMessage(agentMsgId, (msg) => {
         if (!result.stdout && !result.stderr && msg.content === "...") {
           msg.content = t("executionCompleteNoOutput");
         }
       });
-    } catch (error: any) {
-      if (error.name === "AbortError") return; // 忽略中断错误
+    } catch (error) {
+      if (error instanceof Error && error.name === "AbortError") return; // 忽略中断错误
 
-      // 如果有 agentMsgId，说明已经在流式输出了，我们就在当前消息追加错误
-      // 如果没有，或者流根本没启动，我们就新建一条消息
+      const message = error instanceof Error ? error.message : t("unknownError");
       addMessage({
         role: "agent",
-        content: t("executionFailedMessage", {
-          message: error.message || t("unknownError"),
-        }),
+        content: t("executionFailedMessage", { message }),
       });
     } finally {
       setIsChatting(false); // 聊天结束，恢复状态

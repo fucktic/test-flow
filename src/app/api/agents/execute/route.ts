@@ -108,7 +108,6 @@ export async function POST(req: NextRequest) {
 
     tempFilePathToCleanup = tempFilePath;
 
-    console.log(`Executing: ${executable} ${spawnArgs.join(" ")}`);
     const encoder = new TextEncoder();
 
     const stream = new ReadableStream({
@@ -209,7 +208,7 @@ export async function POST(req: NextRequest) {
         "X-Content-Type-Options": "nosniff",
       },
     });
-  } catch (error: any) {
+  } catch (error) {
     if (tempFilePathToCleanup && fs.existsSync(tempFilePathToCleanup)) {
       try {
         fs.unlinkSync(tempFilePathToCleanup);
@@ -218,7 +217,8 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    const message = error instanceof Error ? error.message : "Internal server error";
     console.error("Execution error:", error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return NextResponse.json({ success: false, error: message }, { status: 500 });
   }
 }

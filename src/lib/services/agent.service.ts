@@ -11,8 +11,8 @@ export async function getAgents(): Promise<Agent[]> {
   try {
     const data = await fs.readFile(getAgentFilePath(), "utf-8");
     return JSON.parse(data);
-  } catch (error: any) {
-    if (error.code === "ENOENT") {
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
       return [];
     }
     throw error;

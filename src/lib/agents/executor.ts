@@ -53,10 +53,8 @@ export const executeAgentCommand = async (
     }
 
     return { stdout: fullOutput, stderr: "" };
-  } catch (error: any) {
-    if (error.name === "AbortError") {
-      console.log("Fetch aborted");
-    } else {
+  } catch (error) {
+    if (error instanceof Error && error.name !== "AbortError") {
       console.error("Error executing agent command:", error);
     }
     throw error;

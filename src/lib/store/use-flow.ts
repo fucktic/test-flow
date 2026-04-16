@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
-import { enableMapSet } from "immer";
+import { enableMapSet, type Draft } from "immer";
 
 enableMapSet();
 
@@ -29,7 +29,7 @@ interface FlowState {
   onEdgesChange: (changes: EdgeChange[]) => void;
   onConnect: (connection: Connection) => void;
   addNode: (node: Node) => void;
-  updateNodeData: (nodeId: string, data: any) => void;
+  updateNodeData: (nodeId: string, data: Record<string, unknown>) => void;
   initFlow: (nodes: Node[], edges: Edge[]) => void;
   modifiedNodesDuringChat: Map<string, Node>; // 记录聊天期间修改过的节点信息
   setModifiedNodesDuringChat: (
@@ -37,8 +37,11 @@ interface FlowState {
   ) => void;
 }
 
-const syncGraph = (state: any, set: any) => {
-  const episodeNode = state.nodes.find((n: any) => n.type === "episodeNode");
+/** immer set 函数类型，供内部 handler 工厂使用 */
+type SetFn = (updater: (state: Draft<FlowState>) => void) => void;
+
+const syncGraph = (state: Draft<FlowState>, set: SetFn) => {
+  const episodeNode = state.nodes.find((n) => n.type === "episodeNode");
   if (!episodeNode) return;
 
   const episodeNodeId = episodeNode.id;
@@ -46,23 +49,25 @@ const syncGraph = (state: any, set: any) => {
   const newNodes: Node[] = [];
   const newEdges: Edge[] = [];
 
-  newNodes.push(episodeNode);
+  newNodes.push(episodeNode as unknown as Node);
 
   let currentY = 0;
 
   // 1. Create single Video Preview Node
-  let previewNode = state.nodes.find((n: any) => n.type === "videoPreviewNode");
+  let previewNode = state.nodes.find((n) => n.type === "videoPreviewNode");
   const previewNodeId = previewNode ? previewNode.id : `video-preview-main`;
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const episodesData: any[] = [];
 
-  episodeNode.data.episodes.forEach((ep: any) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (episodeNode.data.episodes as any[]).forEach((ep: any) => {
     const epPrefix = ep.title.split(" ")[0]; // e.g. "EP_001"
     const isChecked = ep.checked;
 
     // 2. Scene Node
     const sceneNodeId = `scene-${ep.id}`;
-    let sceneNode = state.nodes.find((n: any) => n.id === sceneNodeId);
+    let sceneNode = state.nodes.find((n) => n.id === sceneNodeId);
 
     if (!sceneNode) {
       if (isChecked) {
@@ -108,7 +113,8 @@ const syncGraph = (state: any, set: any) => {
       let selectedVideosCount = 0;
       const episodeItems: any[] = [];
 
-      sceneNode.data.scenes.forEach((scene: any) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (sceneNode.data as any).scenes.forEach((scene: any) => {
         const isSceneSelected = scene.selected;
         const imgNodeId = `scene-image-${ep.id}-${scene.id}`;
         const vidNodeId = `scene-video-${ep.id}-${scene.id}`;
@@ -181,8 +187,10 @@ const syncGraph = (state: any, set: any) => {
               style: { stroke: "#10b981", strokeWidth: 2 },
             });
 
-            if (vidNode.data && vidNode.data.videos) {
-              vidNode.data.videos.forEach((v: any) => {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            if (vidNode.data && (vidNode.data as any).videos) {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              (vidNode.data as any).videos.forEach((v: any) => {
                 if (v.selected) {
                   selectedVideosCount++;
                   episodeItems.push({
@@ -207,13 +215,17 @@ const syncGraph = (state: any, set: any) => {
         episodesData.push({
           id: epPrefix,
           episodeName: ep.title,
-          totalScenes: sceneNode.data.scenes.length,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          totalScenes: (sceneNode.data as any).scenes.length,
           selectedVideos: selectedVideosCount,
           vid: `VID_${ep.id}`,
           items: episodeItems,
         });
 
-        const selectedScenesCount = sceneNode.data.scenes.filter((s: any) => s.selected).length;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const selectedScenesCount = (sceneNode.data as any).scenes.filter(
+          (s: any) => s.selected,
+        ).length;
         currentY += Math.max(450, selectedScenesCount * 450);
       }
     }
@@ -252,18 +264,19 @@ const syncGraph = (state: any, set: any) => {
   state.edges = newEdges;
 };
 
-const getEpisodeHandlers = (set: any, nodeId: string) => ({
+const getEpisodeHandlers = (set: SetFn, nodeId: string) => ({
   onEpisodeCheck: (id: string, checked: boolean) => {
-    set((state: any) => {
-      const node = state.nodes.find((n: any) => n.id === nodeId);
+    set((state) => {
+      const node = state.nodes.find((n) => n.id === nodeId);
       if (node && node.type === "episodeNode") {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const eps = (node.data as any).episodes;
-
         if (checked) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const checkedCount = eps.filter((e: any) => e.checked).length;
           if (checkedCount >= 3) return;
         }
-
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const ep = eps.find((e: any) => e.id === id);
         if (ep) {
           ep.checked = checked;
@@ -273,9 +286,10 @@ const getEpisodeHandlers = (set: any, nodeId: string) => ({
     });
   },
   onEpisodeSelect: (id: string) => {
-    set((state: any) => {
-      const node = state.nodes.find((n: any) => n.id === nodeId);
+    set((state) => {
+      const node = state.nodes.find((n) => n.id === nodeId);
       if (node && node.type === "episodeNode") {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const data = node.data as any;
         data.activeId = data.activeId === id ? undefined : id;
       }
@@ -283,15 +297,18 @@ const getEpisodeHandlers = (set: any, nodeId: string) => ({
   },
 });
 
-const getSceneHandlers = (set: any, nodeId: string) => ({
+const getSceneHandlers = (set: SetFn, nodeId: string) => ({
   onSceneSelect: (id: string) => {
-    set((state: any) => {
-      const node = state.nodes.find((n: any) => n.id === nodeId);
+    set((state) => {
+      const node = state.nodes.find((n) => n.id === nodeId);
       if (node && node.type === "sceneNode") {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const scenes = (node.data as any).scenes;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const scene = scenes.find((s: any) => s.id === id);
         if (scene) {
           if (!scene.selected) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const selectedCount = scenes.filter((s: any) => s.selected).length;
             if (selectedCount >= 3) {
               toast.error(tFlow("sceneNode.maxScenesError"));
@@ -304,47 +321,46 @@ const getSceneHandlers = (set: any, nodeId: string) => ({
       }
     });
   },
-  onSceneEdit: (id: string) => {
-    console.log("Edit scene", id);
+  onSceneEdit: (_id: string) => {
+    // 预留：未来实现场景编辑逻辑
   },
   onSceneChange: (id: string, content: string, name?: string, prompt?: string) => {
-    set((state: any) => {
-      const node = state.nodes.find((n: any) => n.id === nodeId);
+    set((state) => {
+      const node = state.nodes.find((n) => n.id === nodeId);
       if (node && node.type === "sceneNode") {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const scenes = (node.data as any).scenes;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const scene = scenes.find((s: any) => s.id === id);
         if (scene) {
           scene.content = content;
-          if (name !== undefined) {
-            scene.name = name;
-          }
-          if (prompt !== undefined) {
-            scene.prompt = prompt;
-          }
+          if (name !== undefined) scene.name = name;
+          if (prompt !== undefined) scene.prompt = prompt;
         }
       }
     });
   },
   onSceneDelete: (id: string) => {
-    set((state: any) => {
-      const node = state.nodes.find((n: any) => n.id === nodeId);
+    set((state) => {
+      const node = state.nodes.find((n) => n.id === nodeId);
       if (node && node.type === "sceneNode") {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (node.data as any).scenes = (node.data as any).scenes.filter((s: any) => s.id !== id);
         syncGraph(state, set);
       }
     });
   },
   onSceneAdd: (index: number) => {
-    set((state: any) => {
-      const node = state.nodes.find((n: any) => n.id === nodeId);
+    set((state) => {
+      const node = state.nodes.find((n) => n.id === nodeId);
       if (node && node.type === "sceneNode") {
-        const newId = uuidv4();
         const newScene = {
-          id: newId,
+          id: uuidv4(),
           name: `S-New`,
           content: tFlow("sceneNode.newSceneContent"),
           selected: false,
         };
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (node.data as any).scenes.splice(index, 0, newScene);
         syncGraph(state, set);
       }
@@ -352,66 +368,64 @@ const getSceneHandlers = (set: any, nodeId: string) => ({
   },
 });
 
-const getImageHandlers = (set: any, nodeId: string) => ({
+const getImageHandlers = (set: SetFn, nodeId: string) => ({
   onToggleExpand: () => {
-    set((state: any) => {
-      const node = state.nodes.find((n: any) => n.id === nodeId);
+    set((state) => {
+      const node = state.nodes.find((n) => n.id === nodeId);
       if (node && node.type === "sceneImageNode") {
-        const data = node.data as any;
-        data.isExpanded = !data.isExpanded;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (node.data as any).isExpanded = !(node.data as any).isExpanded;
       }
     });
   },
   onRatioChange: (ratio: string) => {
-    set((state: any) => {
-      const node = state.nodes.find((n: any) => n.id === nodeId);
-      if (node && node.type === "sceneImageNode") {
-        (node.data as any).ratio = ratio;
-      }
+    set((state) => {
+      const node = state.nodes.find((n) => n.id === nodeId);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      if (node && node.type === "sceneImageNode") (node.data as any).ratio = ratio;
     });
   },
   onOutputFormatChange: (format: string) => {
-    set((state: any) => {
-      const node = state.nodes.find((n: any) => n.id === nodeId);
-      if (node && node.type === "sceneImageNode") {
-        (node.data as any).outputFormat = format;
-      }
+    set((state) => {
+      const node = state.nodes.find((n) => n.id === nodeId);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      if (node && node.type === "sceneImageNode") (node.data as any).outputFormat = format;
     });
   },
   onSkillChange: (skillId: string) => {
-    set((state: any) => {
-      const node = state.nodes.find((n: any) => n.id === nodeId);
-      if (node && node.type === "sceneImageNode") {
-        (node.data as any).skillId = skillId;
-      }
+    set((state) => {
+      const node = state.nodes.find((n) => n.id === nodeId);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      if (node && node.type === "sceneImageNode") (node.data as any).skillId = skillId;
     });
   },
   onPromptChange: (prompt: string) => {
-    set((state: any) => {
-      const node = state.nodes.find((n: any) => n.id === nodeId);
-      if (node && node.type === "sceneImageNode") {
-        (node.data as any).prompt = prompt;
-      }
+    set((state) => {
+      const node = state.nodes.find((n) => n.id === nodeId);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      if (node && node.type === "sceneImageNode") (node.data as any).prompt = prompt;
     });
   },
 });
 
-const getVideoHandlers = (set: any, nodeId: string) => ({
+const getVideoHandlers = (set: SetFn, nodeId: string) => ({
   onToggleExpand: () => {
-    set((state: any) => {
-      const node = state.nodes.find((n: any) => n.id === nodeId);
+    set((state) => {
+      const node = state.nodes.find((n) => n.id === nodeId);
       if (node && node.type === "sceneVideoNode") {
-        const data = node.data as any;
-        data.isExpanded = !data.isExpanded;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (node.data as any).isExpanded = !(node.data as any).isExpanded;
       }
     });
   },
   onVideoSelect: (id: string) => {
-    set((state: any) => {
-      const node = state.nodes.find((n: any) => n.id === nodeId);
+    set((state) => {
+      const node = state.nodes.find((n) => n.id === nodeId);
       if (node && node.type === "sceneVideoNode") {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const data = node.data as any;
         if (data.videos) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           data.videos.forEach((v: any) => {
             v.selected = v.id === id;
           });
@@ -421,38 +435,34 @@ const getVideoHandlers = (set: any, nodeId: string) => ({
     });
   },
   onRatioChange: (ratio: string) => {
-    set((state: any) => {
-      const node = state.nodes.find((n: any) => n.id === nodeId);
-      if (node && node.type === "sceneVideoNode") {
-        (node.data as any).ratio = ratio;
-      }
+    set((state) => {
+      const node = state.nodes.find((n) => n.id === nodeId);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      if (node && node.type === "sceneVideoNode") (node.data as any).ratio = ratio;
     });
   },
   onSkillChange: (skillId: string) => {
-    set((state: any) => {
-      const node = state.nodes.find((n: any) => n.id === nodeId);
-      if (node && node.type === "sceneVideoNode") {
-        (node.data as any).skillId = skillId;
-      }
+    set((state) => {
+      const node = state.nodes.find((n) => n.id === nodeId);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      if (node && node.type === "sceneVideoNode") (node.data as any).skillId = skillId;
     });
   },
   onPromptChange: (prompt: string) => {
-    set((state: any) => {
-      const node = state.nodes.find((n: any) => n.id === nodeId);
-      if (node && node.type === "sceneVideoNode") {
-        (node.data as any).prompt = prompt;
-      }
+    set((state) => {
+      const node = state.nodes.find((n) => n.id === nodeId);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      if (node && node.type === "sceneVideoNode") (node.data as any).prompt = prompt;
     });
   },
 });
 
-const getAssetHandlers = (set: any, nodeId: string) => ({
+const getAssetHandlers = (set: SetFn, nodeId: string) => ({
   onTabChange: (tab: string) => {
-    set((state: any) => {
-      const node = state.nodes.find((n: any) => n.id === nodeId);
-      if (node && node.type === "assetNode") {
-        (node.data as any).activeTab = tab;
-      }
+    set((state) => {
+      const node = state.nodes.find((n) => n.id === nodeId);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      if (node && node.type === "assetNode") (node.data as any).activeTab = tab;
     });
   },
   onAssetAdd: (
@@ -466,23 +476,22 @@ const getAssetHandlers = (set: any, nodeId: string) => ({
       prompt?: string;
     },
   ) => {
-    set((state: any) => {
-      const node = state.nodes.find((n: any) => n.id === nodeId);
+    set((state) => {
+      const node = state.nodes.find((n) => n.id === nodeId);
       if (node && node.type === "assetNode") {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const data = node.data as any;
-        const id = uuidv4();
-        if (!data.assets?.[payload.category]) {
-          return;
-        }
+        if (!data.assets?.[payload.category]) return;
+        const newId = uuidv4();
         data.assets[payload.category].push({
-          id,
+          id: newId,
           name: payload.name,
           type: payload.mediaType || (payload.category === "audio" ? "audio" : "image"),
           url: payload.fileUrl || "",
           description: payload.description,
           prompt: payload.prompt,
         });
-        data.selectedId = id;
+        data.selectedId = newId;
         data.activeTab = payload.category;
       }
     });
@@ -499,14 +508,14 @@ const getAssetHandlers = (set: any, nodeId: string) => ({
       prompt?: string;
     },
   ) => {
-    set((state: any) => {
-      const node = state.nodes.find((n: any) => n.id === nodeId);
+    set((state) => {
+      const node = state.nodes.find((n) => n.id === nodeId);
       if (node && node.type === "assetNode") {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const data = node.data as any;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const targetAsset = data.assets?.[tab]?.find((item: any) => item.id === id);
-        if (!targetAsset) {
-          return;
-        }
+        if (!targetAsset) return;
         const nextType =
           payload.mediaType ||
           (payload.category === "audio"
@@ -525,10 +534,9 @@ const getAssetHandlers = (set: any, nodeId: string) => ({
         if (payload.category === tab) {
           Object.assign(targetAsset, updatedAsset);
         } else {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           data.assets[tab] = data.assets[tab].filter((item: any) => item.id !== id);
-          if (!data.assets?.[payload.category]) {
-            return;
-          }
+          if (!data.assets?.[payload.category]) return;
           data.assets[payload.category].push(updatedAsset);
           data.activeTab = payload.category;
         }
@@ -536,30 +544,29 @@ const getAssetHandlers = (set: any, nodeId: string) => ({
     });
   },
   onAssetSelect: (id?: string) => {
-    set((state: any) => {
-      const node = state.nodes.find((n: any) => n.id === nodeId);
-      if (node && node.type === "assetNode") {
-        (node.data as any).selectedId = id;
-      }
+    set((state) => {
+      const node = state.nodes.find((n) => n.id === nodeId);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      if (node && node.type === "assetNode") (node.data as any).selectedId = id;
     });
   },
   onAssetDelete: (id: string) => {
-    set((state: any) => {
-      const node = state.nodes.find((n: any) => n.id === nodeId);
+    set((state) => {
+      const node = state.nodes.find((n) => n.id === nodeId);
       if (node && node.type === "assetNode") {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const data = node.data as any;
         Object.keys(data.assets).forEach((key) => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           data.assets[key] = data.assets[key].filter((item: any) => item.id !== id);
         });
-        if (data.selectedId === id) {
-          data.selectedId = undefined;
-        }
+        if (data.selectedId === id) data.selectedId = undefined;
       }
     });
   },
 });
 
-export const rehydrateNodes = (nodes: Node[], set: any) => {
+export const rehydrateNodes = (nodes: Node[], set: SetFn) => {
   return nodes.map((node) => {
     // Normalize node types for backward compatibility
     let type = node.type;
@@ -620,7 +627,7 @@ export const useFlowStore = create<FlowState>()(
 
     const tempState = JSON.parse(
       JSON.stringify({ ...initialState, modifiedNodesDuringChat: undefined }),
-    );
+    ) as Draft<FlowState>;
     tempState.modifiedNodesDuringChat = initialState.modifiedNodesDuringChat;
     syncGraph(tempState, set);
 
@@ -695,7 +702,7 @@ export const useFlowStore = create<FlowState>()(
           }
         });
       },
-      updateNodeData: (nodeId: string, data: any) => {
+      updateNodeData: (nodeId: string, data: Record<string, unknown>) => {
         set((state) => {
           const node = state.nodes.find((n) => n.id === nodeId);
           if (node) {
