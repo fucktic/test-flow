@@ -20,7 +20,7 @@ export const resolveAgentCommand = (
 
   const flatText = `"${commandText.replace(/\r?\n/g, " ").trim()}"`;
 
-  if (normalizedCmd === "opencode") {
+  if (normalizedCmd.includes("opencode")) {
     const args = ["run"];
 
     args.push(flatText);
@@ -30,7 +30,7 @@ export const resolveAgentCommand = (
     return { executable, args };
   }
 
-  if (normalizedCmd === "claude") {
+  if (normalizedCmd.includes("claude")) {
     // prompt 很长时在 Windows cmd.exe 下会被 8191 字符限制截断。
     // 后端（route.ts）会将 -p 后面的正文移走、改由 stdin 传入，规避这个限制。
     const args = ["-p", commandText, "--verbose", "--effort", "high"];
@@ -43,11 +43,11 @@ export const resolveAgentCommand = (
     };
   }
 
-  if (normalizedCmd === "codex") {
+  if (normalizedCmd.includes("codex")) {
     return { executable, args: ["exec", flatText] };
   }
 
-  if (normalizedCmd === "openclaw") {
+  if (normalizedCmd.includes("openclaw")) {
     const args = ["agent"];
     if (options.sessionId) {
       args.push("--session-id", options.sessionId);
@@ -56,7 +56,7 @@ export const resolveAgentCommand = (
     return { executable, args };
   }
 
-  if (normalizedCmd === "hermes") {
+  if (normalizedCmd.includes("hermes")) {
     const args = ["chat", "-q", commandText];
     if (options.sessionId) {
       args.push("--resume", options.sessionId);
