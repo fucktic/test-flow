@@ -7,5 +7,22 @@
   "switchProjectConfirmTitle": "Confirm Canvas Switch",
   "switchProjectConfirmDesc": "A skill is currently running. Switching canvas will stop the current skill. Do you want to proceed?",
   "cancel": "Cancel",
-  "confirmSwitch": "Confirm Switch"
+  "confirmSwitch": "Confirm Switch",
+  "configTooltip": "API configuration",
+  "configTitle": "API configuration",
+  "configDesc": "Settings are saved to projects/config.json on the server.",
+  "imageModel": "Image model",
+  "videoModel": "Video model",
+  "imgbb": "imgbb",
+  "apiKey": "API key",
+  "example": "Example",
+  "saveConfig": "Save",
+  "saveConfigSuccess": "Saved",
+  "saveConfigFailed": "Could not save configuration",
+  "fieldRequired": "Required",
+  "editProject": "Rename canvas",
+  "editProjectTitle": "Rename canvas",
+  "editProjectDesc": "Enter a new name for the current canvas.",
+  "renameSuccess": "Renamed",
+  "renameFailed": "Rename failed"
 }

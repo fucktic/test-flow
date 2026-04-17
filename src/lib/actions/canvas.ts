@@ -108,7 +108,148 @@ export async function getProjects() {
   }
 }
 
-export async function createNewCanvas(name: string) {
+export type NewCanvasOptions = {
+  aspectRatio?: string;
+  resolution?: string;
+  style?: string;
+};
+
+function resolveProjectDir(projectId: string): string | null {
+  const projectsRoot = path.resolve(process.cwd(), "projects");
+  const dir = path.resolve(projectsRoot, projectId);
+  if (!dir.startsWith(projectsRoot + path.sep)) {
+    return null;
+  }
+  return dir;
+}
+
+export async function renameProject(projectId: string, newName: string) {
+  const trimmed = newName.trim();
+  if (!trimmed) {
+    return { success: false as const, error: "Invalid name" };
+  }
+  const projectDir = resolveProjectDir(projectId);
+  if (!projectDir) {
+    return { success: false as const, error: "Invalid project" };
+  }
+  try {
+    await fs.access(projectDir);
+  } catch {
+    return { success: false as const, error: "Project not found" };
+  }
+  try {
+    const projectJsonPath = path.join(projectDir, "project.json");
+    const projectInfo = JSON.parse(await fs.readFile(projectJsonPath, "utf-8"));
+    projectInfo.name = trimmed;
+    projectInfo.updatedAt = Date.now();
+    await fs.writeFile(projectJsonPath, JSON.stringify(projectInfo, null, 2), "utf-8");
+
+    const flowJsonPath = path.join(projectDir, "flow.json");
+    try {
+      const flowContent = await fs.readFile(flowJsonPath, "utf-8");
+      const flowData = JSON.parse(flowContent);
+      flowData.name = trimmed;
+      await fs.writeFile(flowJsonPath, JSON.stringify(flowData, null, 2), "utf-8");
+    } catch {
+      // flow.json optional
+    }
+    return { success: true as const, name: trimmed };
+  } catch (error) {
+    console.error("Failed to rename project:", error);
+    return { success: false as const, error: "Failed to rename" };
+  }
+}
+
+export type ProjectDetailPayload = {
+  name: string;
+  aspectRatio: string;
+  resolution: string;
+  style: string;
+};
+
+export async function getProjectDetail(projectId: string): Promise<ProjectDetailPayload | null> {
+  const projectDir = resolveProjectDir(projectId);
+  if (!projectDir) {
+    return null;
+  }
+  try {
+    const projectJsonPath = path.join(projectDir, "project.json");
+    const raw = await fs.readFile(projectJsonPath, "utf-8");
+    const info = JSON.parse(raw) as {
+      name?: string;
+      aspectRatio?: string;
+      resolution?: string;
+      style?: string;
+      canvasDefaults?: { aspectRatio?: string; resolution?: string; style?: string };
+    };
+    const cd = info.canvasDefaults;
+    return {
+      name: info.name?.trim() || projectId,
+      aspectRatio:
+        typeof info.aspectRatio === "string" ? info.aspectRatio : (cd?.aspectRatio ?? "smart"),
+      resolution:
+        typeof info.resolution === "string" ? info.resolution : (cd?.resolution ?? "1080"),
+      style:
+        typeof info.style === "string" ? info.style : typeof cd?.style === "string" ? cd.style : "",
+    };
+  } catch {
+    return null;
+  }
+}
+
+export async function updateProject(
+  projectId: string,
+  data: {
+    name: string;
+    aspectRatio: string;
+    resolution: string;
+    style: string;
+  },
+) {
+  const trimmed = data.name.trim();
+  if (!trimmed) {
+    return { success: false as const, error: "Invalid name" };
+  }
+  const projectDir = resolveProjectDir(projectId);
+  if (!projectDir) {
+    return { success: false as const, error: "Invalid project" };
+  }
+  try {
+    await fs.access(projectDir);
+  } catch {
+    return { success: false as const, error: "Project not found" };
+  }
+  try {
+    const projectJsonPath = path.join(projectDir, "project.json");
+    const projectInfo = JSON.parse(await fs.readFile(projectJsonPath, "utf-8")) as Record<
+      string,
+      unknown
+    >;
+    projectInfo.name = trimmed;
+    projectInfo.updatedAt = Date.now();
+    projectInfo.aspectRatio = data.aspectRatio ?? "smart";
+    projectInfo.resolution = data.resolution ?? "1080";
+    projectInfo.style = (data.style ?? "").trim();
+    delete projectInfo.canvasDefaults;
+    await fs.writeFile(projectJsonPath, JSON.stringify(projectInfo, null, 2), "utf-8");
+
+    const flowJsonPath = path.join(projectDir, "flow.json");
+    try {
+      const flowContent = await fs.readFile(flowJsonPath, "utf-8");
+      const flowData = JSON.parse(flowContent);
+      flowData.name = trimmed;
+      await fs.writeFile(flowJsonPath, JSON.stringify(flowData, null, 2), "utf-8");
+    } catch {
+      // flow.json optional
+    }
+    return { success: true as const, name: trimmed };
+  } catch (error) {
+    console.error("Failed to update project:", error);
+    return { success: false as const, error: "Failed to update" };
+  }
+}
+
+export async function createNewCanvas(name: string, options?: NewCanvasOptions) {
   try {
     const id = generateId();
     const projectsDir = path.join(process.cwd(), "projects", id);
@@ -120,12 +261,28 @@ export async function createNewCanvas(name: string) {
     await fs.mkdir(path.join(projectsDir, "episode", "image"), { recursive: true });
     await fs.mkdir(path.join(projectsDir, "episode", "video"), { recursive: true });
 
-    // 创建项目信息文件
+    const canvasDefaults =
+      options != null
+        ? {
+            aspectRatio: options.aspectRatio ?? "smart",
+            resolution: options.resolution ?? "1080",
+            style: (options.style ?? "").trim(),
+          }
+        : undefined;
+
+    // 创建项目信息文件（画布字段打平在顶层，与 updateProject 一致）
     const projectInfo = {
       id,
       name,
       createdAt: Date.now(),
       updatedAt: Date.now(),
+      ...(canvasDefaults
+        ? {
+            aspectRatio: canvasDefaults.aspectRatio,
+            resolution: canvasDefaults.resolution,
+            style: canvasDefaults.style,
+          }
+        : {}),
     };
     await fs.writeFile(
       path.join(projectsDir, "project.json"),

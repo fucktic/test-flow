@@ -7,5 +7,22 @@
   "switchProjectConfirmTitle": "Подтверждение переключения холста",
   "switchProjectConfirmDesc": "Навык выполняется. Переключение холста остановит текущий навык. Вы уверены?",
   "cancel": "Отмена",
-  "confirmSwitch": "Подтвердить переключение"
+  "confirmSwitch": "Подтвердить переключение",
+  "configTooltip": "Настройка API",
+  "configTitle": "Настройка API",
+  "configDesc": "Настройки сохраняются в projects/config.json на сервере.",
+  "imageModel": "Модель изображений",
+  "videoModel": "Модель видео",
+  "imgbb": "imgbb",
+  "apiKey": "API-ключ",
+  "example": "Пример",
+  "saveConfig": "Сохранить",
+  "saveConfigSuccess": "Сохранено",
+  "saveConfigFailed": "Не удалось сохранить",
+  "fieldRequired": "Обязательно",
+  "editProject": "Переименовать холст",
+  "editProjectTitle": "Переименовать холст",
+  "editProjectDesc": "Введите новое имя для текущего холста.",
+  "renameSuccess": "Переименовано",
+  "renameFailed": "Не удалось переименовать"
 }

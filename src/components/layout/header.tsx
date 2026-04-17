@@ -3,6 +3,7 @@
 import { Link } from "@/i18n/routing";
 import { ProjectSwitcher } from "./project-switcher";
 import { NewProjectButton } from "./new-project-button";
+import { HeaderConfigDialog } from "./header-config-dialog";
 import { ImportSkillButton } from "./import-skill-button";
 import { ThemeSwitcher } from "./theme-switcher";
 import { LanguageSwitcher } from "./language-switcher";
@@ -50,6 +51,7 @@ export function Header({ isSkillsEmpty = false }: { isSkillsEmpty?: boolean }) {
       <div className="flex items-center gap-2">
         <ProjectSwitcher />
         <NewProjectButton />
+        <HeaderConfigDialog />
         <ImportSkillButton defaultOpen={isSkillsEmpty} />
         <LanguageSwitcher />
         <ThemeSwitcher />

@@ -7,5 +7,22 @@
   "switchProjectConfirmTitle": "切換畫布確認",
   "switchProjectConfirmDesc": "目前有正在執行的 skill，切換畫布將停止目前 skill 的工作。是否確認切換？",
   "cancel": "取消",
-  "confirmSwitch": "確認切換"
+  "confirmSwitch": "確認切換",
+  "configTooltip": "API 設定",
+  "configTitle": "API 設定",
+  "configDesc": "設定儲存在專案根目錄 projects/config.json。",
+  "imageModel": "圖片模型",
+  "videoModel": "影片模型",
+  "imgbb": "imgbb",
+  "apiKey": "API Key",
+  "example": "範例",
+  "saveConfig": "儲存",
+  "saveConfigSuccess": "已儲存",
+  "saveConfigFailed": "儲存失敗",
+  "fieldRequired": "必填",
+  "editProject": "編輯畫布名稱",
+  "editProjectTitle": "重新命名畫布",
+  "editProjectDesc": "為目前畫布輸入新的名稱。",
+  "renameSuccess": "已重新命名",
+  "renameFailed": "重新命名失敗"
 }

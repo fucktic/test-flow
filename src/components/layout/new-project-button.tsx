@@ -14,17 +14,25 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { createNewCanvas } from "@/lib/actions/canvas";
 import { useProjectStore } from "@/lib/store/use-projects";
 import { toast } from "sonner";
+import {
+  CanvasProjectFormFields,
+  canvasDialogFooterGlass,
+  type AspectRatioId,
+  type ResolutionId,
+} from "@/components/layout/canvas-project-form-fields";
+import { cn } from "@/lib/utils/index";
 
 export function NewProjectButton() {
   const tHeader = useTranslations("header");
   const tCommon = useTranslations("common");
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
+  const [aspectRatio, setAspectRatio] = useState<AspectRatioId>("smart");
+  const [resolution, setResolution] = useState<ResolutionId>("1080");
+  const [style, setStyle] = useState("");
   const [loading, setLoading] = useState(false);
 
   const { addProject, setCurrentProject } = useProjectStore();
@@ -33,11 +41,18 @@ export function NewProjectButton() {
     if (!name.trim()) return;
     setLoading(true);
     try {
-      const result = await createNewCanvas(name);
+      const result = await createNewCanvas(name, {
+        aspectRatio,
+        resolution,
+        style,
+      });
       if (result.success && result.id) {
         toast.success("Created successfully");
         setOpen(false);
         setName("");
+        setAspectRatio("smart");
+        setResolution("1080");
+        setStyle("");
 
         const newProject = {
           id: result.id,
@@ -75,34 +90,38 @@ export function NewProjectButton() {
         </TooltipContent>
       </Tooltip>
 
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>{tCommon("newCanvasTitle")}</DialogTitle>
-          <DialogDescription>{tCommon("newCanvasDesc")}</DialogDescription>
-        </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="name" className="text-right">
-              {tCommon("canvasNameLabel")}
-            </Label>
-            <Input
-              id="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder={tCommon("canvasNamePlaceholder")}
-              className="col-span-3"
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  handleCreate();
-                }
-              }}
-            />
-          </div>
+      <DialogContent className="flex max-h-[80vh] w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-[560px]">
+        <div className="shrink-0 space-y-2 px-4 pt-4 pr-12 pb-2">
+          <DialogHeader>
+            <DialogTitle>{tCommon("newCanvasTitle")}</DialogTitle>
+            <DialogDescription>{tCommon("newCanvasDesc")}</DialogDescription>
+          </DialogHeader>
         </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)} disabled={loading}>
-            {tCommon("cancel")}
-          </Button>
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-4">
+          <CanvasProjectFormFields
+            nameInputId="new-canvas-name"
+            name={name}
+            onNameChange={setName}
+            aspectRatio={aspectRatio}
+            onAspectRatioChange={setAspectRatio}
+            resolution={resolution}
+            onResolutionChange={setResolution}
+            style={style}
+            onStyleChange={setStyle}
+            scrollAreaClassName="h-full max-h-full min-h-0 flex-1"
+            onNameKeyDown={(e) => {
+              if (e.key === "Enter") {
+                handleCreate();
+              }
+            }}
+          />
+        </div>
+        <DialogFooter
+          className={cn(
+            "!mx-0 !mb-0 shrink-0 gap-2 rounded-none border-t sm:gap-0",
+            canvasDialogFooterGlass,
+          )}
+        >
           <Button onClick={handleCreate} disabled={!name.trim() || loading}>
             {loading ? tCommon("creating") : tCommon("confirm")}
           </Button>

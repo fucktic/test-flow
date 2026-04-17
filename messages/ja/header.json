@@ -7,5 +7,22 @@
   "switchProjectConfirmTitle": "キャンバス切り替えの確認",
   "switchProjectConfirmDesc": "現在スキルが実行中です。キャンバスを切り替えると現在のスキルが停止します。切り替えを確認しますか？",
   "cancel": "キャンセル",
-  "confirmSwitch": "切り替えを確認"
+  "confirmSwitch": "切り替えを確認",
+  "configTooltip": "API 設定",
+  "configTitle": "API 設定",
+  "configDesc": "設定はサーバー上の projects/config.json に保存されます。",
+  "imageModel": "画像モデル",
+  "videoModel": "動画モデル",
+  "imgbb": "imgbb",
+  "apiKey": "API キー",
+  "example": "例",
+  "saveConfig": "保存",
+  "saveConfigSuccess": "保存しました",
+  "saveConfigFailed": "保存に失敗しました",
+  "fieldRequired": "必須",
+  "editProject": "キャンバス名を変更",
+  "editProjectTitle": "キャンバス名の変更",
+  "editProjectDesc": "現在のキャンバスの新しい名前を入力してください。",
+  "renameSuccess": "名前を変更しました",
+  "renameFailed": "名前の変更に失敗しました"
 }

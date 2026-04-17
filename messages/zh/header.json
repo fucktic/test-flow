@@ -7,5 +7,22 @@
   "switchProjectConfirmTitle": "切换画布确认",
   "switchProjectConfirmDesc": "当前有正在执行的 skill，切换画布将停止当前 skill 的工作。是否确认切换？",
   "cancel": "取消",
-  "confirmSwitch": "确认切换"
+  "confirmSwitch": "确认切换",
+  "configTooltip": "API 配置",
+  "configTitle": "API 配置",
+  "configDesc": "配置保存在项目根目录 projects/config.json。",
+  "imageModel": "图片模型",
+  "videoModel": "视频模型",
+  "imgbb": "imgbb",
+  "apiKey": "API Key",
+  "example": "示例",
+  "saveConfig": "保存",
+  "saveConfigSuccess": "已保存",
+  "saveConfigFailed": "保存失败",
+  "fieldRequired": "必填",
+  "editProject": "编辑画布名称",
+  "editProjectTitle": "重命名画布",
+  "editProjectDesc": "为当前画布输入新的名称。",
+  "renameSuccess": "已重命名",
+  "renameFailed": "重命名失败"
 }

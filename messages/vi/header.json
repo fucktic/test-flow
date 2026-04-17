@@ -7,5 +7,22 @@
   "switchProjectConfirmTitle": "Xác nhận chuyển canvas",
   "switchProjectConfirmDesc": "Có skill đang chạy, chuyển canvas sẽ dừng skill hiện tại. Bạn có chắc chắn muốn chuyển không?",
   "cancel": "Hủy",
-  "confirmSwitch": "Xác nhận chuyển"
+  "confirmSwitch": "Xác nhận chuyển",
+  "configTooltip": "Cấu hình API",
+  "configTitle": "Cấu hình API",
+  "configDesc": "Cấu hình được lưu vào projects/config.json trên máy chủ.",
+  "imageModel": "Mô hình ảnh",
+  "videoModel": "Mô hình video",
+  "imgbb": "imgbb",
+  "apiKey": "API key",
+  "example": "Ví dụ",
+  "saveConfig": "Lưu",
+  "saveConfigSuccess": "Đã lưu",
+  "saveConfigFailed": "Lưu thất bại",
+  "fieldRequired": "Bắt buộc",
+  "editProject": "Đổi tên canvas",
+  "editProjectTitle": "Đổi tên canvas",
+  "editProjectDesc": "Nhập tên mới cho canvas hiện tại.",
+  "renameSuccess": "Đã đổi tên",
+  "renameFailed": "Đổi tên thất bại"
 }
