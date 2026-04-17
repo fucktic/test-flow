@@ -23,6 +23,10 @@ import { useWidgetDragResize } from "./hooks/use-widget-drag-resize";
 import { useCurrentSelection } from "./hooks/use-current-selection";
 import { useChatEditor } from "./hooks/use-chat-editor";
 import { resolveAgentCommand } from "./utils/resolve-agent-command";
+import {
+  CodexJsonlStreamParser,
+  extractCodexThreadIdFromStdout,
+} from "./utils/parse-codex-jsonl-stream";
 const SELECTED_NODE_TYPES = [
   // 分镜视频节点
   "sceneVideoNode",
@@ -76,6 +80,10 @@ export function ChatWidget() {
   // hermes 会话 ID（从输出中解析，随 agent/project 切换而重置）
   const hermesSessionIdRef = useRef<string | null>(null);
   const hermesContextKeyRef = useRef<string | null>(null);
+
+  // codex thread_id（用于 exec resume，随 agent/project 切换而重置）
+  const codexSessionIdRef = useRef<string | null>(null);
+  const codexContextKeyRef = useRef<string | null>(null);
 
   const currentAgent = agents.find((a) => a.id === selectedAgentId);
 
@@ -316,6 +324,7 @@ export function ChatWidget() {
 
       const normalizedAgentCmd = (agent.endpoint || agent.name || "").trim().toLowerCase();
       const isHermesAgent = normalizedAgentCmd.includes("hermes");
+      const isCodexAgent = normalizedAgentCmd.includes("codex");
 
       // hermes 使用自身的 session ID，切换 agent 或项目时重置
       const hermesContextKey = `${selectedAgentId}:${currentProject?.id}`;
@@ -324,9 +333,20 @@ export function ChatWidget() {
         hermesContextKeyRef.current = hermesContextKey;
       }
 
+      // codex 使用 CLI 返回的 thread_id，切换 agent 或项目时重置
+      const codexContextKey = `${selectedAgentId}:${currentProject?.id}`;
+      if (isCodexAgent && codexContextKeyRef.current !== codexContextKey) {
+        codexSessionIdRef.current = null;
+        codexContextKeyRef.current = codexContextKey;
+      }
+
       const { executable, args } = resolveAgentCommand(agent, commandText, {
         isFirstMessage: messages.length === 0,
-        sessionId: isHermesAgent ? (hermesSessionIdRef.current ?? undefined) : currentProject?.id,
+        sessionId: isHermesAgent
+          ? (hermesSessionIdRef.current ?? undefined)
+          : isCodexAgent
+            ? (codexSessionIdRef.current ?? undefined)
+            : currentProject?.id,
       });
 
       // 记录本次发送时的项目和智能体，后续消息不再携带系统提示
@@ -339,7 +359,21 @@ export function ChatWidget() {
         content: "...",
       });
 
+      const codexParser = isCodexAgent ? new CodexJsonlStreamParser() : null;
+
       const result = await runCommand(executable, args, "", (chunk) => {
+        if (isCodexAgent && codexParser) {
+          const text = codexParser.push(chunk);
+          if (!text) return;
+          updateMessage(agentMsgId, (msg) => {
+            if (msg.content === "...") {
+              msg.content = text;
+            } else {
+              msg.content += text;
+            }
+          });
+          return;
+        }
         // 每次收到流式输出，追加到消息内容中
         updateMessage(agentMsgId, (msg) => {
           if (msg.content === "...") {
@@ -349,6 +383,24 @@ export function ChatWidget() {
           }
         });
       });
+
+      if (isCodexAgent && codexParser) {
+        const tail = codexParser.flush();
+        if (tail) {
+          updateMessage(agentMsgId, (msg) => {
+            if (msg.content === "...") {
+              msg.content = tail;
+            } else {
+              msg.content += tail;
+            }
+          });
+        }
+        const fromParser = codexParser.threadId;
+        const fromStdout = fromParser ?? extractCodexThreadIdFromStdout(result.stdout);
+        if (fromStdout) {
+          codexSessionIdRef.current = fromStdout;
+        }
+      }
 
       // 从 hermes 输出中提取 session ID，用于后续对话恢复
       if (isHermesAgent && result.stdout) {

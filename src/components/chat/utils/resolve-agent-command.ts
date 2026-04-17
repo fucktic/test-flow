@@ -44,7 +44,16 @@ export const resolveAgentCommand = (
   }
 
   if (normalizedCmd.includes("codex")) {
-    return { executable, args: ["exec", flatText] };
+    // --json 便于解析 thread_id；续写用 `codex exec resume <id> <prompt>`
+    // --full-auto：等价于 workspace-write 沙箱，允许改仓库内文件（默认 exec 多为只读）
+    const args = ["exec", "--json", "--full-auto"];
+    const sid = options.sessionId?.trim();
+    if (sid && !options.isFirstMessage) {
+      args.push("resume", sid, flatText);
+    } else {
+      args.push(flatText);
+    }
+    return { executable, args };
   }
 
   if (normalizedCmd.includes("openclaw")) {

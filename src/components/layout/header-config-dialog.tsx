@@ -65,7 +65,7 @@ function HeaderConfigFormContent({ open, onClose }: { open: boolean; onClose: ()
     imageModelExample: nonEmptyTrimmed(t("fieldRequired")),
     videoModelApiKey: nonEmptyTrimmed(t("fieldRequired")),
     videoModelExample: nonEmptyTrimmed(t("fieldRequired")),
-    imgbbApiKey: z.string().optional(),
+    imgbbApiKey: nonEmptyTrimmed(t("fieldRequired")),
   });
 
   type FormValues = z.infer<typeof schema>;
@@ -213,6 +213,11 @@ function HeaderConfigFormContent({ open, onClose }: { open: boolean; onClose: ()
                 autoComplete="off"
                 {...form.register("imgbbApiKey")}
               />
+              {form.formState.errors.imgbbApiKey && (
+                <p className="text-xs text-destructive">
+                  {form.formState.errors.imgbbApiKey.message}
+                </p>
+              )}
             </fieldset>
           </div>
         </div>
