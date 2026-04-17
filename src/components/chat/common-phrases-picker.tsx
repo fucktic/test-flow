@@ -6,16 +6,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useLocale, useMessages, useTranslations } from "next-intl";
-import {
-  ArrowRight,
-  Bookmark,
-  BookText,
-  Image as ImageIcon,
-  Info,
-  Sparkles,
-  Trash2,
-  Video,
-} from "lucide-react";
+import { Bookmark, BookText, Info, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -36,14 +27,8 @@ import {
   saveCustomPhraseAction,
 } from "@/lib/actions/common-phrases";
 import type { CustomCommonPhrase } from "@/lib/types/common-phrases.types";
+import { CHAT_PRESET_PHRASES } from "@/lib/constants/chat-preset-phrases";
 import { cn } from "@/lib/utils/index";
-
-const PRESET_KEYS = [
-  { labelKey: "phrasePresetNext", insertKey: "phrasePresetNextInsert", Icon: ArrowRight },
-  { labelKey: "phrasePresetGenPrompt", insertKey: "phrasePresetGenPromptInsert", Icon: Sparkles },
-  { labelKey: "phrasePresetGenImage", insertKey: "phrasePresetGenImageInsert", Icon: ImageIcon },
-  { labelKey: "phrasePresetGenVideo", insertKey: "phrasePresetGenVideoInsert", Icon: Video },
-] as const;
 
 /** 避免 t() 在部分环境下对新增 key 抛 MISSING_MESSAGE，优先从 messages 读取 */
 const PHRASE_DETAIL_ARIA_FALLBACK: Record<string, string> = {
@@ -165,9 +150,8 @@ export function CommonPhrasesPicker({
     });
   };
 
-  const handlePresetPick = (insertKey: (typeof PRESET_KEYS)[number]["insertKey"]) => {
-    const text = t(insertKey);
-    appendPhraseToEndAndSend(editor, text, onSend);
+  const handlePresetPick = (insertText: string) => {
+    appendPhraseToEndAndSend(editor, insertText, onSend);
     setPopoverOpen(false);
   };
 
@@ -222,7 +206,7 @@ export function CommonPhrasesPicker({
               {t("presetSection")}
             </p>
             <div className="flex flex-col gap-0.5">
-              {PRESET_KEYS.map((k) => {
+              {CHAT_PRESET_PHRASES.map((k) => {
                 const Icon = k.Icon;
                 return (
                   <div
@@ -238,15 +222,12 @@ export function CommonPhrasesPicker({
                         "flex min-w-0 flex-1 items-center gap-2 px-2 py-1.5 text-left text-sm",
                         "rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring",
                       )}
-                      onClick={() => handlePresetPick(k.insertKey)}
+                      onClick={() => handlePresetPick(k.insertText)}
                     >
                       <Icon className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
                       <span className="truncate font-medium">{t(k.labelKey)}</span>
                     </button>
-                    <PhraseDetailHint
-                      detailText={t(k.insertKey)}
-                      ariaLabel={phraseDetailAriaLabel}
-                    />
+                    <PhraseDetailHint detailText={k.insertText} ariaLabel={phraseDetailAriaLabel} />
                   </div>
                 );
               })}
