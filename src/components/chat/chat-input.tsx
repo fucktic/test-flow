@@ -6,6 +6,7 @@ import { Agent } from "@/lib/types/agent.types";
 
 import { AgentSelect } from "./agent-select";
 import { ChatUpload, UploadedFileList, UploadedFile } from "./chat-upload";
+import { CommonPhrasesPicker } from "./common-phrases-picker";
 
 import { useTranslations } from "next-intl";
 import { useMemo } from "react";
@@ -122,6 +123,11 @@ export function ChatInput({
               />
             </div>
             <ChatUpload files={uploadedFiles} onFilesChange={setUploadedFiles} />
+            <CommonPhrasesPicker
+              editor={editor}
+              onSend={handleSend}
+              disabled={isExecuting || !selectedAgentId}
+            />
           </div>
 
           {isExecuting ? (

@@ -188,7 +188,8 @@ export function ChatWidget() {
 
   // 处理发送消息
   const handleSend = useCallback(async () => {
-    if (!input.trim() && uploadedFiles.length === 0) return;
+    const textSnapshot = editor ? editor.getText().trim() : input.trim();
+    if (!textSnapshot && uploadedFiles.length === 0) return;
     if (!selectedAgentId) {
       toast.error(t("selectAgentPrompt"));
       return;
@@ -252,7 +253,8 @@ export function ChatWidget() {
       finalTransformedInput += (finalTransformedInput ? "\n" : "") + prompt;
     }
 
-    let displayInput = input.trim() ? input : t("sentAttachment");
+    const plainForDisplay = editor ? editor.getText().trim() : input.trim();
+    let displayInput = plainForDisplay ? (editor ? editor.getText() : input) : t("sentAttachment");
     if (currentSelection && SELECTED_NODE_TYPES.includes(currentSelection.type)) {
       displayInput = `${t("onlyModifyNodePrefix", { title: currentSelection.title })}\n${displayInput}`;
     }

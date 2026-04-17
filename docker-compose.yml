@@ -11,8 +11,8 @@ services:
       - ./projects:/app/projects
       # Skill packages
       - ./skills:/app/skills
-      # Agent configuration (edit to add/remove agents)
-      - ./public/agent.json:/app/public/agent.json
+      # App data (agents, custom common phrases, etc.)
+      - ./db:/app/db
     environment:
       - NODE_ENV=production
       - PORT=3000
