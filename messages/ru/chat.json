@@ -64,5 +64,6 @@
   "phraseSaveFailed": "Не удалось сохранить. Проверьте ввод.",
   "phraseDetailAriaLabel": "Наведите курсор для полного текста",
   "phraseDeleteConfirm": "Удалить эту фразу?",
-  "phraseDeleteAriaLabel": "Удалить"
+  "phraseDeleteAriaLabel": "Удалить",
+  "agentProcessSection": "Процесс агента"
 }

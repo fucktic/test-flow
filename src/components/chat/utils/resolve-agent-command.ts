@@ -1,5 +1,18 @@
 import { Agent } from "@/lib/types/agent.types";
 
+/** 与 resolveAgentCommand 分支一致，用于流式回显拆分（过程 / 最终回复） */
+export type AgentStreamKind = "opencode" | "claude" | "codex" | "openclaw" | "hermes" | "generic";
+
+export function getAgentStreamKind(agent: Agent): AgentStreamKind {
+  const normalizedCmd = (agent.endpoint || agent.name || "").trim().toLowerCase();
+  if (normalizedCmd.includes("opencode")) return "opencode";
+  if (normalizedCmd.includes("claude")) return "claude";
+  if (normalizedCmd.includes("codex")) return "codex";
+  if (normalizedCmd.includes("openclaw")) return "openclaw";
+  if (normalizedCmd.includes("hermes")) return "hermes";
+  return "generic";
+}
+
 interface ResolveAgentCommandOptions {
   isFirstMessage: boolean;
   sessionId?: string;

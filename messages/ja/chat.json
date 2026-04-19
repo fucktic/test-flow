@@ -64,5 +64,6 @@
   "phraseSaveFailed": "保存に失敗しました。入力を確認してください",
   "phraseDetailAriaLabel": "ホバーで全文を表示",
   "phraseDeleteConfirm": "この定型文を削除しますか？",
-  "phraseDeleteAriaLabel": "削除"
+  "phraseDeleteAriaLabel": "削除",
+  "agentProcessSection": "エージェントの処理"
 }

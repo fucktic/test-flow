@@ -8,6 +8,8 @@ export interface ChatMessage {
   id: string;
   role: "user" | "agent";
   content: string;
+  /** 智能体过程输出（工具/推理等），与正文分离，UI 中可折叠 */
+  agentProcess?: string;
   timestamp: number;
 }
 
