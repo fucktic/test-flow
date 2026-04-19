@@ -118,7 +118,7 @@ export function NewProjectButton() {
         </div>
         <DialogFooter
           className={cn(
-            "!mx-0 !mb-0 shrink-0 gap-2 rounded-none border-t sm:gap-0",
+            "mx-0! mb-0! shrink-0 gap-2 rounded-none border-t sm:gap-0",
             canvasDialogFooterGlass,
           )}
         >
