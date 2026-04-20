@@ -40,5 +40,17 @@
   "resolution_1080": "1080",
   "resolution_2k": "2K",
   "resolution_4k": "4K",
-  "stylePlaceholder": "例如：電影感、寫實"
+  "stylePlaceholder": "例如：電影感、寫實",
+  "screenplayUploadLabel": "劇本（Markdown）",
+  "screenplayUploadHint": "僅支援 .md；須包含「分集劇本」「分集」「場次」等結構。",
+  "screenplayViewSample": "檢視劇本樣式",
+  "screenplaySampleTitle": "格式樣本",
+  "screenplaySampleSubtitle": "db/剧本样本.md",
+  "screenplaySampleLoadError": "無法載入樣本，請確認專案中存在 db/剧本样本.md。",
+  "screenplayFormatInvalidTitle": "劇本格式不符",
+  "screenplayFormatInvalidDesc": "劇本格式不符，可檢視劇本樣式，或點選下方按鈕。",
+  "screenplayParsingOverlay": "正在解釋分集及場次資訊…",
+  "screenplayView": "檢視",
+  "screenplayNoneSaved": "尚無已儲存的劇本檔案",
+  "screenplayViewerTitle": "劇本預覽"
 }

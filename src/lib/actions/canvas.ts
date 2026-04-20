@@ -1,8 +1,15 @@
 "use server";
 
+import type { Dirent } from "fs";
 import fs from "fs/promises";
 import path from "path";
 import { generateId } from "@/lib/utils/uuid";
+import {
+  extractEpisodeSegments,
+  firstNonEmptyLineTitle,
+  validateScreenplayMarkdown,
+} from "@/lib/screenplay/screenplay";
+import { syncFlowScenesFromProject } from "@/lib/services/project.service";
 
 export async function uploadSkillFiles(formData: FormData) {
   const skillsDir = path.join(process.cwd(), "skills");
@@ -160,11 +167,23 @@ export async function renameProject(projectId: string, newName: string) {
   }
 }
 
+export type ProjectEpisodeMeta = {
+  fileName: string;
+  relativePath: string;
+  titleLine?: string;
+  segments?: Array<{
+    label: string;
+    scenes: Array<{ line: string }>;
+  }>;
+  parsedAt?: number;
+};
+
 export type ProjectDetailPayload = {
   name: string;
   aspectRatio: string;
   resolution: string;
   style: string;
+  episodes?: ProjectEpisodeMeta[];
 };
 
 export async function getProjectDetail(projectId: string): Promise<ProjectDetailPayload | null> {
@@ -181,6 +200,7 @@ export async function getProjectDetail(projectId: string): Promise<ProjectDetail
       resolution?: string;
       style?: string;
       canvasDefaults?: { aspectRatio?: string; resolution?: string; style?: string };
+      episodes?: ProjectEpisodeMeta[];
     };
     const cd = info.canvasDefaults;
     return {
@@ -191,7 +211,160 @@ export async function getProjectDetail(projectId: string): Promise<ProjectDetail
         typeof info.resolution === "string" ? info.resolution : (cd?.resolution ?? "1080"),
       style:
         typeof info.style === "string" ? info.style : typeof cd?.style === "string" ? cd.style : "",
+      episodes: Array.isArray(info.episodes) ? info.episodes : undefined,
     };
+  } catch {
+    return null;
+  }
+}
+
+function sanitizeEpisodeMdFileName(name: string): string {
+  const base = path
+    .basename(name)
+    .replace(/[/\\]/g, "")
+    .replace(/[^\w.\-()\s\u4e00-\u9fff\u3000-\u303f\uff00-\uffef]+/g, "_")
+    .trim();
+  const stem = base.toLowerCase().endsWith(".md") ? base.slice(0, -3) : base;
+  const safeStem = stem || "script";
+  return `${safeStem}.md`.slice(0, 200);
+}
+
+async function uniqueEpisodePath(episodeDir: string, preferred: string): Promise<string> {
+  let name = sanitizeEpisodeMdFileName(preferred);
+  let n = 2;
+  while (true) {
+    const full = path.join(episodeDir, name);
+    try {
+      await fs.access(full);
+      const stem = name.toLowerCase().endsWith(".md") ? name.slice(0, -3) : name;
+      name = `${stem}_${n}.md`.slice(0, 200);
+      n += 1;
+    } catch {
+      return name;
+    }
+  }
+}
+
+/** 将上传的剧本写入 `episode/`，并把解析后的分集/场次写入 `project.json` 的 `episodes` */
+export async function saveProjectEpisodes(
+  projectId: string,
+  files: Array<{ name: string; content: string }>,
+) {
+  if (files.length === 0) {
+    return { success: true as const };
+  }
+  const projectDir = resolveProjectDir(projectId);
+  if (!projectDir) {
+    return { success: false as const, error: "Invalid project" };
+  }
+  try {
+    await fs.access(projectDir);
+  } catch {
+    return { success: false as const, error: "Project not found" };
+  }
+  for (const f of files) {
+    if (!validateScreenplayMarkdown(f.content)) {
+      return { success: false as const, error: "format" };
+    }
+  }
+  try {
+    const episodeDir = path.join(projectDir, "episode");
+    await fs.mkdir(episodeDir, { recursive: true });
+    const projectJsonPath = path.join(projectDir, "project.json");
+    const projectInfo = JSON.parse(await fs.readFile(projectJsonPath, "utf-8")) as Record<
+      string,
+      unknown
+    >;
+
+    const episodesMeta: ProjectEpisodeMeta[] = [];
+    for (const f of files) {
+      const finalName = await uniqueEpisodePath(episodeDir, f.name);
+      const fullPath = path.join(episodeDir, finalName);
+      await fs.writeFile(fullPath, f.content, "utf-8");
+      episodesMeta.push({
+        fileName: finalName,
+        relativePath: `episode/${finalName}`,
+        titleLine: firstNonEmptyLineTitle(f.content),
+        segments: extractEpisodeSegments(f.content),
+        parsedAt: Date.now(),
+      });
+    }
+
+    const prev = Array.isArray(projectInfo.episodes)
+      ? (projectInfo.episodes as ProjectEpisodeMeta[])
+      : [];
+    projectInfo.episodes = [...prev, ...episodesMeta];
+    projectInfo.updatedAt = Date.now();
+    await fs.writeFile(projectJsonPath, JSON.stringify(projectInfo, null, 2), "utf-8");
+    try {
+      await syncFlowScenesFromProject(projectId);
+    } catch (err) {
+      console.error("syncFlowScenesFromProject failed:", err);
+    }
+    return { success: true as const };
+  } catch (error) {
+    console.error("Failed to save project episodes:", error);
+    return { success: false as const, error: "Failed to save episodes" };
+  }
+}
+
+/** 根据磁盘上 `episode/*.md` 重建 `project.json` 中的 `episodes`（编辑保存后同步） */
+export async function refreshProjectEpisodesInProjectJson(projectId: string) {
+  const projectDir = resolveProjectDir(projectId);
+  if (!projectDir) {
+    return { success: false as const, error: "Invalid project" };
+  }
+  try {
+    const episodeDir = path.join(projectDir, "episode");
+    let entries: Dirent[] = [];
+    try {
+      entries = await fs.readdir(episodeDir, { withFileTypes: true });
+    } catch {
+      entries = [];
+    }
+    const mdFiles = entries.filter((e) => e.isFile() && e.name.toLowerCase().endsWith(".md"));
+    const episodesMeta: ProjectEpisodeMeta[] = [];
+    for (const e of mdFiles) {
+      const fullPath = path.join(episodeDir, e.name);
+      const content = await fs.readFile(fullPath, "utf-8");
+      if (!validateScreenplayMarkdown(content)) {
+        continue;
+      }
+      episodesMeta.push({
+        fileName: e.name,
+        relativePath: `episode/${e.name}`,
+        titleLine: firstNonEmptyLineTitle(content),
+        segments: extractEpisodeSegments(content),
+        parsedAt: Date.now(),
+      });
+    }
+    const projectJsonPath = path.join(projectDir, "project.json");
+    const projectInfo = JSON.parse(await fs.readFile(projectJsonPath, "utf-8")) as Record<
+      string,
+      unknown
+    >;
+    projectInfo.episodes = episodesMeta;
+    projectInfo.updatedAt = Date.now();
+    await fs.writeFile(projectJsonPath, JSON.stringify(projectInfo, null, 2), "utf-8");
+    return { success: true as const };
+  } catch (error) {
+    console.error("Failed to refresh episode metadata:", error);
+    return { success: false as const, error: "Failed to refresh episodes" };
+  }
+}
+
+export async function getEpisodeScriptContent(
+  projectId: string,
+  fileName: string,
+): Promise<string | null> {
+  const projectDir = resolveProjectDir(projectId);
+  if (!projectDir) return null;
+  const safe = path.basename(fileName);
+  if (!safe.toLowerCase().endsWith(".md")) return null;
+  const full = path.join(projectDir, "episode", safe);
+  if (!full.startsWith(path.join(projectDir, "episode") + path.sep)) return null;
+  try {
+    return await fs.readFile(full, "utf-8");
   } catch {
     return null;
   }

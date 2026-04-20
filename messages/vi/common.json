@@ -40,5 +40,17 @@
   "resolution_1080": "1080p",
   "resolution_2k": "2K",
   "resolution_4k": "4K",
-  "stylePlaceholder": "VD: điện ảnh, chân thực"
+  "stylePlaceholder": "VD: điện ảnh, chân thực",
+  "screenplayUploadLabel": "Kịch bản (Markdown)",
+  "screenplayUploadHint": "Chỉ hỗ trợ .md; nội dung phải có cấu trúc với 「分集剧本」「分集」「场次」.",
+  "screenplayViewSample": "Xem mẫu định dạng kịch bản",
+  "screenplaySampleTitle": "Mẫu định dạng",
+  "screenplaySampleSubtitle": "db/剧本样本.md",
+  "screenplaySampleLoadError": "Không tải được mẫu. Hãy đảm bảo trong dự án có tệp db/剧本样本.md.",
+  "screenplayFormatInvalidTitle": "Định dạng kịch bản không hợp lệ",
+  "screenplayFormatInvalidDesc": "Định dạng không hợp lệ. Hãy xem mẫu định dạng hoặc nhấn nút bên dưới.",
+  "screenplayParsingOverlay": "Đang phân tích phân tập và cảnh…",
+  "screenplayView": "Xem",
+  "screenplayNoneSaved": "Chưa có tệp kịch bản đã lưu",
+  "screenplayViewerTitle": "Xem trước kịch bản"
 }

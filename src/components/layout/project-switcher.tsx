@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Fragment, useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { Folder, ChevronDown, Check, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -19,20 +19,30 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { getProjects, getProjectDetail, updateProject } from "@/lib/actions/canvas";
+import {
+  getProjects,
+  getProjectDetail,
+  getEpisodeScriptContent,
+  refreshProjectEpisodesInProjectJson,
+  updateProject,
+} from "@/lib/actions/canvas";
 import { useProjectStore } from "@/lib/store/use-projects";
 import { useChatStore } from "@/lib/store/use-chat";
 import { Project } from "@/lib/types/project.types";
 import { toast } from "sonner";
 import {
   CanvasProjectFormFields,
+  ScreenplayParsingOverlay,
   canvasDialogFooterGlass,
   normalizeAspectRatioId,
   normalizeResolutionId,
   type AspectRatioId,
   type ResolutionId,
 } from "@/components/layout/canvas-project-form-fields";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils/index";
+import { withMinDuration } from "@/lib/utils/async";
+import { ScreenplayMarkdownPreview } from "@/components/layout/screenplay-markdown-preview";
 
 export function ProjectSwitcher() {
   const t = useTranslations("header");
@@ -46,6 +56,11 @@ export function ProjectSwitcher() {
   const [resolution, setResolution] = useState<ResolutionId>("1080");
   const [style, setStyle] = useState("");
   const [saveLoading, setSaveLoading] = useState(false);
+  const [parsingOpen, setParsingOpen] = useState(false);
+  const [editEpisodeFileNames, setEditEpisodeFileNames] = useState<string[]>([]);
+  const [scriptViewerOpen, setScriptViewerOpen] = useState(false);
+  const [scriptViewerTitle, setScriptViewerTitle] = useState("");
+  const [scriptViewerBody, setScriptViewerBody] = useState("");
 
   useEffect(() => {
     if (!editOpen || !currentProject) {
@@ -62,12 +77,14 @@ export function ProjectSwitcher() {
         setAspectRatio("smart");
         setResolution("1080");
         setStyle("");
+        setEditEpisodeFileNames([]);
         return;
       }
       setEditName(detail.name);
       setAspectRatio(normalizeAspectRatioId(detail.aspectRatio));
       setResolution(normalizeResolutionId(detail.resolution));
       setStyle(detail.style);
+      setEditEpisodeFileNames(detail.episodes?.map((e) => e.fileName) ?? []);
     })();
     return () => {
       cancelled = true;
@@ -136,14 +153,22 @@ export function ProjectSwitcher() {
   const handleSaveCanvas = async () => {
     if (!currentProject || !editName.trim()) return;
     setSaveLoading(true);
+    setParsingOpen(true);
     try {
-      const result = await updateProject(currentProject.id, {
-        name: editName.trim(),
-        aspectRatio,
-        resolution,
-        style,
-      });
-      if (result.success) {
+      await withMinDuration(5000, async () => {
+        const result = await updateProject(currentProject.id, {
+          name: editName.trim(),
+          aspectRatio,
+          resolution,
+          style,
+        });
+        if (!result.success) {
+          throw new Error("update");
+        }
+        await refreshProjectEpisodesInProjectJson(currentProject.id);
+        const detail = await getProjectDetail(currentProject.id);
+        setEditEpisodeFileNames(detail?.episodes?.map((e) => e.fileName) ?? []);
+
         const updated: Project = {
           ...currentProject,
           name: result.name,
@@ -153,18 +178,27 @@ export function ProjectSwitcher() {
         setProjects(projects.map((p) => (p.id === updated.id ? updated : p)));
         toast.success(t("renameSuccess"));
         setEditOpen(false);
-      } else {
-        toast.error(t("renameFailed"));
-      }
+      });
     } catch {
       toast.error(t("renameFailed"));
     } finally {
+      setParsingOpen(false);
       setSaveLoading(false);
     }
   };
 
+  const openEditScriptViewer = (fileName: string) => {
+    if (!currentProject) return;
+    void (async () => {
+      const text = await getEpisodeScriptContent(currentProject.id, fileName);
+      setScriptViewerTitle(fileName);
+      setScriptViewerBody(text ?? "");
+      setScriptViewerOpen(true);
+    })();
+  };
+
   return (
-    <>
+    <Fragment>
       <div className="flex items-center gap-1 border-r pr-2 mr-2">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -172,7 +206,7 @@ export function ProjectSwitcher() {
               role="button"
               tabIndex={0}
               className={cn(
-                "flex h-8 max-w-[min(100%,14rem)] cursor-pointer items-center gap-1 rounded-md px-2 text-sm outline-none",
+                "flex h-8 max-w-50 cursor-pointer items-center gap-1 rounded-md px-2 text-sm outline-none",
                 "hover:bg-accent hover:text-accent-foreground",
                 "focus-visible:ring-2 focus-visible:ring-ring/50",
               )}
@@ -262,11 +296,18 @@ export function ProjectSwitcher() {
               style={style}
               onStyleChange={setStyle}
               scrollAreaClassName="h-full max-h-full min-h-0 flex-1"
+              screenplay={{
+                mode: "edit",
+                drafts: [],
+                onDraftsChange: () => {},
+                existingFileNames: editEpisodeFileNames,
+                onRequestViewScreenplay: openEditScriptViewer,
+              }}
             />
           </div>
           <DialogFooter
             className={cn(
-              "!mx-0 !mb-0 shrink-0 gap-2 rounded-none border-t sm:gap-0",
+              "mx-0! mb-0! shrink-0 gap-2 rounded-none border-t sm:gap-0",
               canvasDialogFooterGlass,
             )}
           >
@@ -279,6 +320,24 @@ export function ProjectSwitcher() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </>
+
+      <ScreenplayParsingOverlay open={parsingOpen} message={tCommon("screenplayParsingOverlay")} />
+
+      <Dialog open={scriptViewerOpen} onOpenChange={setScriptViewerOpen}>
+        <DialogContent className="flex max-h-[92vh] w-[calc(100vw-2rem)] flex-col gap-3 overflow-hidden p-4 sm:max-w-2xl">
+          <DialogHeader className="shrink-0 space-y-1 pr-8 text-left">
+            <DialogTitle>{tCommon("screenplayViewerTitle")}</DialogTitle>
+            <DialogDescription className="line-clamp-2 break-all sm:break-words">
+              {scriptViewerTitle}
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="h-[min(60vh,520px)] w-full rounded-lg border border-border/60 bg-muted/30">
+            <div className="p-3">
+              <ScreenplayMarkdownPreview markdown={scriptViewerBody} className="text-[13px]" />
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
+    </Fragment>
   );
 }

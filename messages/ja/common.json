@@ -40,5 +40,17 @@
   "resolution_1080": "1080p",
   "resolution_2k": "2K",
   "resolution_4k": "4K",
-  "stylePlaceholder": "例：シネマ、リアル"
+  "stylePlaceholder": "例：シネマ、リアル",
+  "screenplayUploadLabel": "脚本（Markdown）",
+  "screenplayUploadHint": ".md のみ。本文に「分集剧本」「分集」「场次」を含む構造が必要です。",
+  "screenplayViewSample": "脚本の体裁を見る",
+  "screenplaySampleTitle": "フォーマット見本",
+  "screenplaySampleSubtitle": "db/剧本样本.md",
+  "screenplaySampleLoadError": "見本を読み込めません。プロジェクトに db/剧本样本.md があるか確認してください。",
+  "screenplayFormatInvalidTitle": "脚本フォーマットが不正です",
+  "screenplayFormatInvalidDesc": "フォーマットが不正です。脚本の体裁を確認するか、下のボタンを押してください。",
+  "screenplayParsingOverlay": "話数・場の情報を解析しています…",
+  "screenplayView": "表示",
+  "screenplayNoneSaved": "保存済みの脚本ファイルはありません",
+  "screenplayViewerTitle": "脚本プレビュー"
 }

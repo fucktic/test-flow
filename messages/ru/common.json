@@ -40,5 +40,17 @@
   "resolution_1080": "1080p",
   "resolution_2k": "2K",
   "resolution_4k": "4K",
-  "stylePlaceholder": "Напр.: кинематографичный, реалистичный"
+  "stylePlaceholder": "Напр.: кинематографичный, реалистичный",
+  "screenplayUploadLabel": "Сценарий (Markdown)",
+  "screenplayUploadHint": "Только .md; в тексте должны быть структурные маркеры «分集剧本», «分集» и «场次».",
+  "screenplayViewSample": "Просмотреть образец оформления",
+  "screenplaySampleTitle": "Образец формата",
+  "screenplaySampleSubtitle": "db/剧本样本.md",
+  "screenplaySampleLoadError": "Не удалось загрузить образец. Убедитесь, что в проекте есть файл db/剧本样本.md.",
+  "screenplayFormatInvalidTitle": "Неверный формат сценария",
+  "screenplayFormatInvalidDesc": "Неверный формат. Откройте образец оформления или нажмите кнопку ниже.",
+  "screenplayParsingOverlay": "Разбор серий и сцен…",
+  "screenplayView": "Просмотр",
+  "screenplayNoneSaved": "Нет сохранённых файлов сценария",
+  "screenplayViewerTitle": "Предпросмотр сценария"
 }

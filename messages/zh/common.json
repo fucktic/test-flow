@@ -40,5 +40,17 @@
   "resolution_1080": "1080",
   "resolution_2k": "2K",
   "resolution_4k": "4K",
-  "stylePlaceholder": "例如：电影感、写实"
+  "stylePlaceholder": "例如：电影感、写实",
+  "screenplayUploadLabel": "剧本（Markdown）",
+  "screenplayUploadHint": "仅支持 .md；须包含「分集剧本」「分集」「场次」等结构。",
+  "screenplayViewSample": "查看剧本样式",
+  "screenplaySampleTitle": "格式样本",
+  "screenplaySampleSubtitle": "db/剧本样本.md",
+  "screenplaySampleLoadError": "无法加载样本文件，请确认仓库中存在 db/剧本样本.md。",
+  "screenplayFormatInvalidTitle": "剧本格式不符",
+  "screenplayFormatInvalidDesc": "剧本格式不符，可查看剧本样式，或点击下方按钮。",
+  "screenplayParsingOverlay": "正在解释分集及场次信息…",
+  "screenplayView": "查看",
+  "screenplayNoneSaved": "暂无已保存的剧本文件",
+  "screenplayViewerTitle": "剧本预览"
 }

@@ -40,5 +40,17 @@
   "resolution_1080": "1080p",
   "resolution_2k": "2K",
   "resolution_4k": "4K",
-  "stylePlaceholder": "e.g. cinematic, realistic"
+  "stylePlaceholder": "e.g. cinematic, realistic",
+  "screenplayUploadLabel": "Screenplay (Markdown)",
+  "screenplayUploadHint": "Only .md files. Must include 分集剧本, 分集, and 场次.",
+  "screenplayViewSample": "View sample layout",
+  "screenplaySampleTitle": "Format sample",
+  "screenplaySampleSubtitle": "db/剧本样本.md",
+  "screenplaySampleLoadError": "Could not load the sample file. Ensure db/剧本样本.md exists in the project.",
+  "screenplayFormatInvalidTitle": "Invalid screenplay format",
+  "screenplayFormatInvalidDesc": "Invalid format. View the sample layout or use the button below.",
+  "screenplayParsingOverlay": "Parsing episodes and scene breaks…",
+  "screenplayView": "View",
+  "screenplayNoneSaved": "No screenplay files saved yet",
+  "screenplayViewerTitle": "Screenplay preview"
 }
