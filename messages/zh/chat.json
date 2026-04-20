@@ -64,5 +64,6 @@
   "phraseSaveFailed": "保存失败，请检查输入",
   "phraseDetailAriaLabel": "悬停查看完整内容",
   "phraseDeleteConfirm": "确定删除该常用语？",
-  "phraseDeleteAriaLabel": "删除"
+  "phraseDeleteAriaLabel": "删除",
+  "agentProcessSection": "智能体过程"
 }

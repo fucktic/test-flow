@@ -64,5 +64,6 @@
   "phraseSaveFailed": "Save failed. Please check your input.",
   "phraseDetailAriaLabel": "Hover to view full text",
   "phraseDeleteConfirm": "Delete this custom phrase?",
-  "phraseDeleteAriaLabel": "Delete"
+  "phraseDeleteAriaLabel": "Delete",
+  "agentProcessSection": "Agent process"
 }

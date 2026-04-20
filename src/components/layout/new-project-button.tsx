@@ -173,7 +173,7 @@ export function NewProjectButton() {
         <DialogContent className="flex max-h-[92vh] w-[calc(100vw-2rem)] flex-col gap-3 overflow-hidden p-4 sm:max-w-2xl">
           <DialogHeader className="shrink-0 space-y-1 pr-8 text-left">
             <DialogTitle>{tCommon("screenplayViewerTitle")}</DialogTitle>
-            <DialogDescription className="line-clamp-2 break-all sm:break-words">
+            <DialogDescription className="line-clamp-2 break-all sm:wrap-break-words">
               {scriptViewerTitle}
             </DialogDescription>
           </DialogHeader>

@@ -121,7 +121,7 @@ function HeaderConfigFormContent({ open, onClose }: { open: boolean; onClose: ()
     "font-mono text-xs min-h-[100px] leading-relaxed resize-y bg-muted/40 dark:bg-muted/20";
 
   return (
-    <DialogContent className="!flex max-h-[80vh] w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-[520px]">
+    <DialogContent className="flex! max-h-[80vh] w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-[520px]">
       <div className="shrink-0 space-y-2 px-4 pt-4 pr-12 pb-3">
         <DialogHeader>
           <DialogTitle>{t("configTitle")}</DialogTitle>
@@ -223,7 +223,7 @@ function HeaderConfigFormContent({ open, onClose }: { open: boolean; onClose: ()
         </div>
         <DialogFooter
           className={cn(
-            "!mx-0 !mb-0 shrink-0 gap-2 rounded-none border-t sm:gap-0",
+            "mx-0! mb-0! shrink-0 gap-2 rounded-none border-t sm:gap-0",
             canvasDialogFooterGlass,
           )}
         >

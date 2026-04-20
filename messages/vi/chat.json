@@ -64,5 +64,6 @@
   "phraseSaveFailed": "Lưu thất bại, vui lòng kiểm tra.",
   "phraseDetailAriaLabel": "Di chuột để xem toàn bộ nội dung",
   "phraseDeleteConfirm": "Xóa cụm tắt này?",
-  "phraseDeleteAriaLabel": "Xóa"
+  "phraseDeleteAriaLabel": "Xóa",
+  "agentProcessSection": "Quy trình agent"
 }

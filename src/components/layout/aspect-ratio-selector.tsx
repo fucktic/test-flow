@@ -43,7 +43,7 @@ type Props = {
 export function AspectRatioSelector({ value, onChange, label }: Props) {
   return (
     <div className="rounded-xl bg-muted/60 p-2">
-      <div className="flex gap-1 overflow-x-auto pb-1 [scrollbar-width:thin] [scrollbar-color:theme(colors.muted.foreground)_transparent]">
+      <div className="flex gap-1 overflow-x-auto pb-1 [scrollbar-width:thin] [scrollbar-color:var(--color-muted-foreground)_transparent]">
         {ASPECT_RATIO_IDS.map((id) => {
           const active = value === id;
           return (
@@ -62,7 +62,7 @@ export function AspectRatioSelector({ value, onChange, label }: Props) {
                     <span className="absolute inset-0 rounded-[3px] border border-foreground/85" />
                     <span className="absolute inset-[3px] rounded-[2px] border border-foreground/60" />
                     <Sparkles
-                      className="relative z-[1] h-2.5 w-2.5 text-foreground/90"
+                      className="relative z-1 h-2.5 w-2.5 text-foreground/90"
                       strokeWidth={2}
                     />
                   </span>

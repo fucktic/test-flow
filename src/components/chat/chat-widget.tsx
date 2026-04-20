@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { useChatStore } from "@/lib/store/use-chat";
 import { useProjectStore } from "@/lib/store/use-projects";
@@ -22,10 +22,14 @@ import { getSkillFolders } from "@/lib/actions/canvas";
 import { useWidgetDragResize } from "./hooks/use-widget-drag-resize";
 import { useCurrentSelection } from "./hooks/use-current-selection";
 import { useChatEditor } from "./hooks/use-chat-editor";
-import { resolveAgentCommand } from "./utils/resolve-agent-command";
+import { getAgentStreamKind, resolveAgentCommand } from "./utils/resolve-agent-command";
 import {
-  CodexJsonlStreamParser,
+  normalizeAgentStreamPreview,
+  splitPlainAgentOutput,
+} from "./utils/split-agent-plain-output";
+import {
   extractCodexThreadIdFromStdout,
+  parseCodexStdoutComplete,
 } from "./utils/parse-codex-jsonl-stream";
 const SELECTED_NODE_TYPES = [
   // 分镜视频节点
@@ -84,6 +88,9 @@ export function ChatWidget() {
   // codex thread_id（用于 exec resume，随 agent/project 切换而重置）
   const codexSessionIdRef = useRef<string | null>(null);
   const codexContextKeyRef = useRef<string | null>(null);
+
+  /** 非 Codex / Codex：流式期间完整原始输出，结束后一次性拆分 */
+  const plainStreamAccumRef = useRef("");
 
   const currentAgent = agents.find((a) => a.id === selectedAgentId);
 
@@ -187,12 +194,32 @@ export function ChatWidget() {
     fetchAgents();
   }, [fetchAgents]);
 
-  // 消息更新或展开时自动滚动到底部
-  useEffect(() => {
-    if (!isMinimized) {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  /** 最小化时单行预览：取最后一条消息的 agent 过程/正文或用户输入 */
+  const minimizedPreviewLine = useMemo(() => {
+    if (messages.length === 0) return "";
+    const last = messages[messages.length - 1]!;
+    let raw = "";
+    if (last.role === "agent") {
+      const proc = (last.agentProcess || "").trim();
+      const body = (last.content || "").trim();
+      raw = proc || body;
+    } else {
+      raw = (last.content || "").trim();
     }
-  }, [messages, isMinimized]);
+    if (!raw) return "";
+    const oneLine = raw.replace(/\s+/g, " ").trim();
+    return oneLine.length > 140 ? `${oneLine.slice(0, 137)}…` : oneLine;
+  }, [messages]);
+
+  // 消息更新、执行中或展开时自动滚动到底部
+  useEffect(() => {
+    if (isMinimized) return;
+    requestAnimationFrame(() => {
+      messagesEndRef.current?.scrollIntoView({
+        behavior: isExecuting ? "auto" : "smooth",
+      });
+    });
+  }, [messages, isMinimized, isExecuting]);
 
   // 处理发送消息
   const handleSend = useCallback(async () => {
@@ -324,7 +351,8 @@ export function ChatWidget() {
 
       const normalizedAgentCmd = (agent.endpoint || agent.name || "").trim().toLowerCase();
       const isHermesAgent = normalizedAgentCmd.includes("hermes");
-      const isCodexAgent = normalizedAgentCmd.includes("codex");
+      const streamKind = getAgentStreamKind(agent);
+      const isCodexAgent = streamKind === "codex";
 
       // hermes 使用自身的 session ID，切换 agent 或项目时重置
       const hermesContextKey = `${selectedAgentId}:${currentProject?.id}`;
@@ -356,50 +384,42 @@ export function ChatWidget() {
       // 先添加一条空的 agent 消息，并拿到 id
       const agentMsgId = addMessage({
         role: "agent",
-        content: "...",
+        content: "",
       });
 
-      const codexParser = isCodexAgent ? new CodexJsonlStreamParser() : null;
+      plainStreamAccumRef.current = "";
 
       const result = await runCommand(executable, args, "", (chunk) => {
-        if (isCodexAgent && codexParser) {
-          const text = codexParser.push(chunk);
-          if (!text) return;
-          updateMessage(agentMsgId, (msg) => {
-            if (msg.content === "...") {
-              msg.content = text;
-            } else {
-              msg.content += text;
-            }
-          });
-          return;
-        }
-        // 每次收到流式输出，追加到消息内容中
+        plainStreamAccumRef.current += chunk;
+        const preview = normalizeAgentStreamPreview(plainStreamAccumRef.current);
         updateMessage(agentMsgId, (msg) => {
-          if (msg.content === "...") {
-            msg.content = chunk;
-          } else {
-            msg.content += chunk;
-          }
+          msg.agentProcess = preview || undefined;
+          msg.content = "";
         });
       });
 
-      if (isCodexAgent && codexParser) {
-        const tail = codexParser.flush();
-        if (tail) {
-          updateMessage(agentMsgId, (msg) => {
-            if (msg.content === "...") {
-              msg.content = tail;
-            } else {
-              msg.content += tail;
-            }
-          });
+      if (isCodexAgent) {
+        const parsed = parseCodexStdoutComplete(result.stdout);
+        const ft = parsed.final.trim();
+        updateMessage(agentMsgId, (msg) => {
+          msg.agentProcess = parsed.process || undefined;
+          msg.content = ft || t("executionCompleteNoOutput");
+        });
+        const tid = parsed.threadId ?? extractCodexThreadIdFromStdout(result.stdout);
+        if (tid) {
+          codexSessionIdRef.current = tid;
         }
-        const fromParser = codexParser.threadId;
-        const fromStdout = fromParser ?? extractCodexThreadIdFromStdout(result.stdout);
-        if (fromStdout) {
-          codexSessionIdRef.current = fromStdout;
-        }
+      } else {
+        const { final, process } = splitPlainAgentOutput(streamKind, result.stdout);
+        updateMessage(agentMsgId, (msg) => {
+          msg.agentProcess = process || undefined;
+          const ft = final.trim();
+          if (ft) {
+            msg.content = ft;
+          } else if (!msg.content.trim()) {
+            msg.content = t("executionCompleteNoOutput");
+          }
+        });
       }
 
       // 从 hermes 输出中提取 session ID，用于后续对话恢复
@@ -414,7 +434,7 @@ export function ChatWidget() {
 
       // 最终确保显示完整的结果
       updateMessage(agentMsgId, (msg) => {
-        if (!result.stdout && !result.stderr && msg.content === "...") {
+        if (!result.stdout && !result.stderr && !msg.content.trim()) {
           msg.content = t("executionCompleteNoOutput");
         }
       });
@@ -449,72 +469,83 @@ export function ChatWidget() {
   // 如果未初始化完成位置，先不渲染以防闪烁
   if (position.x === -1) return null;
 
-  // 最小化状态：仅显示圆形图标按钮
+  // 最小化状态：一行预览 + 圆形图标按钮
   if (isMinimized) {
+    const showMinimizedStrip = messages.length > 0 || isExecuting;
     return (
       <>
         <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
+          <div className="fixed top-20 right-5 z-50 flex max-w-[min(92vw,280px)] flex-col items-end gap-1.5">
+            {showMinimizedStrip ? (
               <div
-                className={cn(
-                  "fixed top-20 right-5 z-50 flex items-center justify-center bg-background border border-primary shadow-lg cursor-pointer hover:bg-muted/50 transition-colors w-14 h-14 rounded-full",
-                  isExecuting && "shadow-primary/20",
-                )}
-                onClick={async () => {
-                  // 如果没有选中项目，弹出提示窗口并阻止展开
-                  if (!currentProject) {
-                    toast.error(t("noProjectSelectedPrompt"));
-                    return;
-                  }
-
-                  // 如果没有读到skills文件（文件夹），弹出提示窗口并阻止展开
-                  const skills = await getSkillFolders();
-                  if (!skills || skills.length === 0) {
-                    toast.error(t("noSkillsPrompt"));
-                    return;
-                  }
-
-                  let newX = position.x;
-
-                  // 首次展开或判断到右边框的距离是否小于对话框宽度，如果是，则向左平移
-                  if (position.x === -1 || position.x + size.width > window.innerWidth - MARGIN) {
-                    newX = Math.max(MARGIN, window.innerWidth - size.width - MARGIN);
-                  }
-
-                  if (newX !== position.x) {
-                    setPosition(newX, position.y);
-                  }
-
-                  setIsMinimized(false);
-                }}
+                className="w-full min-h-[1.35rem] rounded-lg border border-border/50 bg-background/95 px-2.5 py-1 text-[11px] leading-snug text-muted-foreground shadow-sm truncate"
+                title={minimizedPreviewLine || undefined}
               >
-                <div className="relative flex items-center justify-center w-full h-full">
-                  {isExecuting && (
-                    <>
-                      <div className="absolute inset-0 border-2 border-primary/20 rounded-full z-0" />
-                      <div
-                        className="absolute inset-0 animate-spin z-0"
-                        style={{ animationDuration: "2s" }}
-                      >
-                        <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-primary rounded-full shadow-[0_0_8px_rgba(59,130,246,0.8)]" />
-                      </div>
-                    </>
-                  )}
-                  <img
-                    src="/mantur-logo.svg"
-                    className="w-8 select-none pointer-events-none relative z-10"
-                    style={{
-                      objectFit: "contain",
-                    }}
-                  />
-                </div>
+                {minimizedPreviewLine || (isExecuting ? "…" : "\u00a0")}
               </div>
-            </TooltipTrigger>
-            <TooltipContent side="left">
-              <p>{t("chatWithAgent")}</p>
-            </TooltipContent>
-          </Tooltip>
+            ) : null}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div
+                  className={cn(
+                    "flex items-center justify-center bg-background border border-primary shadow-lg cursor-pointer hover:bg-muted/50 transition-colors w-14 h-14 rounded-full shrink-0",
+                    isExecuting && "shadow-primary/20",
+                  )}
+                  onClick={async () => {
+                    // 如果没有选中项目，弹出提示窗口并阻止展开
+                    if (!currentProject) {
+                      toast.error(t("noProjectSelectedPrompt"));
+                      return;
+                    }
+
+                    // 如果没有读到skills文件（文件夹），弹出提示窗口并阻止展开
+                    const skills = await getSkillFolders();
+                    if (!skills || skills.length === 0) {
+                      toast.error(t("noSkillsPrompt"));
+                      return;
+                    }
+
+                    let newX = position.x;
+
+                    // 首次展开或判断到右边框的距离是否小于对话框宽度，如果是，则向左平移
+                    if (position.x === -1 || position.x + size.width > window.innerWidth - MARGIN) {
+                      newX = Math.max(MARGIN, window.innerWidth - size.width - MARGIN);
+                    }
+
+                    if (newX !== position.x) {
+                      setPosition(newX, position.y);
+                    }
+
+                    setIsMinimized(false);
+                  }}
+                >
+                  <div className="relative flex items-center justify-center w-full h-full">
+                    {isExecuting && (
+                      <>
+                        <div className="absolute inset-0 border-2 border-primary/20 rounded-full z-0" />
+                        <div
+                          className="absolute inset-0 animate-spin z-0"
+                          style={{ animationDuration: "2s" }}
+                        >
+                          <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-primary rounded-full shadow-[0_0_8px_rgba(59,130,246,0.8)]" />
+                        </div>
+                      </>
+                    )}
+                    <img
+                      src="/mantur-logo.svg"
+                      className="w-8 select-none pointer-events-none relative z-10"
+                      style={{
+                        objectFit: "contain",
+                      }}
+                    />
+                  </div>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="left">
+                <p>{t("chatWithAgent")}</p>
+              </TooltipContent>
+            </Tooltip>
+          </div>
         </TooltipProvider>
         <AgentManagerModal />
       </>
@@ -616,7 +647,12 @@ export function ChatWidget() {
                           : "rounded-tl-sm text-foreground/90",
                       )}
                     >
-                      <MessageContent content={msg.content} isUser={isUser} allAssets={allAssets} />
+                      <MessageContent
+                        content={msg.content}
+                        isUser={isUser}
+                        allAssets={allAssets}
+                        agentProcess={!isUser ? msg.agentProcess : undefined}
+                      />
                     </div>
                   </div>
                 );

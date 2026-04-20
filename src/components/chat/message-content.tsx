@@ -1,4 +1,5 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import {
@@ -159,6 +160,8 @@ interface MessageContentProps {
   isUser?: boolean;
   className?: string;
   allAssets?: AssetItem[];
+  /** 智能体过程输出，与正文分开展示（折叠） */
+  agentProcess?: string;
 }
 
 export function MessageContent({
@@ -166,7 +169,11 @@ export function MessageContent({
   isUser = false,
   className,
   allAssets,
+  agentProcess,
 }: MessageContentProps) {
+  const t = useTranslations("chat");
+  const [processOpen, setProcessOpen] = useState(true);
+  const processScrollRef = useRef<HTMLDivElement>(null);
   const cleaned = stripAnsi(content);
   const hasMentions = MENTION_REGEX.test(cleaned);
   // Reset lastIndex after test()
@@ -180,120 +187,164 @@ export function MessageContent({
     );
   }
 
-  const useMarkdown = !hasMentions && hasMarkdown(cleaned);
+  const processCleaned = agentProcess ? stripAnsi(agentProcess) : "";
+  const hasMainText = cleaned.trim().length > 0;
 
-  if (!useMarkdown) {
+  useEffect(() => {
+    const el = processScrollRef.current;
+    if (!el || !processCleaned) return;
+    requestAnimationFrame(() => {
+      el.scrollTop = el.scrollHeight;
+    });
+  }, [processCleaned]);
+
+  const mainBlock = (() => {
+    if (!hasMainText) return null;
+    const useMarkdown = !hasMentions && hasMarkdown(cleaned);
+
+    if (!useMarkdown) {
+      return (
+        <span className={cn("leading-relaxed", className)}>
+          <InlineWithMentions content={cleaned} allAssets={allAssets} />
+        </span>
+      );
+    }
+
     return (
-      <span className={cn("leading-relaxed", className)}>
-        <InlineWithMentions content={cleaned} allAssets={allAssets} />
-      </span>
-    );
-  }
-
-  return (
-    <div className={cn("chat-markdown prose prose-sm max-w-none overflow-hidden", className)}>
-      <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
-        components={{
-          code({ className: codeClass, children, ...props }) {
-            const isBlock = /language-(\w+)/.test(codeClass || "");
-            const codeContent = String(children).replace(/\n$/, "");
-            if (isBlock) {
-              const lang = (codeClass || "").replace("language-", "");
+      <div className={cn("chat-markdown prose prose-sm max-w-none overflow-hidden", className)}>
+        <ReactMarkdown
+          remarkPlugins={[remarkGfm]}
+          components={{
+            code({ className: codeClass, children, ...props }) {
+              const isBlock = /language-(\w+)/.test(codeClass || "");
+              const codeContent = String(children).replace(/\n$/, "");
+              if (isBlock) {
+                const lang = (codeClass || "").replace("language-", "");
+                return (
+                  <div className="relative group my-3">
+                    {lang && (
+                      <span className="absolute top-2 right-3 text-[10px] font-mono text-muted-foreground/60 select-none">
+                        {lang}
+                      </span>
+                    )}
+                    <pre className="overflow-x-auto rounded-lg bg-muted/60 border border-border/40 p-4 text-xs leading-relaxed">
+                      <code className={cn("font-mono text-foreground/90", codeClass)}>
+                        {codeContent}
+                      </code>
+                    </pre>
+                  </div>
+                );
+              }
               return (
-                <div className="relative group my-3">
-                  {lang && (
-                    <span className="absolute top-2 right-3 text-[10px] font-mono text-muted-foreground/60 select-none">
-                      {lang}
-                    </span>
-                  )}
-                  <pre className="overflow-x-auto rounded-lg bg-muted/60 border border-border/40 p-4 text-xs leading-relaxed">
-                    <code className={cn("font-mono text-foreground/90", codeClass)}>
-                      {codeContent}
-                    </code>
-                  </pre>
+                <code
+                  className="px-1.5 py-0.5 rounded bg-muted/60 border border-border/30 font-mono text-xs text-foreground/90"
+                  {...props}
+                >
+                  {children}
+                </code>
+              );
+            },
+            pre({ children }) {
+              return <>{children}</>;
+            },
+            p({ children }) {
+              return <p className="mb-2 last:mb-0 leading-relaxed">{children}</p>;
+            },
+            h1({ children }) {
+              return <h1 className="text-base font-bold mb-2 mt-3 first:mt-0">{children}</h1>;
+            },
+            h2({ children }) {
+              return <h2 className="text-sm font-bold mb-2 mt-3 first:mt-0">{children}</h2>;
+            },
+            h3({ children }) {
+              return <h3 className="text-sm font-semibold mb-1.5 mt-2 first:mt-0">{children}</h3>;
+            },
+            ul({ children }) {
+              return <ul className="list-disc list-outside pl-4 mb-2 space-y-0.5">{children}</ul>;
+            },
+            ol({ children }) {
+              return (
+                <ol className="list-decimal list-outside pl-4 mb-2 space-y-0.5">{children}</ol>
+              );
+            },
+            li({ children }) {
+              return <li className="leading-relaxed">{children}</li>;
+            },
+            blockquote({ children }) {
+              return (
+                <blockquote className="border-l-2 border-primary/40 pl-3 my-2 text-muted-foreground italic">
+                  {children}
+                </blockquote>
+              );
+            },
+            a({ children, href }) {
+              return (
+                <a
+                  href={href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary underline underline-offset-2 hover:text-primary/80 transition-colors"
+                >
+                  {children}
+                </a>
+              );
+            },
+            table({ children }) {
+              return (
+                <div className="overflow-x-auto my-2">
+                  <table className="w-full text-xs border-collapse">{children}</table>
                 </div>
               );
-            }
-            return (
-              <code
-                className="px-1.5 py-0.5 rounded bg-muted/60 border border-border/30 font-mono text-xs text-foreground/90"
-                {...props}
-              >
-                {children}
-              </code>
-            );
-          },
-          pre({ children }) {
-            return <>{children}</>;
-          },
-          p({ children }) {
-            return <p className="mb-2 last:mb-0 leading-relaxed">{children}</p>;
-          },
-          h1({ children }) {
-            return <h1 className="text-base font-bold mb-2 mt-3 first:mt-0">{children}</h1>;
-          },
-          h2({ children }) {
-            return <h2 className="text-sm font-bold mb-2 mt-3 first:mt-0">{children}</h2>;
-          },
-          h3({ children }) {
-            return <h3 className="text-sm font-semibold mb-1.5 mt-2 first:mt-0">{children}</h3>;
-          },
-          ul({ children }) {
-            return <ul className="list-disc list-outside pl-4 mb-2 space-y-0.5">{children}</ul>;
-          },
-          ol({ children }) {
-            return <ol className="list-decimal list-outside pl-4 mb-2 space-y-0.5">{children}</ol>;
-          },
-          li({ children }) {
-            return <li className="leading-relaxed">{children}</li>;
-          },
-          blockquote({ children }) {
-            return (
-              <blockquote className="border-l-2 border-primary/40 pl-3 my-2 text-muted-foreground italic">
-                {children}
-              </blockquote>
-            );
-          },
-          a({ children, href }) {
-            return (
-              <a
-                href={href}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary underline underline-offset-2 hover:text-primary/80 transition-colors"
-              >
-                {children}
-              </a>
-            );
-          },
-          table({ children }) {
-            return (
-              <div className="overflow-x-auto my-2">
-                <table className="w-full text-xs border-collapse">{children}</table>
-              </div>
-            );
-          },
-          th({ children }) {
-            return (
-              <th className="border border-border/50 bg-muted/50 px-2 py-1 text-left font-semibold">
-                {children}
-              </th>
-            );
-          },
-          td({ children }) {
-            return <td className="border border-border/50 px-2 py-1">{children}</td>;
-          },
-          hr() {
-            return <hr className="border-border/40 my-3" />;
-          },
-          strong({ children }) {
-            return <strong className="font-semibold text-foreground">{children}</strong>;
-          },
-        }}
-      >
-        {cleaned}
-      </ReactMarkdown>
+            },
+            th({ children }) {
+              return (
+                <th className="border border-border/50 bg-muted/50 px-2 py-1 text-left font-semibold">
+                  {children}
+                </th>
+              );
+            },
+            td({ children }) {
+              return <td className="border border-border/50 px-2 py-1">{children}</td>;
+            },
+            hr() {
+              return <hr className="border-border/40 my-3" />;
+            },
+            strong({ children }) {
+              return <strong className="font-semibold text-foreground">{children}</strong>;
+            },
+          }}
+        >
+          {cleaned}
+        </ReactMarkdown>
+      </div>
+    );
+  })();
+
+  return (
+    <div className="min-w-0 space-y-2">
+      {processCleaned ? (
+        <details
+          open={processOpen}
+          onToggle={(e) => setProcessOpen(e.currentTarget.open)}
+          className="group rounded-lg border border-border/50 bg-muted/25 text-xs"
+        >
+          <summary className="cursor-pointer list-none px-2.5 py-2 font-medium text-muted-foreground transition-colors hover:text-foreground [&::-webkit-details-marker]:hidden">
+            <span className="inline-flex items-center gap-1.5">
+              <span className="text-[10px] opacity-70 group-open:rotate-90 transition-transform">
+                ▸
+              </span>
+              {t("agentProcessSection")}
+            </span>
+          </summary>
+          <div
+            ref={processScrollRef}
+            className="px-2.5 pb-2.5 max-h-52 overflow-y-auto border-t border-border/40 pt-2 text-muted-foreground"
+          >
+            <InlineWithMentions content={processCleaned} allAssets={allAssets} />
+          </div>
+        </details>
+      ) : null}
+      {mainBlock}
     </div>
   );
 }
