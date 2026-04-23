@@ -1,0 +1,39 @@
+{
+  "agents": [
+    {
+      "id": "898b56b5-b03b-4554-9f54-a60ff4734f9f",
+      "name": "test-agent",
+      "instructions": "test",
+      "icon": "",
+      "description": ""
+    },
+    {
+      "id": "d48555cb-cc2d-4e10-a48a-6a2981f342ba",
+      "name": "test2",
+      "instructions": "test2",
+      "icon": "",
+      "description": ""
+    },
+    {
+      "id": "c346d61c-0184-4488-8024-f0a1bcd4402d",
+      "name": "debug-test",
+      "instructions": "debug",
+      "icon": "",
+      "description": ""
+    },
+    {
+      "id": "998bd14c-bfc6-4ed3-a605-07d247ce4eaf",
+      "name": "测试智能体",
+      "instructions": "测试",
+      "icon": "",
+      "description": ""
+    },
+    {
+      "id": "e41fd608-bbbc-4545-be79-2b5e623350ff",
+      "name": "hermes",
+      "instructions": "hermes",
+      "icon": "https://hermes-agent.nousresearch.com/icon.png?icon.17972d59.png",
+      "description": ""
+    }
+  ]
+}

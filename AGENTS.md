@@ -3,3 +3,37 @@
 
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
 <!-- END:nextjs-agent-rules -->
+
+
+
+1. 通用基础规则
+   技术栈：Next.js 14 App Router、ReactFlow、next-intl、Tailwind、ShadCN/UI；
+   文本规范：所有展示文本必须放入语言包，禁止硬编码中文 / 英文；翻译 key 统一为模块:功能格式。
+   命名规范：文件 / 目录小写 + 连字符；组件大驼峰；变量 / 函数小驼峰；常量大写 + 下划线。
+   代码规范：TS 完整类型、无 any、无死代码、无跨目录非法引用；异常必须捕获。、
+2. 目录边界规则（强制）
+   业务仅允许操作：projects/[项目ID]/\*，禁止读写系统目录 / 其他工程目录。
+   禁止使用绝对路径、非法遍历上级目录、跨模块越权访问。
+   所有文件操作必须通过封装服务，禁止组件直接调用 fs。
+3. ReactFlow 画布规则
+   节点存储：仅保存id/type/position/data，结构可序列化，不存 DOM / 函数 / 绝对路径。
+   画布文件：统一保存为projects/[id]/flow.json，自动加载 / 自动保存。
+   节点类型：仅允许command-node、result-node，数据统一规范。
+   状态管理：画布状态集中管理，禁止分散在组件滥用。
+4. 国际化 next-intl 规则
+   语言包存放：messages/[语言].json，公共文本放在common.json中，其它以页面模块命名的 json 文件。
+   页面与组件统一使用useTranslations，不重复定义语言 key。
+   新增文案必须同步写入对应语言包，不遗漏翻译。
+5. 本地文件读写规则
+   读写必须加异常捕获、路径校验，不抛出未处理错误。
+   禁止覆盖、删除非项目生成的文件，保证本地安全。
+6. Trae 生产级自检项
+   代码需添加注释
+   
+   需优化代码，避免重复、冗余逻辑。
+   无跨目录违规操作
+   无硬编码文本，全部走 i18n
+   类型完整、无 any、无冗余代码
+   文件读写安全、异常可捕获
+   ReactFlow 节点可序列化、可持久化
+   样式仅局部生效，不污染全局

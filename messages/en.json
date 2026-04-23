@@ -1,0 +1,122 @@
+{
+  "Metadata": {
+    "title": "Mantur Canvas",
+    "description": "A multilingual Next.js app scaffold for Mantur Canvas."
+  },
+  "Header": {
+    "brandName": "Mantur",
+    "logoAlt": "Mantur logo",
+    "switchLanguage": "Switch language"
+  },
+  "AgentSwitcher": {
+    "selectAriaLabel": "Select agent",
+    "placeholder": "Select an agent",
+    "empty": "No agents yet. Open the manager to create one.",
+    "manageButton": "Manage agents",
+    "dialog": {
+      "title": "Manage agents",
+      "description": "Create, edit, and remove local agents for this project.",
+      "close": "Close"
+    },
+    "list": {
+      "title": "Agent list",
+      "add": "New agent",
+      "noDescription": "No description"
+    },
+    "form": {
+      "createTitle": "Create agent",
+      "createDescription": "Fill in the required fields and save the new agent.",
+      "editTitle": "Edit agent",
+      "editDescription": "Update the current agent and save your changes.",
+      "name": "Name",
+      "namePlaceholder": "e.g. Research agent",
+      "icon": "Icon",
+      "iconPlaceholder": "e.g. 🤖",
+      "description": "Description",
+      "descriptionPlaceholder": "Optional short description for this agent.",
+      "instructions": "Instructions",
+      "instructionsPlaceholder": "Write the agent instructions here."
+    },
+    "actions": {
+      "create": "Create agent",
+      "update": "Save changes",
+      "saving": "Saving...",
+      "reset": "Reset",
+      "edit": "Edit agent",
+      "delete": "Delete"
+    },
+    "confirm": {
+      "title": "Delete agent",
+      "description": "Delete \"{name}\"? This action cannot be undone.",
+      "cancel": "Cancel",
+      "confirm": "Delete",
+      "deleting": "Deleting..."
+    },
+    "validation": {
+      "nameRequired": "Name is required.",
+      "instructionsRequired": "Instructions are required."
+    },
+    "feedback": {
+      "loading": "Loading agents",
+      "loadError": "Unable to load agents.",
+      "saveSuccess": "Agent saved.",
+      "saveError": "Unable to save agent.",
+      "deleteSuccess": "Agent deleted.",
+      "deleteError": "Unable to delete agent."
+    }
+  },
+  "Home": {
+    "eyebrow": "Canvas workspace",
+    "title": "Build multilingual experiences from a locale-aware app shell.",
+    "description": "This homepage now uses next-intl routing, message catalogs, and a simple language switcher so you can expand the site without duplicating pages.",
+    "primaryCta": "Open docs",
+    "secondaryCta": "Current language",
+    "languageLabel": "Language",
+    "canvasCta": "Open flow canvas"
+  },
+  "Canvas": {
+    "eyebrow": "Flow prototype",
+    "title": "A minimal canvas wired with the libraries you added.",
+    "description": "This page combines React Flow for the graph, zustand for state, zod for seed validation, lucide-react for icons, and shadcn/ui for controls.",
+    "localeTitle": "Locale-ready shell",
+    "localeDescription": "The route and chrome stay localized, with {defaultLocale} as the default locale and {secondaryLocale} available as a secondary route.",
+    "addNode": "Add node",
+    "reset": "Reset canvas",
+    "stackTitle": "Integrated stack",
+    "stackItems": {
+      "flow": "React Flow renders draggable nodes and connections.",
+      "store": "zustand keeps the graph state in a small client store.",
+      "schema": "zod validates the initial graph data before hydration.",
+      "ui": "shadcn/ui provides the action buttons and shared UI primitives."
+    },
+    "canvasTitle": "Workspace",
+    "canvasHint": "Drag nodes, connect handles, and inspect the minimap.",
+    "nodeCount": "{count, plural, one {# node} other {# nodes}}",
+    "newNodeLabel": "Idea {count}",
+    "back": "Back to home"
+  },
+  "Sidebar": {
+    "episodes": "Episodes",
+    "assets": "Assets",
+    "projects": "Projects",
+    "settings": "Settings",
+    "skills": "Skills",
+    "video": "Video",
+    "assetTabs": {
+      "all": "All",
+      "character": "Character",
+      "scene": "Scene",
+      "prop": "Prop",
+      "voice": "Voice",
+      "video": "Video"
+    }
+  },
+  "Locale": {
+    "en": "English",
+    "zh": "简体中文",
+    "zh-TW": "繁體中文",
+    "ja": "日本語",
+    "ru": "Русский",
+    "vi": "Tiếng Việt"
+  }
+}
