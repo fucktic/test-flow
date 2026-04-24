@@ -103,6 +103,11 @@
     "settings": "设置",
     "skills": "技能",
     "video": "视频",
+    "episodePanel": {
+      "selectedCount": "{count}/{max}",
+      "empty": "当前项目暂无分集",
+      "noCurrentProject": "请先进入项目"
+    },
     "assetTabs": {
       "all": "全部",
       "character": "角色",

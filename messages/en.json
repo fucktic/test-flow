@@ -103,6 +103,11 @@
     "settings": "Settings",
     "skills": "Skills",
     "video": "Video",
+    "episodePanel": {
+      "selectedCount": "{count}/{max}",
+      "empty": "No episodes in the current project",
+      "noCurrentProject": "Enter a project first"
+    },
     "assetTabs": {
       "all": "All",
       "character": "Character",

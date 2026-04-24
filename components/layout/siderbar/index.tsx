@@ -42,12 +42,19 @@ function VideoPanel() {
 }
 
 function FloatingPanel({ active, onClose }: { active: NavSection; onClose: () => void }) {
-  if (active === null || !FLOAT_KEYS.has(active)) return null;
+  const t = useTranslations("Sidebar");
+  const visible = active !== null && FLOAT_KEYS.has(active);
 
   return (
-    <div className="fixed top-16 left-20 z-40 overflow-hidden rounded-2xl border border-border bg-card shadow-2xl">
+    <div
+      className={cn(
+        "fixed top-16 left-20 z-40 min-w-[260px] overflow-hidden rounded-2xl border border-border bg-card shadow-2xl transition-all duration-200 ease-out backdrop-blur-md",
+        visible ? "translate-x-0 opacity-100" : "pointer-events-none -translate-x-2 opacity-0",
+      )}
+      aria-hidden={!visible}
+    >
       <div className="flex items-center justify-between border-b border-border px-4 py-2">
-        <span className="text-sm font-semibold capitalize">{active}</span>
+        <span className="text-sm font-semibold">{active ? t(active) : null}</span>
         <button
           type="button"
           onClick={onClose}
