@@ -11,6 +11,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { Separator } from "@/components/ui/separator"
+import { Button } from "@/components/ui/button"
 import { useTranslations } from "next-intl"
 import { EpisodesPanel } from "./episodes-panel"
 import { AssetsPanel } from "./assets-panel"
@@ -34,13 +35,22 @@ const NAV_ITEMS: NavItem[] = [
   { key: "video", icon: Video, group: 2 },
 ]
 
+function VideoPanel() {
+  const t = useTranslations("Sidebar")
+  const label = t("video")
+  return (
+    <div className="flex flex-col gap-3 p-4">
+      <h3 className="text-sm font-semibold">{label}</h3>
+      <p className="text-muted-foreground text-xs">{label} — 暂无内容</p>
+    </div>
+  )
+}
+
 function FloatingPanel({
   active,
-  t,
   onClose,
 }: {
   active: NavSection
-  t: (key: string) => string
   onClose: () => void
 }) {
   if (active === null || !FLOAT_KEYS.has(active)) return null
@@ -48,7 +58,7 @@ function FloatingPanel({
   return (
     <div className="fixed top-16 left-20 z-40 overflow-hidden rounded-2xl border border-border bg-card shadow-2xl">
       <div className="flex items-center justify-between border-b border-border px-4 py-2">
-        <h3 className="text-sm font-semibold">{t(active)}</h3>
+        <span className="text-sm font-semibold capitalize">{active}</span>
         <button
           type="button"
           onClick={onClose}
@@ -61,7 +71,7 @@ function FloatingPanel({
       <div className="overflow-y-auto">
         {active === "episodes" && <EpisodesPanel />}
         {active === "assets" && <AssetsPanel />}
-        {active === "video" && <ProjectsPanel label={t("video")} />}
+        {active === "video" && <VideoPanel />}
       </div>
     </div>
   )
@@ -69,9 +79,11 @@ function FloatingPanel({
 
 function DialogPanel({
   active,
+  t,
   onClose,
 }: {
   active: NavSection
+  t: (key: string) => string
   onClose: () => void
 }) {
   return (
@@ -87,9 +99,17 @@ function DialogPanel({
           className="fixed top-1/2 left-1/2 z-50 max-h-[85vh] w-[min(92vw,960px)] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-2xl outline-none"
         >
           <div className="flex items-center justify-between border-b border-border px-6 py-3">
-            {active === "projects" && <ProjectsPanel label="" />}
-            {active === "settings" && <SettingsPanel label="" />}
-            {active === "skills" && <SkillsPanel label="" />}
+            {active ? <Dialog.Title className="text-lg font-semibold">{t(active)}</Dialog.Title> : null}
+            <Dialog.Close asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <X className="size-4" />
+              </Button>
+            </Dialog.Close>
           </div>
 
           <div className="overflow-y-auto p-4">
@@ -141,10 +161,10 @@ const Sidebar = () => {
       </aside>
 
       {/* Floating panel: episodes, assets, video */}
-      <FloatingPanel active={active} t={t} onClose={() => setActive(null)} />
+      <FloatingPanel active={active} onClose={() => setActive(null)} />
 
       {/* Modal dialog: projects, settings, skills */}
-      <DialogPanel active={active} onClose={() => setActive(null)} />
+      <DialogPanel active={active} t={t} onClose={() => setActive(null)} />
     </TooltipProvider>
   )
 }

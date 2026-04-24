@@ -12,11 +12,12 @@ import {
 import { useCanvasStore } from "@/store/use-canvas-store";
 
 function CanvasWorkspaceInner() {
-  const { edges, nodes, onConnect, onEdgesChange, onNodesChange } =
+  const {  edges, nodes, onConnect, onEdgesChange, onNodesChange } =
     useCanvasStore();
 
   return (
-    <div className="h-full min-h-[520px] overflow-hidden rounded-3xl border border-white/10 bg-black/30">
+    <div className="relative h-full  overflow-hidden rounded-3xl border border-white/10 bg-black/30">
+      
       <ReactFlow
         fitView
         colorMode="dark"

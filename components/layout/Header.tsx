@@ -1,22 +1,33 @@
-import { getTranslations } from "next-intl/server";
+'use client'
+import { useTranslations } from "next-intl";
 import Image from "next/image";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import AgentSwitcher from "./AgentSwitcher";
-export default async function Header() {
-    const t = await getTranslations("Header");
+import { useCanvasStore } from "@/store/use-canvas-store";
+
+export default function Header() {
+    const currentProject = useCanvasStore((state) => state.currentProject);
+    const t = useTranslations("Header");
 
     return (
         <header className="pointer-events-none fixed top-0 left-0 right-0 z-50 h-16 px-16 flex items-center">
-            <span className="inline-flex items-center gap-2">
+            <span className="pointer-events-auto inline-flex min-w-0 items-center gap-2">
                 <Image
                     src="/mantur-logo.svg"
                     alt={t("logoAlt")}
                     width={68}
                     height={20}
                     loading="eager"
-
+                    style={{ width: 68, height: "auto" }}
                 />
-                <span className="text-xl font-bold">{t("brandName")}</span>
+                {currentProject ? (
+                    <span className="max-w-[min(420px,60vw)] truncate text-sm font-semibold text-foreground">
+                        {currentProject.name}
+                    </span>
+                ) : (
+                    <span className="text-xl font-bold">{t("brandName")}</span>
+                )}
+
             </span>
             <div className="flex-1"></div>
             <span className="pointer-events-auto flex items-center gap-2">

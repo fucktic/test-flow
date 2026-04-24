@@ -10,7 +10,8 @@ This version has breaking changes — APIs, conventions, and file structure may 
    技术栈：Next.js 14 App Router、ReactFlow、next-intl、Tailwind、ShadCN/UI；
    文本规范：所有展示文本必须放入语言包，禁止硬编码中文 / 英文；翻译 key 统一为模块:功能格式。
    命名规范：文件 / 目录小写 + 连字符；组件大驼峰；变量 / 函数小驼峰；常量大写 + 下划线。
-   代码规范：TS 完整类型、无 any、无死代码、无跨目录非法引用；异常必须捕获。、
+   代码规范：TS 完整类型、无 any、无死代码、无跨目录非法引用；异常必须捕获。
+   组件必须先shadcn/ui组件库。
 2. 目录边界规则（强制）
    业务仅允许操作：projects/[项目ID]/\*，禁止读写系统目录 / 其他工程目录。
    禁止使用绝对路径、非法遍历上级目录、跨模块越权访问。
