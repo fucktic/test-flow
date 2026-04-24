@@ -112,6 +112,90 @@
       "video": "视频"
     }
   },
+  "Skills": {
+    "title": "技能文件夹",
+    "description": "管理根目录 skills 下的技能文件夹。",
+    "empty": "暂无技能文件夹",
+    "fileCount": "{count} 个文件",
+    "actions": {
+      "upload": "上传",
+      "uploading": "上传中...",
+      "delete": "删除",
+      "confirmDelete": "确认删除"
+    },
+    "feedback": {
+      "loading": "加载中...",
+      "loadError": "技能文件夹加载失败。",
+      "uploadSuccess": "技能文件夹已上传。",
+      "uploadError": "技能文件夹上传失败。",
+      "deleteError": "技能文件夹删除失败。"
+    }
+  },
+  "Settings": {
+    "modelManager": {
+      "title": "模型管理器",
+      "description": "为图片和视频分别维护可用模型，每类都可以添加多个模型。",
+      "sections": {
+        "image": "图片",
+        "video": "视频",
+        "imageBed": "图床"
+      },
+      "types": {
+        "image": "图片",
+        "video": "视频"
+      },
+      "form": {
+        "createTitle": "新增配置",
+        "editTitle": "编辑配置",
+        "subtitle": "添加一个{type}生成模型",
+        "name": "模型名称",
+        "namePlaceholder": "输入模型名称",
+        "imageBedName": "图床名称",
+        "imageBedNamePlaceholder": "输入图床名称",
+        "apiKey": "API Key",
+        "apiKeyPlaceholder": "输入模型 API Key",
+        "default": "默认",
+        "defaultImageBed": "默认图床",
+        "example": "示例",
+        "examplePlaceholder": "输入这个模型的调用示例或用途说明",
+        "imageBedExamplePlaceholder": "输入图床上传地址、访问域名或使用示例",
+        "videoReferenceMode": "视频参考模式",
+        "editing": "正在编辑“{name}”"
+      },
+      "videoReferenceModes": {
+        "all-purpose": "全能参考",
+        "first-last-frame": "首尾帧"
+      },
+      "actions": {
+        "new": "新增",
+        "save": "保存",
+        "saving": "保存中...",
+        "remove": "删除模型",
+        "confirmRemove": "确认删除",
+        "setDefault": "设为默认图床",
+        "showApiKey": "显示 API Key",
+        "hideApiKey": "隐藏 API Key"
+      },
+      "list": {
+        "title": "{type}模型",
+        "count": "{count} 个",
+        "empty": "暂无模型"
+      },
+      "validation": {
+        "nameRequired": "名称不能为空。",
+        "apiKeyRequired": "API Key 不能为空。",
+        "exampleRequired": "示例不能为空。",
+        "required": "请填写模型名称、API Key 和示例。",
+        "saveFailed": "模型保存失败，请重试。"
+      },
+      "feedback": {
+        "loading": "加载中...",
+        "loadError": "配置加载失败。",
+        "saveError": "请填写名称、API Key 和示例后保存。",
+        "saved": "配置已保存。"
+      }
+    }
+  },
   "Projects": {
     "newProject": "新增项目",
     "loading": "加载中...",

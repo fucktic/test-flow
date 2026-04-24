@@ -17,7 +17,8 @@ import {
 } from "@/components/ui/dialog"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { deleteProject, listProjects, updateProject } from "@/lib/services/project-service"
+import { fetchProjects, updateCurrentProject } from "@/lib/project-api"
+import { deleteProject, updateProject } from "@/lib/services/project-service"
 import type { ProjectListItem } from "@/lib/project-types"
 import { useCanvasStore } from "@/store/use-canvas-store"
 
@@ -143,6 +144,8 @@ function EditProjectDialog({
   onUpdated: () => void
 }) {
   const t = useTranslations("Projects")
+  const currentProject = useCanvasStore((state) => state.currentProject)
+  const setCurrentProject = useCanvasStore((state) => state.setCurrentProject)
 
   const handleSave = async (values: ProjectEditableFormValues) => {
     if (!project) return false
@@ -155,6 +158,9 @@ function EditProjectDialog({
       })
 
       if (result.success) {
+        if (currentProject?.id === result.project.id) {
+          setCurrentProject(result.project)
+        }
         toast.success(t("editSuccess"))
         onUpdated()
         onClose()
@@ -207,6 +213,8 @@ function DeleteProjectDialog({
   onDeleted: () => void
 }) {
   const t = useTranslations("Projects")
+  const clearCurrentProject = useCanvasStore((state) => state.clearCurrentProject)
+  const currentProject = useCanvasStore((state) => state.currentProject)
   const [deleting, setDeleting] = useState(false)
 
   const handleDelete = async () => {
@@ -216,6 +224,9 @@ function DeleteProjectDialog({
     try {
       const result = await deleteProject(project.id)
       if (result.success) {
+        if (currentProject?.id === project.id) {
+          clearCurrentProject()
+        }
         toast.success(t("deleteSuccess"))
         onDeleted()
         onClose()
@@ -251,28 +262,28 @@ function DeleteProjectDialog({
 
 export function ProjectsPanel() {
   const t = useTranslations("Projects")
+  const currentProject = useCanvasStore((state) => state.currentProject)
+  const projects = useCanvasStore((state) => state.projects)
+  const clearCurrentProject = useCanvasStore((state) => state.clearCurrentProject)
   const setCurrentProject = useCanvasStore((state) => state.setCurrentProject)
+  const setProjects = useCanvasStore((state) => state.setProjects)
   const [addScriptOpen, setAddScriptOpen] = useState(false)
   const [editingProject, setEditingProject] = useState<ProjectListItem | null>(null)
   const [deletingProject, setDeletingProject] = useState<ProjectListItem | null>(null)
-  const [projects, setProjects] = useState<ProjectListItem[]>([])
   const [loadingProjects, setLoadingProjects] = useState(false)
+  const [enteringProjectId, setEnteringProjectId] = useState<string | null>(null)
 
   const refreshProjects = useCallback(async () => {
     setLoadingProjects(true)
     try {
-      const result = await listProjects()
-      if (result.success) {
-        setProjects(result.projects)
-      } else {
-        toast.error(t("loadError"))
-      }
+      const nextProjects = await fetchProjects()
+      setProjects(nextProjects)
     } catch {
       toast.error(t("loadError"))
     } finally {
       setLoadingProjects(false)
     }
-  }, [t])
+  }, [setProjects, t])
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -282,9 +293,17 @@ export function ProjectsPanel() {
     return () => window.clearTimeout(timeoutId)
   }, [refreshProjects])
 
-  const handleEnterProject = (project: ProjectListItem) => {
-    setCurrentProject(project)
-    toast.success(t("enterSuccess", { name: project.name }))
+  const handleEnterProject = async (project: ProjectListItem) => {
+    setEnteringProjectId(project.id)
+    try {
+      const projectDetail = await updateCurrentProject(project.id)
+      setCurrentProject(projectDetail)
+      toast.success(t("enterSuccess", { name: projectDetail.name }))
+    } catch {
+      toast.error(t("loadError"))
+    } finally {
+      setEnteringProjectId(null)
+    }
   }
 
   return (
@@ -343,9 +362,14 @@ export function ProjectsPanel() {
                 variant="ghost"
                 aria-label={t("enter")}
                 onClick={() => handleEnterProject(project)}
+                disabled={enteringProjectId === project.id}
                 className="absolute top-1/2 left-1/2 size-12 -translate-x-1/2 -translate-y-1/2 rounded-full opacity-0 shadow-lg transition-all hover:scale-110 group-hover:opacity-100"
               >
-                <LogIn className="size-6" />
+                {enteringProjectId === project.id ? (
+                  <Loader2 className="size-6 animate-spin" />
+                ) : (
+                  <LogIn className="size-6" />
+                )}
               </Button>
               <div className="flex w-full items-center justify-between gap-2 text-[11px] text-muted-foreground">
                 <span>{t("episodeCount", { count: project.episodeCount })}</span>
@@ -389,7 +413,12 @@ export function ProjectsPanel() {
       <DeleteProjectDialog
         project={deletingProject}
         onClose={() => setDeletingProject(null)}
-        onDeleted={refreshProjects}
+        onDeleted={() => {
+          if (currentProject?.id === deletingProject?.id) {
+            clearCurrentProject()
+          }
+          void refreshProjects()
+        }}
       />
     </div>
   )

@@ -1,0 +1,23 @@
+target_files:
+  - global-assets/scene-prompts.md
+  - ep-01/director-analysis.md
+check_items:
+  - name: 场景信息完整性
+    rule: 每个场景的描述完整、可生成、可区分
+    weight: 10
+    pass_condition: 所有场景都包含环境、光影、风格、时代背景描述
+  - name: 与导演分析一致性
+    rule: 场景清单与导演分析中的场景清单完全匹配，无遗漏、无冲突
+    weight: 10
+    pass_condition: 所有导演分析中提到的场景都有对应提示词，描述无矛盾
+  - name: 九宫格格式合规
+    rule: 场景提示词规定为3×3九宫格，禁止3×4、4×4等其他格式
+    weight: 10
+    pass_condition: 所有场景宫格都是3×3格式，余格拆分策略符合art-direction-skill要求
+  - name: 视觉风格统一性
+    rule: 所有场景提示词与人物提示词共用同一套视觉规范，格间画风统一
+    weight: 10
+    pass_condition: 所有场景的画风、渲染风格、配色体系与人物人设统一
+acceptance:
+  min_score: 32
+  no_item_below: 6

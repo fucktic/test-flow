@@ -12,17 +12,20 @@ import {
 } from "@xyflow/react";
 import {create} from "zustand";
 import {initialFlowState} from "@/lib/flow-schema";
-import type { ProjectListItem } from "@/lib/project-types";
+import type { ProjectDetail, ProjectListItem } from "@/lib/project-types";
 
 type CanvasNode = Node<{label: string}>;
 type CanvasEdge = Edge;
 
 type CanvasState = {
-  currentProject: ProjectListItem | null;
+  currentProject: ProjectDetail | null;
+  projects: ProjectListItem[];
   nodes: CanvasNode[];
   edges: CanvasEdge[];
   addNode: (label: string) => void;
-  setCurrentProject: (project: ProjectListItem) => void;
+  clearCurrentProject: () => void;
+  setCurrentProject: (project: ProjectDetail) => void;
+  setProjects: (projects: ProjectListItem[]) => void;
   onConnect: (connection: Connection) => void;
   onEdgesChange: (changes: EdgeChange<CanvasEdge>[]) => void;
   onNodesChange: (changes: NodeChange<CanvasNode>[]) => void;
@@ -43,8 +46,11 @@ const buildInitialState = () => ({
 
 export const useCanvasStore = create<CanvasState>((set) => ({
   currentProject: null,
+  projects: [],
   ...buildInitialState(),
+  clearCurrentProject: () => set({ currentProject: null }),
   setCurrentProject: (project) => set({ currentProject: project }),
+  setProjects: (projects) => set({ projects }),
   addNode: (label) =>
     set((state) => {
       const nextIndex = state.nodes.length + 1;

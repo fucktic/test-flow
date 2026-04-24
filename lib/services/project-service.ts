@@ -4,10 +4,11 @@ import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { parseScriptMD } from "@/lib/script-parser";
-import type { ProjectDetail, ProjectEpisode, ProjectListItem } from "@/lib/project-types";
+import type { ProjectAssetItem, ProjectAssets, ProjectDetail, ProjectEpisode, ProjectListItem } from "@/lib/project-types";
 
 const PROJECT_ROOT = process.cwd();
 const PROJECTS_DIR = path.resolve(PROJECT_ROOT, "projects");
+const CURRENT_PROJECT_PATH = path.resolve(PROJECTS_DIR, "currentProject.json");
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function assertSafeProjectPath(targetPath: string) {
@@ -22,6 +23,11 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function readString(value: unknown): string {
   return typeof value === "string" ? value : "";
+}
+
+function readStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item): item is string => typeof item === "string");
 }
 
 function readEpisodeCount(value: unknown): number {
@@ -41,6 +47,36 @@ function readEpisodes(value: unknown): ProjectEpisode[] {
   });
 }
 
+function readAssetItems(value: unknown): ProjectAssetItem[] {
+  if (!Array.isArray(value)) return [];
+
+  return value.flatMap((asset) => {
+    if (!isRecord(asset)) return [];
+
+    const id = readString(asset.id);
+    return id
+      ? [
+          {
+            id,
+            children: readStringArray(asset.children),
+          },
+        ]
+      : [];
+  });
+}
+
+function readAssets(value: unknown): ProjectAssets {
+  const assets = isRecord(value) ? value : {};
+
+  return {
+    characters: readAssetItems(assets.characters),
+    scenes: readAssetItems(assets.scenes),
+    props: readAssetItems(assets.props),
+    voices: readAssetItems(assets.voices),
+    videos: readAssetItems(assets.videos),
+  };
+}
+
 function toProjectDetail(value: unknown): ProjectDetail | null {
   if (!isRecord(value)) return null;
 
@@ -55,6 +91,7 @@ function toProjectDetail(value: unknown): ProjectDetail | null {
     aspectRatio: readString(value.aspectRatio),
     resolution: readString(value.resolution),
     episodes: readEpisodes(value.episodes),
+    assets: readAssets(value.assets),
     createdAt: readString(value.createdAt),
   };
 }
@@ -91,6 +128,26 @@ async function writeProjectDetail(project: ProjectDetail) {
   const projectJsonPath = path.resolve(getProjectDir(project.id), "project.json");
   assertSafeProjectPath(projectJsonPath);
   await writeFile(projectJsonPath, JSON.stringify(project, null, 2), "utf8");
+}
+
+async function writeCurrentProjectDetail(project: ProjectDetail) {
+  assertSafeProjectPath(CURRENT_PROJECT_PATH);
+  await mkdir(PROJECTS_DIR, { recursive: true });
+  await writeFile(CURRENT_PROJECT_PATH, JSON.stringify(project, null, 2), "utf8");
+}
+
+async function readCurrentProjectDetail(): Promise<ProjectDetail | null> {
+  assertSafeProjectPath(CURRENT_PROJECT_PATH);
+
+  try {
+    const content = await readFile(CURRENT_PROJECT_PATH, "utf8");
+    const currentProject = toProjectDetail(JSON.parse(content));
+    if (!currentProject) return null;
+
+    return readProjectDetail(currentProject.id);
+  } catch {
+    return null;
+  }
 }
 
 export async function listProjects(): Promise<
@@ -131,6 +188,70 @@ export async function listProjects(): Promise<
   }
 }
 
+export async function getCurrentProject(): Promise<
+  { success: true; project: ProjectDetail | null } | { success: false; error: string }
+> {
+  try {
+    const project = await readCurrentProjectDetail();
+    return { success: true, project };
+  } catch (err) {
+    if (err instanceof Error) {
+      return { success: false, error: err.message };
+    }
+    return { success: false, error: "未知错误" };
+  }
+}
+
+export async function setCurrentProject(
+  projectId: string,
+): Promise<{ success: true; project: ProjectDetail } | { success: false; error: string }> {
+  try {
+    const project = await readProjectDetail(projectId);
+    if (!project) {
+      return { success: false, error: "PROJECT_NOT_FOUND" };
+    }
+
+    await writeCurrentProjectDetail(project);
+    return { success: true, project };
+  } catch (err) {
+    if (err instanceof Error) {
+      return { success: false, error: err.message };
+    }
+    return { success: false, error: "未知错误" };
+  }
+}
+
+export async function clearCurrentProject(): Promise<{ success: true } | { success: false; error: string }> {
+  try {
+    assertSafeProjectPath(CURRENT_PROJECT_PATH);
+    await rm(CURRENT_PROJECT_PATH, { force: true });
+    return { success: true };
+  } catch (err) {
+    if (err instanceof Error) {
+      return { success: false, error: err.message };
+    }
+    return { success: false, error: "未知错误" };
+  }
+}
+
+export async function getProject(
+  projectId: string,
+): Promise<{ success: true; project: ProjectDetail } | { success: false; error: string }> {
+  try {
+    const project = await readProjectDetail(projectId);
+    if (!project) {
+      return { success: false, error: "PROJECT_NOT_FOUND" };
+    }
+
+    return { success: true, project };
+  } catch (err) {
+    if (err instanceof Error) {
+      return { success: false, error: err.message };
+    }
+    return { success: false, error: "未知错误" };
+  }
+}
+
 export async function updateProject(params: {
   projectId: string;
   description: string;
@@ -150,6 +271,10 @@ export async function updateProject(params: {
       resolution: params.resolution,
     };
     await writeProjectDetail(nextProject);
+    const currentProject = await readCurrentProjectDetail().catch(() => null);
+    if (currentProject?.id === nextProject.id) {
+      await writeCurrentProjectDetail(nextProject);
+    }
 
     return { success: true, project: nextProject };
   } catch (err) {
@@ -162,8 +287,12 @@ export async function updateProject(params: {
 
 export async function deleteProject(projectId: string): Promise<{ success: true } | { success: false; error: string }> {
   try {
+    const currentProject = await readCurrentProjectDetail().catch(() => null);
     const projectDir = getProjectDir(projectId);
     await rm(projectDir, { recursive: true, force: true });
+    if (currentProject?.id === projectId) {
+      await clearCurrentProject();
+    }
     return { success: true };
   } catch (err) {
     if (err instanceof Error) {
@@ -207,6 +336,13 @@ export async function createProject(params: {
         aspectRatio: params.aspectRatio,
         resolution: params.resolution,
         episodes,
+        assets: {
+          characters: [],
+          scenes: [],
+          props: [],
+          voices: [],
+          videos: [],
+        },
         createdAt: new Date().toISOString(),
       }, null, 2),
       "utf8",

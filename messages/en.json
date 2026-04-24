@@ -112,6 +112,90 @@
       "video": "Video"
     }
   },
+  "Skills": {
+    "title": "Skill Folders",
+    "description": "Manage skill folders under the root skills directory.",
+    "empty": "No skill folders yet",
+    "fileCount": "{count, plural, one {# file} other {# files}}",
+    "actions": {
+      "upload": "Upload",
+      "uploading": "Uploading...",
+      "delete": "Delete",
+      "confirmDelete": "Confirm"
+    },
+    "feedback": {
+      "loading": "Loading...",
+      "loadError": "Unable to load skill folders.",
+      "uploadSuccess": "Skill folder uploaded.",
+      "uploadError": "Unable to upload skill folder.",
+      "deleteError": "Unable to delete skill folder."
+    }
+  },
+  "Settings": {
+    "modelManager": {
+      "title": "Model Manager",
+      "description": "Manage available image and video models. Each category can contain multiple models.",
+      "sections": {
+        "image": "Image",
+        "video": "Video",
+        "imageBed": "Image Host"
+      },
+      "types": {
+        "image": "Image",
+        "video": "Video"
+      },
+      "form": {
+        "createTitle": "New Config",
+        "editTitle": "Edit Config",
+        "subtitle": "Add a {type} generation model",
+        "name": "Model Name",
+        "namePlaceholder": "Enter model name",
+        "imageBedName": "Image Host Name",
+        "imageBedNamePlaceholder": "Enter image host name",
+        "apiKey": "API Key",
+        "apiKeyPlaceholder": "Enter model API key",
+        "default": "Default",
+        "defaultImageBed": "Default image host",
+        "example": "Example",
+        "examplePlaceholder": "Enter a sample call or usage note for this model",
+        "imageBedExamplePlaceholder": "Enter the upload endpoint, access domain, or usage sample",
+        "videoReferenceMode": "Video Reference Mode",
+        "editing": "Editing \"{name}\""
+      },
+      "videoReferenceModes": {
+        "all-purpose": "All-purpose Reference",
+        "first-last-frame": "First/Last Frame"
+      },
+      "actions": {
+        "new": "New",
+        "save": "Save",
+        "saving": "Saving...",
+        "remove": "Remove model",
+        "confirmRemove": "Confirm",
+        "setDefault": "Set default image host",
+        "showApiKey": "Show API key",
+        "hideApiKey": "Hide API key"
+      },
+      "list": {
+        "title": "{type} Models",
+        "count": "{count, plural, one {# item} other {# items}}",
+        "empty": "No models yet"
+      },
+      "validation": {
+        "nameRequired": "Name is required.",
+        "apiKeyRequired": "API key is required.",
+        "exampleRequired": "Example is required.",
+        "required": "Model name, API key, and example are required.",
+        "saveFailed": "Unable to save model. Please try again."
+      },
+      "feedback": {
+        "loading": "Loading...",
+        "loadError": "Unable to load config.",
+        "saveError": "Fill in name, API key, and example before saving.",
+        "saved": "Config saved."
+      }
+    }
+  },
   "Projects": {
     "newProject": "New Project",
     "loading": "Loading...",

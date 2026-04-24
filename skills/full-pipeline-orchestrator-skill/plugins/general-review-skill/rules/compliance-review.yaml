@@ -1,0 +1,27 @@
+target_files:
+  - ep-01/script.md
+  - ep-01/director-analysis.md
+  - global-assets/character-prompts.md
+  - global-assets/scene-prompts.md
+  - ep-01/storyboard/p*/storyboard-prompt.md
+  - episode/image/*.png
+check_items:
+  - name: 内容合规
+    rule: 无政治、宗教、色情、血腥、暴力、仇恨歧视等违规内容
+    weight: 10
+    pass_condition: 所有内容不触碰国家内容安全红线
+  - name: 版权合规
+    rule: 无真人/名人肖像、版权IP、商标等侵权内容
+    weight: 10
+    pass_condition: 所有内容无版权风险
+  - name: 未成年人保护
+    rule: 无涉及未成年人不良导向内容
+    weight: 10
+    pass_condition: 所有内容符合未成年人保护要求
+  - name: AI生成合规
+    rule: 提示词无容易触发文生图平台误杀的敏感词
+    weight: 10
+    pass_condition: 所有prompt无平台敏感词，可正常生成
+acceptance:
+  min_score: 40
+  no_item_below: 0

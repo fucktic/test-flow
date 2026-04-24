@@ -1,0 +1,22 @@
+target_files:
+  - ep-01/script.md
+check_items:
+  - name: 结构完整性
+    rule: 剧本包含故事大纲、人物设定、场景列表、完整剧情四部分
+    weight: 10
+    pass_condition: 四部分内容完整，无缺失
+  - name: 逻辑合理性
+    rule: 剧情逻辑通顺，人物行为符合人设，无明显bug
+    weight: 10
+    pass_condition: 剧情无矛盾，人物动机合理，情节连贯
+  - name: 时长匹配
+    rule: 剧本内容长度符合目标时长要求
+    weight: 10
+    pass_condition: 按单镜3-8秒计算，总时长符合项目目标时长要求
+  - name: 可拍摄性
+    rule: 场景、动作描述可落地生成，无无法实现的内容
+    weight: 10
+    pass_condition: 所有场景、动作描述可被AI生成，无过于抽象的内容
+acceptance:
+  min_score: 32
+  no_item_below: 6
