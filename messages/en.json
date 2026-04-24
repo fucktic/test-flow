@@ -102,6 +102,7 @@
     "projects": "Projects",
     "settings": "Settings",
     "skills": "Skills",
+    "chat": "Chat",
     "video": "Video",
     "episodePanel": {
       "selectedCount": "{count}/{max}",
@@ -115,6 +116,49 @@
       "prop": "Prop",
       "voice": "Voice",
       "video": "Video"
+    },
+    "assetPanel": {
+      "searchPlaceholder": "Search assets",
+      "parseAll": "Parse assets",
+      "addAsset": "Add",
+      "generateAsset": "Generate",
+      "clearAssets": "Clear assets",
+      "deleteAsset": "Delete asset",
+      "deleteConfirmTitle": "Delete asset",
+      "deleteConfirmDescription": "Delete \"{name}\"? This action cannot be undone.",
+      "cancel": "Cancel",
+      "confirmDelete": "Delete",
+      "deleting": "Deleting...",
+      "notParsed": "Assets have not been parsed",
+      "noCurrentProject": "Enter a project first",
+      "loading": "Loading assets",
+      "imagePending": "Pending",
+      "detail": {
+        "title": "Asset details",
+        "open": "View details",
+        "close": "Close details",
+        "type": "Type: {value}",
+        "source": "Source: {value}",
+        "emptyValue": "No information",
+        "noChildren": "No linked assets"
+      },
+      "actions": {
+        "parse": {
+          "title": "Parse assets",
+          "description": "Parse assets again from the current project content?",
+          "confirm": "Start parsing"
+        },
+        "generate": {
+          "title": "Generate assets",
+          "description": "Generate assets for the current filtered set?",
+          "confirm": "Start generating"
+        },
+        "clear": {
+          "title": "Clear assets",
+          "description": "This will remove the current project's asset records and cannot be undone.",
+          "confirm": "Clear assets"
+        }
+      }
     }
   },
   "Skills": {

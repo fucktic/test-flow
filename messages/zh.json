@@ -102,6 +102,7 @@
     "projects": "项目管理",
     "settings": "设置",
     "skills": "技能",
+    "chat": "聊天",
     "video": "视频",
     "episodePanel": {
       "selectedCount": "{count}/{max}",
@@ -115,6 +116,49 @@
       "prop": "道具",
       "voice": "音色",
       "video": "视频"
+    },
+    "assetPanel": {
+      "searchPlaceholder": "搜索资产",
+      "parseAll": "一键解析资产",
+      "addAsset": "添加",
+      "generateAsset": "一键生成",
+      "clearAssets": "清空资产",
+      "deleteAsset": "删除资产",
+      "deleteConfirmTitle": "确认删除资产",
+      "deleteConfirmDescription": "确定删除“{name}”吗？此操作无法撤销。",
+      "cancel": "取消",
+      "confirmDelete": "确认删除",
+      "deleting": "删除中...",
+      "notParsed": "还未解析资产",
+      "noCurrentProject": "请先进入项目",
+      "loading": "正在加载资产",
+      "imagePending": "待生成",
+      "detail": {
+        "title": "资产详情",
+        "open": "查看详情",
+        "close": "关闭详情",
+        "type": "类型：{value}",
+        "source": "来源：{value}",
+        "emptyValue": "暂无信息",
+        "noChildren": "暂无关联资产"
+      },
+      "actions": {
+        "parse": {
+          "title": "确认解析资产",
+          "description": "将根据当前项目内容重新解析资产，确认继续吗？",
+          "confirm": "开始解析"
+        },
+        "generate": {
+          "title": "确认生成资产",
+          "description": "将为当前筛选范围内的资产执行一键生成，确认继续吗？",
+          "confirm": "开始生成"
+        },
+        "clear": {
+          "title": "确认清空资产",
+          "description": "清空后将移除当前项目的资产记录，此操作无法撤销。",
+          "confirm": "确认清空"
+        }
+      }
     }
   },
   "Skills": {

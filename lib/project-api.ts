@@ -1,4 +1,4 @@
-import type { ProjectDetail, ProjectListItem } from "@/lib/project-types";
+import type { ProjectDetail, ProjectImageAsset, ProjectListItem } from "@/lib/project-types";
 
 type ProjectsResponse = {
   projects?: ProjectListItem[];
@@ -6,6 +6,10 @@ type ProjectsResponse = {
 
 type ProjectResponse = {
   project?: ProjectDetail;
+};
+
+type ProjectImagesResponse = {
+  images?: ProjectImageAsset[];
 };
 
 async function readJsonResponse<T>(response: Response): Promise<T> {
@@ -38,6 +42,33 @@ export async function fetchProject(projectId: string): Promise<ProjectDetail> {
   }
 
   return data.project;
+}
+
+export async function fetchProjectImages(projectId: string): Promise<ProjectImageAsset[]> {
+  const data = await readJsonResponse<ProjectImagesResponse>(
+    await fetch(`/api/projects/${encodeURIComponent(projectId)}/images`, {
+      cache: "no-store",
+    }),
+  );
+
+  return Array.isArray(data.images) ? data.images : [];
+}
+
+export async function deleteProjectImage(
+  projectId: string,
+  imageId: string,
+): Promise<ProjectImageAsset[]> {
+  const data = await readJsonResponse<ProjectImagesResponse>(
+    await fetch(
+      `/api/projects/${encodeURIComponent(projectId)}/images?imageId=${encodeURIComponent(imageId)}`,
+      {
+        method: "DELETE",
+        cache: "no-store",
+      },
+    ),
+  );
+
+  return Array.isArray(data.images) ? data.images : [];
 }
 
 export async function fetchCurrentProject(): Promise<ProjectDetail | null> {

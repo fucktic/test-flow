@@ -1,7 +1,16 @@
 "use client";
 
 import { useState, Fragment } from "react";
-import { Layers, Package, FolderKanban, Settings, Video, X, Wrench } from "lucide-react";
+import {
+  Layers,
+  Package,
+  FolderKanban,
+  MessageCircle,
+  Settings,
+  Video,
+  X,
+  Wrench,
+} from "lucide-react";
 import { Dialog } from "radix-ui";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -14,12 +23,21 @@ import { ProjectsPanel } from "./projects-panel";
 import { SettingsPanel } from "./settings-panel";
 import { SkillsPanel } from "./skills-panel";
 
-type NavSection = "episodes" | "assets" | "projects" | "settings" | "skills" | "video" | null;
+type NavSection =
+  | "episodes"
+  | "assets"
+  | "projects"
+  | "settings"
+  | "skills"
+  | "chat"
+  | "video"
+  | null;
 
 type NavItem = { key: Exclude<NavSection, null>; icon: typeof Layers; group: number };
 
-const FLOAT_KEYS = new Set(["episodes", "assets", "video"]);
+const FLOAT_KEYS = new Set(["episodes", "assets"]);
 const DIALOG_KEYS = new Set(["projects", "settings", "skills"]);
+const PASSIVE_KEYS = new Set(["chat", "video"]);
 
 const NAV_ITEMS: NavItem[] = [
   { key: "episodes", icon: Layers, group: 0 },
@@ -27,19 +45,9 @@ const NAV_ITEMS: NavItem[] = [
   { key: "projects", icon: FolderKanban, group: 1 },
   { key: "settings", icon: Settings, group: 1 },
   { key: "skills", icon: Wrench, group: 1 },
+  { key: "chat", icon: MessageCircle, group: 2 },
   { key: "video", icon: Video, group: 2 },
 ];
-
-function VideoPanel() {
-  const t = useTranslations("Sidebar");
-  const label = t("video");
-  return (
-    <div className="flex flex-col gap-3 p-4">
-      <h3 className="text-sm font-semibold">{label}</h3>
-      <p className="text-muted-foreground text-xs">{label} — 暂无内容</p>
-    </div>
-  );
-}
 
 function FloatingPanel({ active, onClose }: { active: NavSection; onClose: () => void }) {
   const t = useTranslations("Sidebar");
@@ -48,7 +56,8 @@ function FloatingPanel({ active, onClose }: { active: NavSection; onClose: () =>
   return (
     <div
       className={cn(
-        "fixed top-16 left-20 z-40 min-w-[260px] overflow-hidden rounded-2xl border border-border bg-card shadow-2xl transition-all duration-200 ease-out backdrop-blur-md",
+        "fixed top-16 left-20 z-40 overflow-hidden rounded-2xl border border-border bg-card shadow-2xl transition-all duration-200 ease-out backdrop-blur-md",
+
         visible ? "translate-x-0 opacity-100" : "pointer-events-none -translate-x-2 opacity-0",
       )}
       aria-hidden={!visible}
@@ -67,7 +76,6 @@ function FloatingPanel({ active, onClose }: { active: NavSection; onClose: () =>
       <div className="overflow-y-auto">
         {active === "episodes" && <EpisodesPanel />}
         {active === "assets" && <AssetsPanel />}
-        {active === "video" && <VideoPanel />}
       </div>
     </div>
   );
@@ -129,6 +137,11 @@ const Sidebar = () => {
   const [active, setActive] = useState<NavSection>(null);
 
   const toggle = (key: NavSection) => {
+    if (key && PASSIVE_KEYS.has(key)) {
+      setActive(null);
+      return;
+    }
+
     setActive((prev) => (prev === key ? null : key));
   };
 
@@ -163,7 +176,7 @@ const Sidebar = () => {
         ))}
       </aside>
 
-      {/* Floating panel: episodes, assets, video */}
+      {/* Floating panel: episodes, assets */}
       <FloatingPanel active={active} onClose={() => setActive(null)} />
 
       {/* Modal dialog: projects, settings, skills */}

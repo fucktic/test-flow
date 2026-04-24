@@ -14,6 +14,15 @@ export type ProjectAssetItem = {
   children: string[];
 };
 
+export type ProjectImageAsset = {
+  id: string;
+  name: string;
+  type: string;
+  source: string;
+  prompt: string;
+  url: string;
+};
+
 export type ProjectAssets = {
   characters: ProjectAssetItem[];
   scenes: ProjectAssetItem[];
@@ -30,6 +39,7 @@ export type ProjectDetail = {
   resolution: string;
   episodes: ProjectEpisode[];
   assets: ProjectAssets;
+  assetsParsed: boolean;
   createdAt: string;
 };
 

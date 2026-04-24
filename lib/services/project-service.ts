@@ -4,7 +4,14 @@ import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { parseScriptMD } from "@/lib/script-parser";
-import type { ProjectAssetItem, ProjectAssets, ProjectDetail, ProjectEpisode, ProjectListItem } from "@/lib/project-types";
+import type {
+  ProjectAssetItem,
+  ProjectAssets,
+  ProjectDetail,
+  ProjectEpisode,
+  ProjectImageAsset,
+  ProjectListItem,
+} from "@/lib/project-types";
 
 const PROJECT_ROOT = process.cwd();
 const PROJECTS_DIR = path.resolve(PROJECT_ROOT, "projects");
@@ -28,6 +35,10 @@ function readString(value: unknown): string {
 function readStringArray(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
   return value.filter((item): item is string => typeof item === "string");
+}
+
+function readBoolean(value: unknown): boolean {
+  return typeof value === "boolean" ? value : false;
 }
 
 function readEpisodeCount(value: unknown): number {
@@ -77,6 +88,28 @@ function readAssets(value: unknown): ProjectAssets {
   };
 }
 
+function readProjectImageAssets(value: unknown): ProjectImageAsset[] {
+  const imageRecords = Array.isArray(value) ? value : [value];
+
+  return imageRecords.flatMap((imageAsset) => {
+    if (!isRecord(imageAsset)) return [];
+
+    const id = readString(imageAsset.id);
+    if (!id) return [];
+
+    return [
+      {
+        id,
+        name: readString(imageAsset.name),
+        type: readString(imageAsset.type),
+        source: readString(imageAsset.source),
+        prompt: readString(imageAsset.prompt),
+        url: readString(imageAsset.url),
+      },
+    ];
+  });
+}
+
 function toProjectDetail(value: unknown): ProjectDetail | null {
   if (!isRecord(value)) return null;
 
@@ -92,6 +125,7 @@ function toProjectDetail(value: unknown): ProjectDetail | null {
     resolution: readString(value.resolution),
     episodes: readEpisodes(value.episodes),
     assets: readAssets(value.assets),
+    assetsParsed: readBoolean(value.assetsParsed),
     createdAt: readString(value.createdAt),
   };
 }
@@ -221,7 +255,9 @@ export async function setCurrentProject(
   }
 }
 
-export async function clearCurrentProject(): Promise<{ success: true } | { success: false; error: string }> {
+export async function clearCurrentProject(): Promise<
+  { success: true } | { success: false; error: string }
+> {
   try {
     assertSafeProjectPath(CURRENT_PROJECT_PATH);
     await rm(CURRENT_PROJECT_PATH, { force: true });
@@ -244,6 +280,50 @@ export async function getProject(
     }
 
     return { success: true, project };
+  } catch (err) {
+    if (err instanceof Error) {
+      return { success: false, error: err.message };
+    }
+    return { success: false, error: "未知错误" };
+  }
+}
+
+export async function getProjectImages(
+  projectId: string,
+): Promise<{ success: true; images: ProjectImageAsset[] } | { success: false; error: string }> {
+  try {
+    const imagesJsonPath = path.resolve(getProjectDir(projectId), "images", "images.json");
+    assertSafeProjectPath(imagesJsonPath);
+
+    try {
+      const content = await readFile(imagesJsonPath, "utf8");
+      return { success: true, images: readProjectImageAssets(JSON.parse(content)) };
+    } catch {
+      return { success: true, images: [] };
+    }
+  } catch (err) {
+    if (err instanceof Error) {
+      return { success: false, error: err.message };
+    }
+    return { success: false, error: "未知错误" };
+  }
+}
+
+export async function deleteProjectImage(params: {
+  projectId: string;
+  imageId: string;
+}): Promise<{ success: true; images: ProjectImageAsset[] } | { success: false; error: string }> {
+  try {
+    const imagesJsonPath = path.resolve(getProjectDir(params.projectId), "images", "images.json");
+    assertSafeProjectPath(imagesJsonPath);
+
+    const content = await readFile(imagesJsonPath, "utf8");
+    const images = readProjectImageAssets(JSON.parse(content));
+    const nextImages = images.filter((image) => image.id !== params.imageId);
+
+    await writeFile(imagesJsonPath, JSON.stringify(nextImages, null, 2), "utf8");
+
+    return { success: true, images: nextImages };
   } catch (err) {
     if (err instanceof Error) {
       return { success: false, error: err.message };
@@ -285,7 +365,9 @@ export async function updateProject(params: {
   }
 }
 
-export async function deleteProject(projectId: string): Promise<{ success: true } | { success: false; error: string }> {
+export async function deleteProject(
+  projectId: string,
+): Promise<{ success: true } | { success: false; error: string }> {
   try {
     const currentProject = await readCurrentProjectDetail().catch(() => null);
     const projectDir = getProjectDir(projectId);
@@ -321,30 +403,31 @@ export async function createProject(params: {
 
     await mkdir(projectDir, { recursive: true });
 
-    await writeFile(
-      path.resolve(projectDir, "script.md"),
-      params.fileContent,
-      "utf8",
-    );
+    await writeFile(path.resolve(projectDir, "script.md"), params.fileContent, "utf8");
 
     await writeFile(
       path.resolve(projectDir, "project.json"),
-      JSON.stringify({
-        id: projectId,
-        name: params.fileName,
-        description: params.description,
-        aspectRatio: params.aspectRatio,
-        resolution: params.resolution,
-        episodes,
-        assets: {
-          characters: [],
-          scenes: [],
-          props: [],
-          voices: [],
-          videos: [],
+      JSON.stringify(
+        {
+          id: projectId,
+          name: params.fileName,
+          description: params.description,
+          aspectRatio: params.aspectRatio,
+          resolution: params.resolution,
+          episodes,
+          assets: {
+            characters: [],
+            scenes: [],
+            props: [],
+            voices: [],
+            videos: [],
+          },
+          assetsParsed: false,
+          createdAt: new Date().toISOString(),
         },
-        createdAt: new Date().toISOString(),
-      }, null, 2),
+        null,
+        2,
+      ),
       "utf8",
     );
 
