@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Bot, X } from "lucide-react";
 import { Dialog } from "radix-ui";
 import { useLocale, useTranslations } from "next-intl";
+import { v4 as createUuid } from "uuid";
 import { Button } from "@/components/ui/button";
 import type { AgentRecord } from "@/lib/agent-schema";
 import type { AppConfig } from "@/lib/config-schema";
@@ -57,11 +58,7 @@ const FIXED_SYSTEM_PROMPT_TEMPLATE =
   "All file reads and writes must stay within {projectRoot}/projects/{projectId}/. Never create or modify files inside the skills/ directory.";
 
 const createMessageId = () => {
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
-    return crypto.randomUUID();
-  }
-
-  return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  return createUuid();
 };
 
 function AgentGlyph({ agent }: { agent?: AgentRecord }) {

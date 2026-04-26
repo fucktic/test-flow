@@ -9,6 +9,7 @@ import {
   MiniMap,
   ReactFlow,
   ReactFlowProvider,
+  useReactFlow,
   type Edge,
   type Node,
   type NodeTypes,
@@ -59,6 +60,7 @@ function toSerializableFlow(nodes: Node[], edges: Edge[]): FlowState | null {
 
 function CanvasWorkspaceInner() {
   const t = useTranslations("Canvas");
+  const { fitView } = useReactFlow();
   const workspaceRef = useRef<HTMLDivElement>(null);
   const { execute: executeSilentAgentCommand } = useSilentAgentCommand();
   const [chatWindowPosition, setChatWindowPosition] = useState<{ left: number; top: number } | null>(
@@ -78,9 +80,18 @@ function CanvasWorkspaceInner() {
     clearSelectedMediaGridItem,
     selectedEpisodeIds,
     selectedMediaGridItem,
-    setProjectCanvasData,
+    setProjectCanvasDataBatch,
   } = useCanvasStore();
-  const activeEpisodeId = selectedEpisodeIds[0] ?? currentProject?.episodes[0]?.id ?? "";
+  const activeEpisodeIds = useMemo(() => {
+    const availableEpisodeIds = new Set(currentProject?.episodes.map((episode) => episode.id) ?? []);
+    const visibleEpisodeIds = selectedEpisodeIds.filter((episodeId) =>
+      availableEpisodeIds.has(episodeId),
+    );
+
+    return visibleEpisodeIds.length > 0
+      ? visibleEpisodeIds
+      : currentProject?.episodes.slice(0, 1).map((episode) => episode.id) ?? [];
+  }, [currentProject?.episodes, selectedEpisodeIds]);
   const modelOptions = useMemo<ChatWindowModelOption[]>(() => {
     const models =
       selectedMediaGridItem?.item.type === "video" ? config.videoModels : config.imageModels;
@@ -262,12 +273,17 @@ function CanvasWorkspaceInner() {
     let active = true;
 
     const loadCanvasData = async () => {
-      if (!currentProject || !activeEpisodeId) return;
+      if (!currentProject || activeEpisodeIds.length === 0) return;
 
       try {
-        const data = await fetchProjectCanvasData(currentProject.id, activeEpisodeId);
+        const episodeEntries = await Promise.all(
+          activeEpisodeIds.map(async (episodeId) => [
+            episodeId,
+            await fetchProjectCanvasData(currentProject.id, episodeId),
+          ] as const),
+        );
         if (!active) return;
-        setProjectCanvasData(currentProject.id, activeEpisodeId, data);
+        setProjectCanvasDataBatch(currentProject.id, Object.fromEntries(episodeEntries));
       } catch {
         // Keep the existing canvas visible if project files are temporarily unavailable.
       }
@@ -279,9 +295,9 @@ function CanvasWorkspaceInner() {
       active = false;
     };
   }, [
-    activeEpisodeId,
+    activeEpisodeIds,
     currentProject,
-    setProjectCanvasData,
+    setProjectCanvasDataBatch,
   ]);
 
   useEffect(() => {
@@ -300,6 +316,14 @@ function CanvasWorkspaceInner() {
       window.clearTimeout(timeoutId);
     };
   }, [currentCanvasData, edges, nodes]);
+
+  useEffect(() => {
+    if (!currentProject || nodes.length === 0) return;
+
+    window.requestAnimationFrame(() => {
+      void fitView({ duration: 240, padding: 0.18 });
+    });
+  }, [currentProject, fitView, nodes]);
 
   return (
     <div

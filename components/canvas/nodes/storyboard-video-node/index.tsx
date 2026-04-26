@@ -3,14 +3,16 @@
 import { useTranslations } from "next-intl";
 import { Handle, Position, type Node, type NodeProps } from "@xyflow/react";
 import { cn } from "@/lib/utils";
-import type { StoryboardMediaNodeData } from "@/store/use-canvas-store";
+import { type StoryboardMediaNodeData, useCanvasStore } from "@/store/use-canvas-store";
 import { NODE_WIDTH_CLASS } from "../constants";
 import { MediaGrid } from "../media-grid";
 
 type StoryboardVideoNodeType = Node<StoryboardMediaNodeData, "storyboard-video-node">;
 
-export function StoryboardVideoNode({ data, id }: NodeProps<StoryboardVideoNodeType>) {
+export function StoryboardVideoNode({ data, id, selected }: NodeProps<StoryboardVideoNodeType>) {
   const t = useTranslations("Canvas");
+  const activeNodeId = useCanvasStore((state) => state.selectedMediaGridItem?.nodeId);
+  const active = selected || activeNodeId === id;
 
   return (
     <div className={cn("relative", NODE_WIDTH_CLASS)}>
@@ -24,13 +26,21 @@ export function StoryboardVideoNode({ data, id }: NodeProps<StoryboardVideoNodeT
         </span>
       </div>
 
-      <section className="rounded-md border border-border bg-card  text-card-foreground shadow-xl">
+      <section
+        className={cn(
+          "rounded-2xl border bg-card text-card-foreground shadow-xl transition-[border-color,box-shadow,transform] duration-200",
+          active
+            ? "border-foreground/45 shadow-[0_0_30px_hsl(var(--foreground)/0.24),0_12px_40px_rgba(0,0,0,0.42)]"
+            : "border-border",
+        )}
+      >
         <MediaGrid
           addLabel={t("storyboardVideo.add")}
           items={data.items}
           mediaType={data.mediaType}
           nodeId={id}
           sceneId={data.sceneId}
+          selectedVideoId={data.selectedVideoId}
           showItemNames={false}
         />
       </section>

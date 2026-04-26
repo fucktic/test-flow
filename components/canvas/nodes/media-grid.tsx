@@ -47,7 +47,9 @@ function MediaPreview({
   onDelete,
   onLibrary,
   onSelect,
+  onSelectVideo,
   onUpload,
+  selectedVideoId,
   showName,
 }: {
   hasActiveSelection: boolean;
@@ -56,7 +58,9 @@ function MediaPreview({
   onDelete: (item: MediaItem) => void;
   onLibrary?: (item: MediaItem) => void;
   onSelect: (item: MediaItem, anchorRect: DOMRect) => void;
+  onSelectVideo?: (item: MediaItem) => void;
   onUpload: (item: MediaItem, file: File) => void;
+  selectedVideoId?: string;
   showName: boolean;
 }) {
   const t = useTranslations("Canvas");
@@ -67,6 +71,7 @@ function MediaPreview({
   const commandStatus = status === "loading" || status === "error" || status === "success" ? status : "";
   const isLoading = commandStatus === "loading";
   const isError = failed || commandStatus === "error" || status === "failed";
+  const isSelectedVideo = item.type === "video" && selectedVideoId === item.id;
   const statusLabel =
     commandStatus === "loading"
       ? t("mediaGrid.loading")
@@ -141,6 +146,30 @@ function MediaPreview({
             <Trash2 className="size-3.5" />
           </Button>
         </div>
+        {item.type === "video" && onSelectVideo ? (
+          <button
+            type="button"
+            aria-label={t("mediaGrid.selectVideo", { name: item.name || item.id })}
+            aria-pressed={isSelectedVideo}
+            className={cn(
+              "absolute bottom-1 left-1 z-30 flex size-6 items-center justify-center rounded-full border bg-background/90 shadow-sm transition-colors",
+              isSelectedVideo
+                ? "border-primary text-primary"
+                : "border-border text-muted-foreground hover:border-primary hover:text-primary",
+            )}
+            onClick={(event) => {
+              event.stopPropagation();
+              onSelectVideo(item);
+            }}
+          >
+            <span
+              className={cn(
+                "size-2.5 rounded-full transition-colors",
+                isSelectedVideo ? "bg-primary" : "bg-transparent",
+              )}
+            />
+          </button>
+        ) : null}
         {source && !isError ? (
           // Project media URLs are data from the project JSON and remain serializable in flow nodes.
           <Image
@@ -229,6 +258,7 @@ export function MediaGrid({
   mediaType,
   nodeId,
   sceneId,
+  selectedVideoId,
   showItemNames,
 }: {
   addLabel: string;
@@ -236,6 +266,7 @@ export function MediaGrid({
   mediaType: "image" | "video";
   nodeId: string;
   sceneId: string;
+  selectedVideoId?: string;
   showItemNames: boolean;
 }) {
   const t = useTranslations("Canvas");
@@ -247,6 +278,7 @@ export function MediaGrid({
   const addVideoToStoryboard = useCanvasStore((state) => state.addVideoToStoryboard);
   const removeMediaFromStoryboard = useCanvasStore((state) => state.removeMediaFromStoryboard);
   const setCurrentProject = useCanvasStore((state) => state.setCurrentProject);
+  const setStoryboardSelectedVideo = useCanvasStore((state) => state.setStoryboardSelectedVideo);
   const updateImageAsset = useCanvasStore((state) => state.updateImageAsset);
   const updateVideoAsset = useCanvasStore((state) => state.updateVideoAsset);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -346,6 +378,12 @@ export function MediaGrid({
                   },
                 });
               }}
+              onSelectVideo={
+                mediaType === "video"
+                  ? (selectedItem) => setStoryboardSelectedVideo(sceneId, selectedItem.id)
+                  : undefined
+              }
+              selectedVideoId={selectedVideoId}
             />
           ))}
         </div>

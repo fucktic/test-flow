@@ -2,7 +2,7 @@
 
 import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { randomUUID } from "node:crypto";
+import { v4 as createUuid } from "uuid";
 import { parseScriptMD } from "@/lib/script-parser";
 import { flowStateSchema, type FlowState } from "@/lib/flow-schema";
 import type {
@@ -26,6 +26,7 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3
 const TEMP_FILE_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.[a-z0-9]{1,12}$/i;
 const IMAGE_FILE_PATTERN = /^image-[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.[a-z0-9]{1,12}$/i;
 const COMMAND_STATUS_VALUES = new Set(["loading", "error", "success"]);
+const EMPTY_FLOW_STATE: FlowState = { nodes: [], edges: [] };
 
 export type ProjectTempImage = {
   id: string;
@@ -202,7 +203,20 @@ function readFlowState(value: unknown): FlowState {
   const parsedFlow = flowStateSchema.safeParse(value);
   if (parsedFlow.success) return parsedFlow.data;
 
-  return { nodes: [], edges: [] };
+  return EMPTY_FLOW_STATE;
+}
+
+async function readOrCreateProjectFlow(flowJsonPath: string): Promise<FlowState> {
+  try {
+    const content = await readFile(flowJsonPath, "utf8");
+    return readFlowState(JSON.parse(content));
+  } catch (err) {
+    if (err instanceof Error && "code" in err && err.code === "ENOENT") {
+      await writeFile(flowJsonPath, JSON.stringify(EMPTY_FLOW_STATE, null, 2), "utf8");
+    }
+
+    return EMPTY_FLOW_STATE;
+  }
 }
 
 function readProjectConfig(value: unknown): ProjectConfig {
@@ -632,9 +646,7 @@ export async function getProjectCanvasData(params: {
       videosJsonPath,
     ].forEach(assertSafeProjectPath);
 
-    const flow = await readFile(flowJsonPath, "utf8")
-      .then((content) => readFlowState(JSON.parse(content)))
-      .catch(() => ({ nodes: [], edges: [] }));
+    const flow = await readOrCreateProjectFlow(flowJsonPath);
 
     const storyboardContent = await readFile(episodeStoryboardPath, "utf8").catch(async () =>
       readFile(projectStoryboardPath, "utf8"),
@@ -768,7 +780,7 @@ export async function createProjectImage(params: {
 
     await mkdir(imagesDir, { recursive: true });
 
-    const id = `image-${randomUUID()}`;
+    const id = `image-${createUuid()}`;
     let url = "";
 
     if (params.image.image) {
@@ -922,7 +934,7 @@ export async function createProjectVideo(params: {
     const currentVideos = await readFile(videosJsonPath, "utf8")
       .then((content) => readProjectVideoAssets(JSON.parse(content)))
       .catch(() => []);
-    const id = `video-${randomUUID()}`;
+    const id = `video-${createUuid()}`;
     const video: ProjectVideoAsset = {
       id,
       duration: "",
@@ -1074,7 +1086,7 @@ export async function saveProjectTempImages(params: {
 
     const images = await Promise.all(
       params.images.map(async (image, index) => {
-        const id = randomUUID();
+        const id = createUuid();
         const extension = getImageExtension(image.contentType, image.name);
         const fileName = `${id}.${extension}`;
         const filePath = path.resolve(tempDir, fileName);
@@ -1111,7 +1123,7 @@ export async function saveProjectTempFiles(params: {
 
     const images = await Promise.all(
       params.files.map(async (file, index) => {
-        const id = randomUUID();
+        const id = createUuid();
         const extension = file.contentType.startsWith("image/")
           ? getImageExtension(file.contentType, file.name)
           : getSafeFileExtension(file.name);
@@ -1228,18 +1240,30 @@ export async function createProject(params: {
   resolution: string;
 }): Promise<{ success: true; projectId: string } | { success: false; error: string }> {
   try {
-    const projectId = randomUUID();
+    const projectId = createUuid();
     const projectDir = path.resolve(PROJECTS_DIR, projectId);
     assertSafeProjectPath(projectDir);
     const parsedScript = parseScriptMD(params.fileContent);
     const episodes = parsedScript.episodes.map((episode) => ({
-      id: randomUUID(),
+      id: createUuid(),
       name: episode.name,
     }));
 
     await mkdir(projectDir, { recursive: true });
+    const episodeDir = path.resolve(projectDir, "episode");
+    assertSafeProjectPath(episodeDir);
+    await mkdir(episodeDir, { recursive: true });
 
     await writeFile(path.resolve(projectDir, "script.md"), params.fileContent, "utf8");
+    await Promise.all(
+      episodes.map((episode) => {
+        const episodeStoryboardPath = path.resolve(episodeDir, `${episode.id}.json`);
+        assertSafeProjectPath(episodeStoryboardPath);
+
+        // Each episode starts with an empty storyboard list that the canvas can append to later.
+        return writeFile(episodeStoryboardPath, JSON.stringify([], null, 2), "utf8");
+      }),
+    );
 
     await writeFile(
       path.resolve(projectDir, "project.json"),

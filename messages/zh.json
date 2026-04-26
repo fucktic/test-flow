@@ -162,6 +162,7 @@
       "error": "Error",
       "success": "已完成",
       "select": "选择 {name}",
+      "selectVideo": "选中视频 {name}",
       "upload": "本地上传",
       "delete": "删除",
       "addToLibrary": "入库",

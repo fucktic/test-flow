@@ -124,7 +124,7 @@ function DialogPanel({
           </div>
 
           <div className="overflow-y-auto p-4">
-            {active === "projects" && <ProjectsPanel />}
+            {active === "projects" && <ProjectsPanel onEnteredProject={onClose} />}
             {active === "settings" && <SettingsPanel />}
             {active === "skills" && <SkillsPanel />}
           </div>

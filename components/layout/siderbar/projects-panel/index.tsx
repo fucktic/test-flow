@@ -260,7 +260,7 @@ function DeleteProjectDialog({
   )
 }
 
-export function ProjectsPanel() {
+export function ProjectsPanel({ onEnteredProject }: { onEnteredProject?: () => void }) {
   const t = useTranslations("Projects")
   const currentProject = useCanvasStore((state) => state.currentProject)
   const projects = useCanvasStore((state) => state.projects)
@@ -311,6 +311,7 @@ export function ProjectsPanel() {
       setCommandStatuses({})
       setCurrentProject(projectDetail)
       toast.success(t("enterSuccess", { name: projectDetail.name }))
+      onEnteredProject?.()
     } catch {
       toast.error(t("loadError"))
     } finally {
@@ -340,12 +341,6 @@ export function ProjectsPanel() {
             <div className="flex aspect-square w-full flex-col items-center justify-center gap-2 rounded-lg border border-border bg-muted/30 text-muted-foreground">
               <Loader2 className="size-5 animate-spin" />
               <span className="text-xs">{t("loading")}</span>
-            </div>
-          ) : null}
-
-          {!loadingProjects && projects.length === 0 ? (
-            <div className="col-span-2 flex min-h-24 items-center rounded-lg border border-border bg-muted/20 px-4 text-xs text-muted-foreground">
-              {t("empty")}
             </div>
           ) : null}
 

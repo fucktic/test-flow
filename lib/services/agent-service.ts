@@ -1,6 +1,6 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { randomUUID } from "node:crypto";
+import { v4 as createUuid } from "uuid";
 import {
   agentDbSchema,
   createAgentInputSchema,
@@ -69,7 +69,7 @@ export async function createAgent(input: CreateAgentInput): Promise<AgentRecord>
     const db = await readAgentDb();
 
     const agent: AgentRecord = {
-      id: randomUUID(),
+      id: createUuid(),
       ...validated,
     };
 

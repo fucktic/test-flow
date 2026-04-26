@@ -23,14 +23,21 @@ const MAX_SELECTED_STORYBOARDS = 3;
 
 type StoryboardListNodeType = Node<StoryboardListNodeData, "storyboard-list-node">;
 
-export function StoryboardListNode({ data }: NodeProps<StoryboardListNodeType>) {
+export function StoryboardListNode({ data, selected }: NodeProps<StoryboardListNodeType>) {
   const t = useTranslations("Canvas");
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const addStoryboard = useCanvasStore((state) => state.addStoryboard);
   const deleteStoryboard = useCanvasStore((state) => state.deleteStoryboard);
   const moveStoryboard = useCanvasStore((state) => state.moveStoryboard);
+  const selectedMediaGridSceneId = useCanvasStore((state) => state.selectedMediaGridItem?.sceneId);
   const selectedStoryboardIds = useCanvasStore((state) => state.selectedStoryboardIds);
   const toggleStoryboardSelection = useCanvasStore((state) => state.toggleStoryboardSelection);
+  const active =
+    selected ||
+    data.storyboards.some(
+      (storyboard) =>
+        storyboard.id === selectedMediaGridSceneId || selectedStoryboardIds.includes(storyboard.id),
+    );
   const pendingDeleteStoryboard = data.storyboards.find(
     (storyboard) => storyboard.id === pendingDeleteId,
   );
@@ -67,19 +74,16 @@ export function StoryboardListNode({ data }: NodeProps<StoryboardListNodeType>) 
             {data.episodeName}
           </span>
         </div>
-        <Button
-          type="button"
-          size="icon"
-          variant="outline"
-          aria-label={t("storyboardList.add")}
-          className="nodrag size-6 shrink-0 rounded-full bg-card"
-          onClick={() => addStoryboard(data.episodeId)}
-        >
-          <Plus className="size-3.5" />
-        </Button>
       </div>
 
-      <section className="rounded-2xl border border-border bg-card p-1.5 text-card-foreground shadow-xl">
+      <section
+        className={cn(
+          "rounded-2xl border bg-card p-1.5 text-card-foreground shadow-xl transition-[border-color,box-shadow] duration-200",
+          active
+            ? "border-foreground/45 shadow-[0_0_30px_hsl(var(--foreground)/0.24),0_12px_40px_rgba(0,0,0,0.42)]"
+            : "border-border",
+        )}
+      >
         {data.storyboards.length > 0 ? (
           <ScrollArea className="h-105 ">
             <div className="flex flex-col gap-2">
@@ -128,6 +132,19 @@ export function StoryboardListNode({ data }: NodeProps<StoryboardListNodeType>) 
                       {storyboard.description}
                     </p>
                     <div className="nodrag absolute bottom-1.5 right-1.5 z-10 flex items-center gap-1 rounded-full border border-border bg-card/95 p-0.5 opacity-0 shadow-sm transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        aria-label={t("storyboardList.add")}
+                        className="size-6 rounded-full text-muted-foreground hover:text-foreground"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          addStoryboard(data.episodeId, storyboard.id);
+                        }}
+                      >
+                        <Plus className="size-3.5" />
+                      </Button>
                       <Button
                         type="button"
                         size="icon"

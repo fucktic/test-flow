@@ -162,6 +162,7 @@
       "error": "Error",
       "success": "Done",
       "select": "Select {name}",
+      "selectVideo": "Select video {name}",
       "upload": "Local upload",
       "delete": "Delete",
       "addToLibrary": "Add to library",

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Eye, EyeOff, ImageIcon, Link2, Plus, Trash2, Video } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useForm, useWatch } from "react-hook-form";
+import { v4 as createUuid } from "uuid";
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -70,7 +71,7 @@ function getSectionIcon(section: ConfigSection) {
 }
 
 function createConfigId(section: ConfigSection) {
-  return `${section}-${crypto.randomUUID()}`;
+  return `${section}-${createUuid()}`;
 }
 
 function maskApiKey(apiKey: string) {
