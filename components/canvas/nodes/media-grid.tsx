@@ -1,10 +1,38 @@
 "use client";
 
-import { AlertCircle, CheckCircle2, ImageIcon, Loader2, Plus, Video } from "lucide-react";
+import {
+  AlertCircle,
+  CheckCircle2,
+  ImageIcon,
+  Loader2,
+  PackagePlus,
+  Plus,
+  Trash2,
+  Upload,
+  Video,
+} from "lucide-react";
 import Image from "next/image";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useTranslations } from "next-intl";
+import { AssetCreateDialog } from "@/components/assets/asset-create-dialog";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  createProjectVideo,
+  deleteProjectImage,
+  deleteProjectVideo,
+  updateProjectImageFile,
+  updateProjectVideoFile,
+} from "@/lib/project-api";
+import type { ProjectImageAsset } from "@/lib/project-types";
 import { cn } from "@/lib/utils";
 import { useCanvasStore, type MediaItem } from "@/store/use-canvas-store";
 
@@ -16,18 +44,25 @@ function MediaPreview({
   hasActiveSelection,
   isSelected,
   item,
+  onDelete,
+  onLibrary,
   onSelect,
+  onUpload,
   showName,
 }: {
   hasActiveSelection: boolean;
   isSelected: boolean;
   item: MediaItem;
+  onDelete: (item: MediaItem) => void;
+  onLibrary?: (item: MediaItem) => void;
   onSelect: (item: MediaItem, anchorRect: DOMRect) => void;
+  onUpload: (item: MediaItem, file: File) => void;
   showName: boolean;
 }) {
   const t = useTranslations("Canvas");
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [failed, setFailed] = useState(false);
-  const source = item.type === "video" ? item.poster || item.url : item.url;
+  const source = item.type === "video" ? item.poster : item.url;
   const status = item.status.toLowerCase();
   const commandStatus = status === "loading" || status === "error" || status === "success" ? status : "";
   const isLoading = commandStatus === "loading";
@@ -42,16 +77,9 @@ function MediaPreview({
           : "";
 
   return (
-    <button
-      type="button"
-      aria-label={t("mediaGrid.select", { name: item.name || item.id })}
-      aria-pressed={isSelected}
+    <div
       data-selected-media-grid-item={isSelected ? "true" : undefined}
-      className={`group relative cursor-pointer text-left ${MEDIA_TILE_RADIUS_CLASS}`}
-      onClick={(event) => {
-        event.stopPropagation();
-        onSelect(item, event.currentTarget.getBoundingClientRect());
-      }}
+      className={`group relative text-left ${MEDIA_TILE_RADIUS_CLASS}`}
     >
       <div
         className={cn(
@@ -59,6 +87,60 @@ function MediaPreview({
           MEDIA_TILE_RADIUS_CLASS,
         )}
       >
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-xs"
+          aria-label={t("mediaGrid.upload")}
+          className="absolute left-1 top-1 z-30 size-6 bg-background/90 text-foreground opacity-0 shadow-sm transition-opacity hover:bg-accent group-hover:opacity-100"
+          onClick={(event) => {
+            event.stopPropagation();
+            fileInputRef.current?.click();
+          }}
+        >
+          <Upload className="size-3.5" />
+        </Button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept={item.type === "video" ? "video/mp4,video/webm,video/quicktime" : "image/png,image/jpeg,image/webp,image/gif"}
+          className="hidden"
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            event.currentTarget.value = "";
+            if (file) onUpload(item, file);
+          }}
+        />
+        <div className="absolute right-1 top-1 z-30 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+          {item.type === "image" && onLibrary ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-xs"
+              aria-label={t("mediaGrid.addToLibrary")}
+              className="size-6 bg-background/90 text-foreground shadow-sm hover:bg-accent"
+              onClick={(event) => {
+                event.stopPropagation();
+                onLibrary(item);
+              }}
+            >
+              <PackagePlus className="size-3.5" />
+            </Button>
+          ) : null}
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            aria-label={t("mediaGrid.delete")}
+            className="size-6 bg-background/90 text-foreground shadow-sm hover:bg-accent hover:text-destructive"
+            onClick={(event) => {
+              event.stopPropagation();
+              onDelete(item);
+            }}
+          >
+            <Trash2 className="size-3.5" />
+          </Button>
+        </div>
         {source && !isError ? (
           // Project media URLs are data from the project JSON and remain serializable in flow nodes.
           <Image
@@ -101,23 +183,37 @@ function MediaPreview({
       ) : null}
         {hasActiveSelection && !isSelected ? (
           <div
-            className="pointer-events-none absolute inset-0 z-20 bg-black/55 backdrop-blur-[1px]"
+            className="pointer-events-none absolute inset-0 z-[5] bg-black/55 backdrop-blur-[1px]"
             aria-hidden="true"
           />
         ) : null}
+        <button
+          type="button"
+          aria-label={t("mediaGrid.select", { name: item.name || item.id })}
+          aria-pressed={isSelected}
+          className="absolute inset-0 z-10 cursor-pointer bg-transparent"
+          onClick={(event) => {
+            event.stopPropagation();
+            onSelect(item, event.currentTarget.getBoundingClientRect());
+          }}
+        />
       </div>
       
-    </button>
+    </div>
   );
 }
 
-function EmptyMediaTile({ label }: { label: string }) {
+function EmptyMediaTile({ label, onClick }: { label: string; onClick?: () => void }) {
   return (
     <div className={`overflow-visible ${MEDIA_TILE_RADIUS_CLASS}`}>
       <button
         type="button"
         aria-label={label}
         title={label}
+        onClick={(event) => {
+          event.stopPropagation();
+          onClick?.();
+        }}
         className={`flex aspect-square h-auto w-full flex-col items-center justify-center gap-1 border border-dashed border-border bg-transparent text-muted-foreground ring-inset transition-colors hover:bg-accent hover:text-primary hover:ring-1 hover:ring-primary ${MEDIA_TILE_RADIUS_CLASS}`}
       >
         <Plus className="size-4" />
@@ -130,47 +226,177 @@ function EmptyMediaTile({ label }: { label: string }) {
 export function MediaGrid({
   addLabel,
   items,
+  mediaType,
   nodeId,
   sceneId,
   showItemNames,
 }: {
   addLabel: string;
   items: MediaItem[];
+  mediaType: "image" | "video";
   nodeId: string;
   sceneId: string;
   showItemNames: boolean;
 }) {
+  const t = useTranslations("Canvas");
   const selectedMediaGridItem = useCanvasStore((state) => state.selectedMediaGridItem);
   const selectMediaGridItem = useCanvasStore((state) => state.selectMediaGridItem);
+  const currentCanvasData = useCanvasStore((state) => state.currentCanvasData);
+  const currentProject = useCanvasStore((state) => state.currentProject);
+  const addImageToStoryboard = useCanvasStore((state) => state.addImageToStoryboard);
+  const addVideoToStoryboard = useCanvasStore((state) => state.addVideoToStoryboard);
+  const removeMediaFromStoryboard = useCanvasStore((state) => state.removeMediaFromStoryboard);
+  const setCurrentProject = useCanvasStore((state) => state.setCurrentProject);
+  const updateImageAsset = useCanvasStore((state) => state.updateImageAsset);
+  const updateVideoAsset = useCanvasStore((state) => state.updateVideoAsset);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [libraryImage, setLibraryImage] = useState<ProjectImageAsset | null>(null);
+  const [pendingDeleteItem, setPendingDeleteItem] = useState<MediaItem | null>(null);
   const hasActiveSelection = Boolean(selectedMediaGridItem);
+  const handleAddMedia = () => {
+    if (!currentProject) return;
+    if (mediaType === "image") {
+      setCreateDialogOpen(true);
+      return;
+    }
+
+    void (async () => {
+      try {
+        const result = await createProjectVideo(currentProject.id, {
+          name: addLabel,
+          prompt: "",
+          source: "manual",
+        });
+        addVideoToStoryboard(sceneId, result.video);
+      } catch {
+        // Creation can be retried from the add tile.
+      }
+    })();
+  };
+  const handleConfirmDeleteMedia = () => {
+    if (!currentProject || !pendingDeleteItem) return;
+    const item = pendingDeleteItem;
+
+    void (async () => {
+      try {
+        if (item.type === "image") {
+          await deleteProjectImage(currentProject.id, item.id);
+        } else {
+          await deleteProjectVideo(currentProject.id, item.id);
+        }
+        removeMediaFromStoryboard(sceneId, item.id, item.type);
+        setPendingDeleteItem(null);
+      } catch {
+        // Deleting is best-effort; keep the tile if persistence fails.
+      }
+    })();
+  };
+  const handleUploadMedia = (item: MediaItem, file: File) => {
+    if (!currentProject) return;
+
+    void (async () => {
+      try {
+        if (item.type === "image") {
+          const result = await updateProjectImageFile(currentProject.id, item.id, file);
+          updateImageAsset(result.image);
+          return;
+        }
+
+        const result = await updateProjectVideoFile(currentProject.id, item.id, file);
+        updateVideoAsset(result.video);
+      } catch {
+        // Upload replacement can be retried from the tile.
+      }
+    })();
+  };
 
   return (
-    <ScrollArea className={`nowheel ${MEDIA_GRID_TWO_ROW_HEIGHT} `}>
-      <div className="grid grid-cols-2 gap-2 p-1">
-        <EmptyMediaTile label={addLabel} />
-        {items.map((item) => (
-          <MediaPreview
-            key={item.id}
-            hasActiveSelection={hasActiveSelection}
-            isSelected={selectedMediaGridItem?.nodeId === nodeId && selectedMediaGridItem.item.id === item.id}
-            item={item}
-            showName={showItemNames}
-            onSelect={(selectedItem, anchorRect) => {
-              selectMediaGridItem({
-                nodeId,
-                sceneId,
-                item: selectedItem,
-                anchorRect: {
-                  height: anchorRect.height,
-                  left: anchorRect.left,
-                  top: anchorRect.top,
-                  width: anchorRect.width,
-                },
-              });
-            }}
+    <>
+      <ScrollArea className={`nowheel ${MEDIA_GRID_TWO_ROW_HEIGHT} p-2`}>
+        <div className="grid grid-cols-2 gap-2 p-1">
+          <EmptyMediaTile
+            label={addLabel}
+            onClick={handleAddMedia}
           />
-        ))}
-      </div>
-    </ScrollArea>
+          {items.map((item) => (
+            <MediaPreview
+              key={item.id}
+              hasActiveSelection={hasActiveSelection}
+              isSelected={selectedMediaGridItem?.nodeId === nodeId && selectedMediaGridItem.item.id === item.id}
+              item={item}
+              onDelete={setPendingDeleteItem}
+              onLibrary={(selectedItem) => {
+                const image = currentCanvasData?.data.images.find(
+                  (asset) => asset.id === selectedItem.id,
+                );
+                if (image) setLibraryImage(image);
+              }}
+              showName={showItemNames}
+              onUpload={handleUploadMedia}
+              onSelect={(selectedItem, anchorRect) => {
+                selectMediaGridItem({
+                  nodeId,
+                  sceneId,
+                  item: selectedItem,
+                  anchorRect: {
+                    height: anchorRect.height,
+                    left: anchorRect.left,
+                    top: anchorRect.top,
+                    width: anchorRect.width,
+                  },
+                });
+              }}
+            />
+          ))}
+        </div>
+      </ScrollArea>
+      {currentProject ? (
+        <AssetCreateDialog
+          hiddenSources={["local"]}
+          images={currentCanvasData?.data.images ?? []}
+          onCreated={(image) => addImageToStoryboard(sceneId, image)}
+          onImported={(image) => addImageToStoryboard(sceneId, image)}
+          onProjectUpdated={setCurrentProject}
+          onOpenChange={setCreateDialogOpen}
+          open={createDialogOpen}
+          projectAssets={currentProject.assets}
+          projectId={currentProject.id}
+        />
+      ) : null}
+      {currentProject ? (
+        <AssetCreateDialog
+          images={currentCanvasData?.data.images ?? []}
+          libraryImage={libraryImage}
+          onOpenChange={(open) => !open && setLibraryImage(null)}
+          onProjectUpdated={setCurrentProject}
+          open={Boolean(libraryImage)}
+          projectAssets={currentProject.assets}
+          projectId={currentProject.id}
+        />
+      ) : null}
+      <Dialog
+        open={Boolean(pendingDeleteItem)}
+        onOpenChange={(open) => !open && setPendingDeleteItem(null)}
+      >
+        <DialogContent className="w-[min(92vw,420px)]" showCloseButton={false}>
+          <DialogHeader>
+            <DialogTitle>{t("mediaGrid.deleteTitle")}</DialogTitle>
+            <DialogDescription className="mt-2">
+              {t("mediaGrid.deleteDescription", {
+                name: pendingDeleteItem?.name || pendingDeleteItem?.id || "",
+              })}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="button" variant="secondary" onClick={() => setPendingDeleteItem(null)}>
+              {t("mediaGrid.cancel")}
+            </Button>
+            <Button type="button" variant="destructive" onClick={handleConfirmDeleteMedia}>
+              {t("mediaGrid.confirmDelete")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

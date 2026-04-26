@@ -17,6 +17,7 @@ import {
 import Image from "next/image";
 import { useTranslations } from "next-intl";
 
+import { AssetCreateDialog } from "@/components/assets/asset-create-dialog";
 import { ChatWindow, type ChatWindowModelOption } from "@/components/canvas/chat-window";
 import { useSilentAgentCommand } from "@/components/canvas/use-silent-agent-command";
 import { Button } from "@/components/ui/button";
@@ -87,6 +88,7 @@ export function AssetsPanel() {
   const tCanvas = useTranslations("Canvas");
   const { execute: executeSilentAgentCommand } = useSilentAgentCommand();
   const currentProject = useCanvasStore((state) => state.currentProject);
+  const setCurrentProject = useCanvasStore((state) => state.setCurrentProject);
   const commandStatuses = useCanvasStore((state) => state.commandStatuses);
   const [activeTab, setActiveTab] = useState<AssetTabKey>("all");
   const [searchValue, setSearchValue] = useState("");
@@ -97,6 +99,7 @@ export function AssetsPanel() {
   const [deletingAsset, setDeletingAsset] = useState<ProjectImageAsset | null>(null);
   const [deletingImage, setDeletingImage] = useState(false);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction>(null);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
   const [selectedChatAssetId, setSelectedChatAssetId] = useState<string | null>(null);
   const [assetChatPosition, setAssetChatPosition] = useState<{ left: number; top: number } | null>(
@@ -414,6 +417,7 @@ export function AssetsPanel() {
                     <Button
                       type="button"
                       variant="outline"
+                      onClick={() => setCreateDialogOpen(true)}
                       className="flex aspect-square h-auto flex-col gap-1 border-dashed text-muted-foreground"
                     >
                       <Plus className="size-4" />
@@ -662,6 +666,20 @@ export function AssetsPanel() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AssetCreateDialog
+        images={projectImages}
+        onCreated={(_image, images) => {
+          setProjectImages(images);
+          setFailedImageIds(new Set());
+        }}
+        onImported={(image) => setSelectedAssetId(image.id)}
+        onProjectUpdated={setCurrentProject}
+        onOpenChange={setCreateDialogOpen}
+        open={createDialogOpen}
+        projectAssets={currentProject?.assets}
+        projectId={currentProject?.id ?? ""}
+      />
 
       <Dialog
         open={confirmAction !== null}

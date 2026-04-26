@@ -161,7 +161,68 @@
       "loading": "生成中",
       "error": "Error",
       "success": "已完成",
-      "select": "选择 {name}"
+      "select": "选择 {name}",
+      "upload": "本地上传",
+      "delete": "删除",
+      "addToLibrary": "入库",
+      "deleteTitle": "删除媒体？",
+      "deleteDescription": "确定从当前宫格和项目记录中删除“{name}”吗？",
+      "cancel": "取消",
+      "confirmDelete": "删除"
+    }
+  },
+  "AssetCreate": {
+    "category": {
+      "character": "角色",
+      "prop": "道具",
+      "scene": "场景",
+      "reference": "参考图"
+    },
+    "source": {
+      "title": "新增素材",
+      "description": "选择素材来源。",
+      "global": {
+        "title": "全局引入",
+        "description": "从全局资产的角色、道具、场景中选择。"
+      },
+      "local": {
+        "title": "本地上传",
+        "description": "上传图片并写入当前项目资产库。"
+      },
+      "ai": {
+        "title": "AI生成",
+        "description": "先写入提示词，图片可稍后生成或替换。"
+      }
+    },
+    "global": {
+      "title": "全局资产",
+      "description": "选择要引入的全局资产。",
+      "back": "返回角色列表",
+      "childCount": " · {count} 个子资产",
+      "unmatchedTitle": "未匹配图片信息",
+      "unmatchedDescription": "ID：{id}",
+      "empty": "暂无可选资产"
+    },
+    "form": {
+      "title": "新建素材",
+      "libraryTitle": "素材入库",
+      "description": {
+        "local": "上传本地图片并填写资产信息。",
+        "ai": "填写资产信息，图片位置可上传替换。"
+      },
+      "uploadHint": "上传自定义资产",
+      "uploadRule": "支持 png、jpg、jpeg、webp、gif",
+      "imageError": "图片错误",
+      "category": "入库目录",
+      "parentCharacter": "所属角色",
+      "parentCharacterPlaceholder": "作为一级角色",
+      "name": "资产标题",
+      "namePlaceholder": "这里是资产的标题",
+      "prompt": "资产描述",
+      "promptPlaceholder": "这里是资产的描述，可用于生成",
+      "back": "返回",
+      "confirm": "确定",
+      "saving": "保存中..."
     }
   },
   "Sidebar": {

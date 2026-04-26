@@ -28,6 +28,7 @@ export function StoryboardImageNode({ data, id }: NodeProps<StoryboardImageNodeT
         <MediaGrid
           addLabel={t("storyboardImage.add")}
           items={data.items}
+          mediaType={data.mediaType}
           nodeId={id}
           sceneId={data.sceneId}
           showItemNames

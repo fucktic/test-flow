@@ -24,6 +24,7 @@ const CURRENT_PROJECT_PATH = path.resolve(PROJECTS_DIR, "currentProject.json");
 const PROJECT_COMMAND_FILE_NAME = "command.json";
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const TEMP_FILE_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.[a-z0-9]{1,12}$/i;
+const IMAGE_FILE_PATTERN = /^image-[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.[a-z0-9]{1,12}$/i;
 const COMMAND_STATUS_VALUES = new Set(["loading", "error", "success"]);
 
 export type ProjectTempImage = {
@@ -42,6 +43,21 @@ type ProjectTempImageInput = {
 };
 
 export type ProjectCommandStatus = "loading" | "error" | "success";
+
+type CreateProjectImageInput = {
+  category: string;
+  image?: ProjectTempImageInput;
+  name: string;
+  parentId?: string;
+  prompt: string;
+  source: string;
+};
+
+type CreateProjectVideoInput = {
+  name: string;
+  prompt: string;
+  source: string;
+};
 
 function assertSafeProjectPath(targetPath: string) {
   if (targetPath !== PROJECTS_DIR && !targetPath.startsWith(`${PROJECTS_DIR}${path.sep}`)) {
@@ -274,6 +290,18 @@ function getImageExtension(contentType: string, fileName: string) {
   throw new Error("Unsupported image type.");
 }
 
+function getVideoExtension(contentType: string, fileName: string) {
+  const normalizedContentType = contentType.toLowerCase();
+  if (normalizedContentType === "video/mp4") return "mp4";
+  if (normalizedContentType === "video/webm") return "webm";
+  if (normalizedContentType === "video/quicktime") return "mov";
+
+  const extension = path.extname(fileName).replace(".", "").toLowerCase();
+  if (["mp4", "webm", "mov"].includes(extension)) return extension;
+
+  throw new Error("Unsupported video type.");
+}
+
 function getSafeFileExtension(fileName: string) {
   const extension = path.extname(fileName).replace(".", "").toLowerCase();
   if (/^[a-z0-9]{1,12}$/.test(extension)) return extension;
@@ -287,6 +315,69 @@ function getTempFileContentType(fileName: string) {
   if (extension === "webp") return "image/webp";
   if (extension === "gif") return "image/gif";
   return "application/octet-stream";
+}
+
+function getVideoFileContentType(fileName: string) {
+  const extension = path.extname(fileName).replace(".", "").toLowerCase();
+  if (extension === "mp4") return "video/mp4";
+  if (extension === "webm") return "video/webm";
+  if (extension === "mov") return "video/quicktime";
+  return "application/octet-stream";
+}
+
+function upsertAssetItem(items: ProjectAssetItem[], assetId: string) {
+  if (items.some((item) => item.id === assetId)) return items;
+  return [{ id: assetId, children: [] }, ...items];
+}
+
+function upsertChildAssetItem(items: ProjectAssetItem[], parentId: string, childId: string) {
+  return items.map((item) => {
+    if (item.id !== parentId || item.children.includes(childId)) return item;
+
+    return {
+      ...item,
+      children: [childId, ...item.children],
+    };
+  });
+}
+
+function addImageToProjectAssets(
+  project: ProjectDetail,
+  params: { category: string; imageId: string; parentId?: string },
+) {
+  if (params.category === "character") {
+    return {
+      ...project,
+      assets: {
+        ...project.assets,
+        characters: params.parentId
+          ? upsertChildAssetItem(project.assets.characters, params.parentId, params.imageId)
+          : upsertAssetItem(project.assets.characters, params.imageId),
+      },
+    };
+  }
+
+  if (params.category === "scene") {
+    return {
+      ...project,
+      assets: {
+        ...project.assets,
+        scenes: upsertAssetItem(project.assets.scenes, params.imageId),
+      },
+    };
+  }
+
+  if (params.category === "prop") {
+    return {
+      ...project,
+      assets: {
+        ...project.assets,
+        props: upsertAssetItem(project.assets.props, params.imageId),
+      },
+    };
+  }
+
+  return project;
 }
 
 async function readProjectDetail(projectId: string): Promise<ProjectDetail | null> {
@@ -654,6 +745,317 @@ export async function deleteProjectImage(params: {
     await writeFile(imagesJsonPath, JSON.stringify(nextImages, null, 2), "utf8");
 
     return { success: true, images: nextImages };
+  } catch (err) {
+    if (err instanceof Error) {
+      return { success: false, error: err.message };
+    }
+    return { success: false, error: "未知错误" };
+  }
+}
+
+export async function createProjectImage(params: {
+  image: CreateProjectImageInput;
+  projectId: string;
+}): Promise<
+  { success: true; image: ProjectImageAsset; images: ProjectImageAsset[]; project: ProjectDetail | null } | { success: false; error: string }
+> {
+  try {
+    const projectDir = getProjectDir(params.projectId);
+    const imagesDir = path.resolve(projectDir, "images");
+    const imagesJsonPath = path.resolve(imagesDir, "images.json");
+    assertSafeProjectPath(imagesDir);
+    assertSafeProjectPath(imagesJsonPath);
+
+    await mkdir(imagesDir, { recursive: true });
+
+    const id = `image-${randomUUID()}`;
+    let url = "";
+
+    if (params.image.image) {
+      const extension = getImageExtension(params.image.image.contentType, params.image.image.name);
+      const fileName = `${id}.${extension}`;
+      const filePath = path.resolve(imagesDir, fileName);
+      assertSafeProjectPath(filePath);
+      await writeFile(filePath, params.image.image.buffer);
+      url = `/api/projects/${encodeURIComponent(params.projectId)}/images/${encodeURIComponent(fileName)}`;
+    }
+
+    const currentImages = await readFile(imagesJsonPath, "utf8")
+      .then((content) => readProjectImageAssets(JSON.parse(content)))
+      .catch(() => []);
+    const image: ProjectImageAsset = {
+      id,
+      name: params.image.name,
+      type: params.image.category,
+      source: params.image.source,
+      prompt: params.image.prompt,
+      url,
+    };
+    const images = [image, ...currentImages];
+
+    await writeFile(imagesJsonPath, JSON.stringify(images, null, 2), "utf8");
+    const project = await readProjectDetail(params.projectId).catch(() => null);
+    const nextProject = project
+      ? addImageToProjectAssets(project, {
+          category: params.image.category,
+          imageId: id,
+          parentId: params.image.parentId,
+        })
+      : null;
+
+    if (nextProject && nextProject !== project) {
+      await writeProjectDetail(nextProject);
+      const currentProject = await readCurrentProjectDetail().catch(() => null);
+      if (currentProject?.id === nextProject.id) {
+        await writeCurrentProjectDetail(nextProject);
+      }
+    }
+
+    return { success: true, image, images, project: nextProject };
+  } catch (err) {
+    if (err instanceof Error) {
+      return { success: false, error: err.message };
+    }
+    return { success: false, error: "未知错误" };
+  }
+}
+
+export async function updateProjectImageFile(params: {
+  file: ProjectTempImageInput;
+  imageId: string;
+  projectId: string;
+}): Promise<{ success: true; image: ProjectImageAsset; images: ProjectImageAsset[] } | { success: false; error: string }> {
+  try {
+    const projectDir = getProjectDir(params.projectId);
+    const imagesDir = path.resolve(projectDir, "images");
+    const imagesJsonPath = path.resolve(imagesDir, "images.json");
+    assertSafeProjectPath(imagesDir);
+    assertSafeProjectPath(imagesJsonPath);
+
+    await mkdir(imagesDir, { recursive: true });
+    const content = await readFile(imagesJsonPath, "utf8");
+    const currentImages = readProjectImageAssets(JSON.parse(content));
+    const currentImage = currentImages.find((image) => image.id === params.imageId);
+    if (!currentImage) return { success: false, error: "IMAGE_NOT_FOUND" };
+
+    const extension = getImageExtension(params.file.contentType, params.file.name);
+    const fileName = `${params.imageId}.${extension}`;
+    const filePath = path.resolve(imagesDir, fileName);
+    assertSafeProjectPath(filePath);
+    await writeFile(filePath, params.file.buffer);
+
+    const nextImage: ProjectImageAsset = {
+      ...currentImage,
+      source: currentImage.source || "local",
+      url: `/api/projects/${encodeURIComponent(params.projectId)}/images/${encodeURIComponent(fileName)}`,
+    };
+    const images = currentImages.map((image) => (image.id === params.imageId ? nextImage : image));
+    await writeFile(imagesJsonPath, JSON.stringify(images, null, 2), "utf8");
+
+    return { success: true, image: nextImage, images };
+  } catch (err) {
+    if (err instanceof Error) {
+      return { success: false, error: err.message };
+    }
+    return { success: false, error: "未知错误" };
+  }
+}
+
+export async function addExistingImageToProjectAssets(params: {
+  category: string;
+  imageId: string;
+  parentId?: string;
+  projectId: string;
+}): Promise<{ success: true; project: ProjectDetail } | { success: false; error: string }> {
+  try {
+    const project = await readProjectDetail(params.projectId);
+    if (!project) return { success: false, error: "PROJECT_NOT_FOUND" };
+
+    const nextProject = addImageToProjectAssets(project, params);
+    await writeProjectDetail(nextProject);
+    const currentProject = await readCurrentProjectDetail().catch(() => null);
+    if (currentProject?.id === nextProject.id) {
+      await writeCurrentProjectDetail(nextProject);
+    }
+
+    return { success: true, project: nextProject };
+  } catch (err) {
+    if (err instanceof Error) {
+      return { success: false, error: err.message };
+    }
+    return { success: false, error: "未知错误" };
+  }
+}
+
+export async function getProjectVideos(
+  projectId: string,
+): Promise<{ success: true; videos: ProjectVideoAsset[] } | { success: false; error: string }> {
+  try {
+    const videosJsonPath = path.resolve(getProjectDir(projectId), "videos", "videos.json");
+    assertSafeProjectPath(videosJsonPath);
+
+    try {
+      const content = await readFile(videosJsonPath, "utf8");
+      return { success: true, videos: readProjectVideoAssets(JSON.parse(content)) };
+    } catch {
+      return { success: true, videos: [] };
+    }
+  } catch (err) {
+    if (err instanceof Error) {
+      return { success: false, error: err.message };
+    }
+    return { success: false, error: "未知错误" };
+  }
+}
+
+export async function createProjectVideo(params: {
+  projectId: string;
+  video: CreateProjectVideoInput;
+}): Promise<{ success: true; video: ProjectVideoAsset; videos: ProjectVideoAsset[] } | { success: false; error: string }> {
+  try {
+    const videosDir = path.resolve(getProjectDir(params.projectId), "videos");
+    const videosJsonPath = path.resolve(videosDir, "videos.json");
+    assertSafeProjectPath(videosDir);
+    assertSafeProjectPath(videosJsonPath);
+
+    await mkdir(videosDir, { recursive: true });
+    const currentVideos = await readFile(videosJsonPath, "utf8")
+      .then((content) => readProjectVideoAssets(JSON.parse(content)))
+      .catch(() => []);
+    const id = `video-${randomUUID()}`;
+    const video: ProjectVideoAsset = {
+      id,
+      duration: "",
+      name: params.video.name,
+      poster: "",
+      prompt: params.video.prompt,
+      source: params.video.source,
+      status: "",
+      url: "",
+    };
+    const videos = [video, ...currentVideos];
+    await writeFile(videosJsonPath, JSON.stringify(videos, null, 2), "utf8");
+
+    return { success: true, video, videos };
+  } catch (err) {
+    if (err instanceof Error) {
+      return { success: false, error: err.message };
+    }
+    return { success: false, error: "未知错误" };
+  }
+}
+
+export async function updateProjectVideoFile(params: {
+  file: ProjectTempImageInput;
+  projectId: string;
+  videoId: string;
+}): Promise<{ success: true; video: ProjectVideoAsset; videos: ProjectVideoAsset[] } | { success: false; error: string }> {
+  try {
+    const videosDir = path.resolve(getProjectDir(params.projectId), "videos");
+    const videosJsonPath = path.resolve(videosDir, "videos.json");
+    assertSafeProjectPath(videosDir);
+    assertSafeProjectPath(videosJsonPath);
+
+    await mkdir(videosDir, { recursive: true });
+    const content = await readFile(videosJsonPath, "utf8");
+    const currentVideos = readProjectVideoAssets(JSON.parse(content));
+    const currentVideo = currentVideos.find((video) => video.id === params.videoId);
+    if (!currentVideo) return { success: false, error: "VIDEO_NOT_FOUND" };
+
+    const extension = getVideoExtension(params.file.contentType, params.file.name);
+    const fileName = `${params.videoId}.${extension}`;
+    const filePath = path.resolve(videosDir, fileName);
+    assertSafeProjectPath(filePath);
+    await writeFile(filePath, params.file.buffer);
+
+    const nextVideo: ProjectVideoAsset = {
+      ...currentVideo,
+      source: currentVideo.source || "local",
+      url: `/api/projects/${encodeURIComponent(params.projectId)}/videos/${encodeURIComponent(fileName)}`,
+    };
+    const videos = currentVideos.map((video) => (video.id === params.videoId ? nextVideo : video));
+    await writeFile(videosJsonPath, JSON.stringify(videos, null, 2), "utf8");
+
+    return { success: true, video: nextVideo, videos };
+  } catch (err) {
+    if (err instanceof Error) {
+      return { success: false, error: err.message };
+    }
+    return { success: false, error: "未知错误" };
+  }
+}
+
+export async function deleteProjectVideo(params: {
+  projectId: string;
+  videoId: string;
+}): Promise<{ success: true; videos: ProjectVideoAsset[] } | { success: false; error: string }> {
+  try {
+    const videosJsonPath = path.resolve(getProjectDir(params.projectId), "videos", "videos.json");
+    assertSafeProjectPath(videosJsonPath);
+
+    const content = await readFile(videosJsonPath, "utf8");
+    const videos = readProjectVideoAssets(JSON.parse(content));
+    const nextVideos = videos.filter((video) => video.id !== params.videoId);
+
+    await writeFile(videosJsonPath, JSON.stringify(nextVideos, null, 2), "utf8");
+
+    return { success: true, videos: nextVideos };
+  } catch (err) {
+    if (err instanceof Error) {
+      return { success: false, error: err.message };
+    }
+    return { success: false, error: "未知错误" };
+  }
+}
+
+export async function readProjectVideoFile(params: {
+  fileName: string;
+  projectId: string;
+}): Promise<
+  { success: true; buffer: Buffer; contentType: string } | { success: false; error: string }
+> {
+  try {
+    if (!/^video-[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.[a-z0-9]{1,12}$/i.test(params.fileName)) {
+      return { success: false, error: "INVALID_VIDEO_FILE_NAME" };
+    }
+
+    const filePath = path.resolve(getProjectDir(params.projectId), "videos", params.fileName);
+    assertSafeProjectPath(filePath);
+    const buffer = await readFile(filePath);
+
+    return {
+      success: true,
+      buffer,
+      contentType: getVideoFileContentType(params.fileName),
+    };
+  } catch (err) {
+    if (err instanceof Error) {
+      return { success: false, error: err.message };
+    }
+    return { success: false, error: "未知错误" };
+  }
+}
+
+export async function readProjectImageFile(params: {
+  fileName: string;
+  projectId: string;
+}): Promise<
+  { success: true; buffer: Buffer; contentType: string } | { success: false; error: string }
+> {
+  try {
+    if (!IMAGE_FILE_PATTERN.test(params.fileName)) {
+      return { success: false, error: "INVALID_IMAGE_FILE_NAME" };
+    }
+
+    const filePath = path.resolve(getProjectDir(params.projectId), "images", params.fileName);
+    assertSafeProjectPath(filePath);
+    const buffer = await readFile(filePath);
+
+    return {
+      success: true,
+      buffer,
+      contentType: getTempFileContentType(params.fileName),
+    };
   } catch (err) {
     if (err instanceof Error) {
       return { success: false, error: err.message };

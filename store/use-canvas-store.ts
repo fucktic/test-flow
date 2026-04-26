@@ -73,6 +73,15 @@ type CanvasState = {
   selectedEpisodeIds: string[];
   selectedStoryboardIds: string[];
   selectedMediaGridItem: SelectedMediaGridItem | null;
+  addImageToStoryboard: (storyboardId: string, image: ProjectImageAsset) => void;
+  addVideoToStoryboard: (storyboardId: string, video: ProjectVideoAsset) => void;
+  removeMediaFromStoryboard: (
+    storyboardId: string,
+    mediaId: string,
+    mediaType: "image" | "video",
+  ) => void;
+  updateImageAsset: (image: ProjectImageAsset) => void;
+  updateVideoAsset: (video: ProjectVideoAsset) => void;
   addNode: (label: string) => void;
   addStoryboard: (episodeId: string) => void;
   clearSelectedMediaGridItem: () => void;
@@ -378,6 +387,206 @@ export const useCanvasStore = create<CanvasState>((set) => ({
         edges: nextCanvas.edges,
         selectedStoryboardIds:
           currentSelection === nextSelection ? state.selectedStoryboardIds : nextCanvas.selectedStoryboardIds,
+      };
+    }),
+  addImageToStoryboard: (storyboardId, image) =>
+    set((state) => {
+      if (!state.currentCanvasData) return {};
+
+      const currentImages = state.currentCanvasData.data.images;
+      const nextImages = currentImages.some((item) => item.id === image.id)
+        ? currentImages.map((item) => (item.id === image.id ? image : item))
+        : [image, ...currentImages];
+      const nextStoryboards = state.currentCanvasData.data.storyboards.map((storyboard) => {
+        if (storyboard.id !== storyboardId || storyboard.images.includes(image.id)) {
+          return storyboard;
+        }
+
+        return {
+          ...storyboard,
+          images: [image.id, ...storyboard.images],
+        };
+      });
+      const nextCanvasData: CurrentCanvasData = {
+        ...state.currentCanvasData,
+        data: {
+          ...state.currentCanvasData.data,
+          images: nextImages,
+          storyboards: nextStoryboards,
+        },
+      };
+      const episodeName =
+        state.currentProject?.episodes.find(
+          (episode) => episode.id === state.currentCanvasData?.episodeId,
+        )?.name ?? "";
+      const nextCanvas = rebuildStoryboardCanvasState(
+        nextCanvasData,
+        state.selectedStoryboardIds,
+        episodeName,
+        state.commandStatuses,
+      );
+
+      return {
+        currentCanvasData: nextCanvasData,
+        nodes: nextCanvas.nodes,
+        edges: nextCanvas.edges,
+        selectedMediaGridItem: null,
+      };
+    }),
+  updateImageAsset: (image) =>
+    set((state) => {
+      if (!state.currentCanvasData) return {};
+
+      const nextCanvasData: CurrentCanvasData = {
+        ...state.currentCanvasData,
+        data: {
+          ...state.currentCanvasData.data,
+          images: state.currentCanvasData.data.images.map((item) =>
+            item.id === image.id ? image : item,
+          ),
+        },
+      };
+      const episodeName =
+        state.currentProject?.episodes.find(
+          (episode) => episode.id === state.currentCanvasData?.episodeId,
+        )?.name ?? "";
+      const nextCanvas = rebuildStoryboardCanvasState(
+        nextCanvasData,
+        state.selectedStoryboardIds,
+        episodeName,
+        state.commandStatuses,
+      );
+
+      return {
+        currentCanvasData: nextCanvasData,
+        nodes: nextCanvas.nodes,
+        edges: nextCanvas.edges,
+      };
+    }),
+  addVideoToStoryboard: (storyboardId, video) =>
+    set((state) => {
+      if (!state.currentCanvasData) return {};
+
+      const currentVideos = state.currentCanvasData.data.videos;
+      const nextVideos = currentVideos.some((item) => item.id === video.id)
+        ? currentVideos.map((item) => (item.id === video.id ? video : item))
+        : [video, ...currentVideos];
+      const nextStoryboards = state.currentCanvasData.data.storyboards.map((storyboard) => {
+        if (storyboard.id !== storyboardId || storyboard.videos.includes(video.id)) {
+          return storyboard;
+        }
+
+        return {
+          ...storyboard,
+          videos: [video.id, ...storyboard.videos],
+        };
+      });
+      const nextCanvasData: CurrentCanvasData = {
+        ...state.currentCanvasData,
+        data: {
+          ...state.currentCanvasData.data,
+          videos: nextVideos,
+          storyboards: nextStoryboards,
+        },
+      };
+      const episodeName =
+        state.currentProject?.episodes.find(
+          (episode) => episode.id === state.currentCanvasData?.episodeId,
+        )?.name ?? "";
+      const nextCanvas = rebuildStoryboardCanvasState(
+        nextCanvasData,
+        state.selectedStoryboardIds,
+        episodeName,
+        state.commandStatuses,
+      );
+
+      return {
+        currentCanvasData: nextCanvasData,
+        nodes: nextCanvas.nodes,
+        edges: nextCanvas.edges,
+        selectedMediaGridItem: null,
+      };
+    }),
+  updateVideoAsset: (video) =>
+    set((state) => {
+      if (!state.currentCanvasData) return {};
+
+      const nextCanvasData: CurrentCanvasData = {
+        ...state.currentCanvasData,
+        data: {
+          ...state.currentCanvasData.data,
+          videos: state.currentCanvasData.data.videos.map((item) =>
+            item.id === video.id ? video : item,
+          ),
+        },
+      };
+      const episodeName =
+        state.currentProject?.episodes.find(
+          (episode) => episode.id === state.currentCanvasData?.episodeId,
+        )?.name ?? "";
+      const nextCanvas = rebuildStoryboardCanvasState(
+        nextCanvasData,
+        state.selectedStoryboardIds,
+        episodeName,
+        state.commandStatuses,
+      );
+
+      return {
+        currentCanvasData: nextCanvasData,
+        nodes: nextCanvas.nodes,
+        edges: nextCanvas.edges,
+      };
+    }),
+  removeMediaFromStoryboard: (storyboardId, mediaId, mediaType) =>
+    set((state) => {
+      if (!state.currentCanvasData) return {};
+
+      const nextCanvasData: CurrentCanvasData = {
+        ...state.currentCanvasData,
+        data: {
+          ...state.currentCanvasData.data,
+          images:
+            mediaType === "image"
+              ? state.currentCanvasData.data.images.filter((image) => image.id !== mediaId)
+              : state.currentCanvasData.data.images,
+          videos:
+            mediaType === "video"
+              ? state.currentCanvasData.data.videos.filter((video) => video.id !== mediaId)
+              : state.currentCanvasData.data.videos,
+          storyboards: state.currentCanvasData.data.storyboards.map((storyboard) => {
+            if (storyboard.id !== storyboardId) return storyboard;
+
+            return {
+              ...storyboard,
+              images:
+                mediaType === "image"
+                  ? storyboard.images.filter((imageId) => imageId !== mediaId)
+                  : storyboard.images,
+              videos:
+                mediaType === "video"
+                  ? storyboard.videos.filter((videoId) => videoId !== mediaId)
+                  : storyboard.videos,
+            };
+          }),
+        },
+      };
+      const episodeName =
+        state.currentProject?.episodes.find(
+          (episode) => episode.id === state.currentCanvasData?.episodeId,
+        )?.name ?? "";
+      const nextCanvas = rebuildStoryboardCanvasState(
+        nextCanvasData,
+        state.selectedStoryboardIds,
+        episodeName,
+        state.commandStatuses,
+      );
+
+      return {
+        currentCanvasData: nextCanvasData,
+        nodes: nextCanvas.nodes,
+        edges: nextCanvas.edges,
+        selectedMediaGridItem:
+          state.selectedMediaGridItem?.item.id === mediaId ? null : state.selectedMediaGridItem,
       };
     }),
   toggleStoryboardSelection: (storyboardId) =>

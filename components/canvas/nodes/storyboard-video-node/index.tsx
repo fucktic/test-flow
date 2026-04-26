@@ -24,10 +24,11 @@ export function StoryboardVideoNode({ data, id }: NodeProps<StoryboardVideoNodeT
         </span>
       </div>
 
-      <section className="rounded-md border border-border bg-card p-2 text-card-foreground shadow-xl">
+      <section className="rounded-md border border-border bg-card  text-card-foreground shadow-xl">
         <MediaGrid
           addLabel={t("storyboardVideo.add")}
           items={data.items}
+          mediaType={data.mediaType}
           nodeId={id}
           sceneId={data.sceneId}
           showItemNames={false}

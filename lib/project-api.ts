@@ -18,7 +18,14 @@ type ProjectResponse = {
 };
 
 type ProjectImagesResponse = {
+  image?: ProjectImageAsset;
   images?: ProjectImageAsset[];
+  project?: ProjectDetail;
+};
+
+type ProjectVideosResponse = {
+  video?: ProjectVideoAsset;
+  videos?: ProjectVideoAsset[];
 };
 
 export type ProjectTempImage = {
@@ -200,6 +207,165 @@ export async function deleteProjectImage(
   );
 
   return Array.isArray(data.images) ? data.images : [];
+}
+
+export async function createProjectImage(
+  projectId: string,
+  params: {
+    category: string;
+    file?: File | null;
+    name: string;
+    parentId?: string;
+    prompt: string;
+    source: string;
+  },
+): Promise<{ image: ProjectImageAsset; images: ProjectImageAsset[]; project?: ProjectDetail }> {
+  const formData = new FormData();
+  formData.append("category", params.category);
+  formData.append("name", params.name);
+  formData.append("prompt", params.prompt);
+  formData.append("source", params.source);
+  if (params.parentId) formData.append("parentId", params.parentId);
+  if (params.file) formData.append("file", params.file);
+
+  const data = await readJsonResponse<ProjectImagesResponse>(
+    await fetch(`/api/projects/${encodeURIComponent(projectId)}/images`, {
+      method: "POST",
+      body: formData,
+    }),
+  );
+
+  if (!data.image) {
+    throw new Error("PROJECT_IMAGE_CREATE_FAILED");
+  }
+
+  return {
+    image: data.image,
+    images: Array.isArray(data.images) ? data.images : [data.image],
+    project: data.project,
+  };
+}
+
+export async function updateProjectImageFile(
+  projectId: string,
+  imageId: string,
+  file: File,
+): Promise<{ image: ProjectImageAsset; images: ProjectImageAsset[] }> {
+  const formData = new FormData();
+  formData.append("imageId", imageId);
+  formData.append("file", file);
+
+  const data = await readJsonResponse<ProjectImagesResponse>(
+    await fetch(`/api/projects/${encodeURIComponent(projectId)}/images`, {
+      method: "PUT",
+      body: formData,
+    }),
+  );
+
+  if (!data.image) {
+    throw new Error("PROJECT_IMAGE_UPDATE_FAILED");
+  }
+
+  return {
+    image: data.image,
+    images: Array.isArray(data.images) ? data.images : [data.image],
+  };
+}
+
+export async function addProjectImageToAssets(
+  projectId: string,
+  params: {
+    category: string;
+    imageId: string;
+    parentId?: string;
+  },
+): Promise<ProjectDetail> {
+  const data = await readJsonResponse<ProjectImagesResponse>(
+    await fetch(`/api/projects/${encodeURIComponent(projectId)}/images`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(params),
+    }),
+  );
+
+  if (!data.project) {
+    throw new Error("PROJECT_IMAGE_ASSET_SAVE_FAILED");
+  }
+
+  return data.project;
+}
+
+export async function createProjectVideo(
+  projectId: string,
+  params: {
+    name: string;
+    prompt: string;
+    source: string;
+  },
+): Promise<{ video: ProjectVideoAsset; videos: ProjectVideoAsset[] }> {
+  const data = await readJsonResponse<ProjectVideosResponse>(
+    await fetch(`/api/projects/${encodeURIComponent(projectId)}/videos`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(params),
+    }),
+  );
+
+  if (!data.video) {
+    throw new Error("PROJECT_VIDEO_CREATE_FAILED");
+  }
+
+  return {
+    video: data.video,
+    videos: Array.isArray(data.videos) ? data.videos : [data.video],
+  };
+}
+
+export async function updateProjectVideoFile(
+  projectId: string,
+  videoId: string,
+  file: File,
+): Promise<{ video: ProjectVideoAsset; videos: ProjectVideoAsset[] }> {
+  const formData = new FormData();
+  formData.append("videoId", videoId);
+  formData.append("file", file);
+
+  const data = await readJsonResponse<ProjectVideosResponse>(
+    await fetch(`/api/projects/${encodeURIComponent(projectId)}/videos`, {
+      method: "PUT",
+      body: formData,
+    }),
+  );
+
+  if (!data.video) {
+    throw new Error("PROJECT_VIDEO_UPDATE_FAILED");
+  }
+
+  return {
+    video: data.video,
+    videos: Array.isArray(data.videos) ? data.videos : [data.video],
+  };
+}
+
+export async function deleteProjectVideo(
+  projectId: string,
+  videoId: string,
+): Promise<ProjectVideoAsset[]> {
+  const data = await readJsonResponse<ProjectVideosResponse>(
+    await fetch(
+      `/api/projects/${encodeURIComponent(projectId)}/videos?videoId=${encodeURIComponent(videoId)}`,
+      {
+        method: "DELETE",
+        cache: "no-store",
+      },
+    ),
+  );
+
+  return Array.isArray(data.videos) ? data.videos : [];
 }
 
 export async function uploadProjectTempImages(

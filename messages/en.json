@@ -161,7 +161,68 @@
       "loading": "Loading",
       "error": "Error",
       "success": "Done",
-      "select": "Select {name}"
+      "select": "Select {name}",
+      "upload": "Local upload",
+      "delete": "Delete",
+      "addToLibrary": "Add to library",
+      "deleteTitle": "Delete media?",
+      "deleteDescription": "Delete {name} from this grid and project records?",
+      "cancel": "Cancel",
+      "confirmDelete": "Delete"
+    }
+  },
+  "AssetCreate": {
+    "category": {
+      "character": "Character",
+      "prop": "Prop",
+      "scene": "Scene",
+      "reference": "Reference image"
+    },
+    "source": {
+      "title": "Add asset",
+      "description": "Choose where this asset comes from.",
+      "global": {
+        "title": "Import global",
+        "description": "Choose from global characters, props, and scenes."
+      },
+      "local": {
+        "title": "Local upload",
+        "description": "Upload an image into the current project asset library."
+      },
+      "ai": {
+        "title": "AI generation",
+        "description": "Save the prompt first, then generate or replace the image later."
+      }
+    },
+    "global": {
+      "title": "Global assets",
+      "description": "Choose a global asset to import.",
+      "back": "Back to characters",
+      "childCount": " · {count} child assets",
+      "unmatchedTitle": "Image info not matched",
+      "unmatchedDescription": "ID: {id}",
+      "empty": "No assets available"
+    },
+    "form": {
+      "title": "Create asset",
+      "libraryTitle": "Add to library",
+      "description": {
+        "local": "Upload a local image and fill in the asset details.",
+        "ai": "Fill in the asset details. The image slot can be replaced by upload."
+      },
+      "uploadHint": "Upload custom asset",
+      "uploadRule": "Supports png, jpg, jpeg, webp, and gif",
+      "imageError": "Image error",
+      "category": "Category",
+      "parentCharacter": "Character",
+      "parentCharacterPlaceholder": "As top-level character",
+      "name": "Asset title",
+      "namePlaceholder": "Asset title",
+      "prompt": "Asset description",
+      "promptPlaceholder": "Asset description for generation",
+      "back": "Back",
+      "confirm": "Confirm",
+      "saving": "Saving..."
     }
   },
   "Sidebar": {
