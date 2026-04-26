@@ -9,7 +9,7 @@ import { MediaGrid } from "../media-grid";
 
 type StoryboardVideoNodeType = Node<StoryboardMediaNodeData, "storyboard-video-node">;
 
-export function StoryboardVideoNode({ data }: NodeProps<StoryboardVideoNodeType>) {
+export function StoryboardVideoNode({ data, id }: NodeProps<StoryboardVideoNodeType>) {
   const t = useTranslations("Canvas");
 
   return (
@@ -25,7 +25,13 @@ export function StoryboardVideoNode({ data }: NodeProps<StoryboardVideoNodeType>
       </div>
 
       <section className="rounded-md border border-border bg-card p-2 text-card-foreground shadow-xl">
-        <MediaGrid addLabel={t("storyboardVideo.add")} items={data.items} showItemNames={false} />
+        <MediaGrid
+          addLabel={t("storyboardVideo.add")}
+          items={data.items}
+          nodeId={id}
+          sceneId={data.sceneId}
+          showItemNames={false}
+        />
       </section>
       <Handle type="source" position={Position.Right} className="bg-primary!" />
     </div>

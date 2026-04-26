@@ -73,7 +73,8 @@ export default function AgentSwitcher() {
   const { selectedAgentId: storeSelectedId, setSelectedAgentId: storeSetSelectedId } =
     useAgentStore();
   const [agents, setAgents] = useState<AgentRecord[]>([]);
-  const [selectedAgentId, setSelectedAgentId] = useState(() => storeSelectedId);
+  const selectedAgentId = storeSelectedId;
+  const setSelectedAgentId = storeSetSelectedId;
   const [selectOpen, setSelectOpen] = useState(false);
   const [managerOpen, setManagerOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<AgentRecord | null>(null);
@@ -101,30 +102,22 @@ export default function AgentSwitcher() {
 
       const nextAgents = await parseAgentResponse(response);
       setAgents(nextAgents);
-      setSelectedAgentId((currentId) => {
-        if (nextAgents.some((agent) => agent.id === currentId)) {
-          return currentId;
-        }
-
-        return nextAgents[0]?.id ?? "";
-      });
+      const currentId = useAgentStore.getState().selectedAgentId;
+      if (!nextAgents.some((agent) => agent.id === currentId)) {
+        setSelectedAgentId(nextAgents[0]?.id ?? "");
+      }
       return nextAgents;
     } catch {
       toast.error(t("feedback.loadError"));
       return [];
     }
-  }, [t]);
+  }, [setSelectedAgentId, t]);
 
   useEffect(() => {
     startLoadingTransition(() => {
       void loadAgents();
     });
   }, [loadAgents]);
-
-  // Sync local → store whenever selectedAgentId changes
-  useEffect(() => {
-    storeSetSelectedId(selectedAgentId);
-  }, [selectedAgentId, storeSetSelectedId]);
 
   function openCreateForm() {
     setFieldError("");
@@ -237,7 +230,9 @@ export default function AgentSwitcher() {
             openCreateForm();
           }
           await loadAgents();
-          setSelectedAgentId((currentId) => (currentId === deletedId ? "" : currentId));
+          if (useAgentStore.getState().selectedAgentId === deletedId) {
+            setSelectedAgentId("");
+          }
           toast.success(t("feedback.deleteSuccess"));
         } catch {
           toast.error(t("feedback.deleteError"));

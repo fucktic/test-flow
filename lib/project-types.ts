@@ -67,3 +67,20 @@ export type ProjectDetail = {
 export type ProjectListItem = Omit<ProjectDetail, "assets"> & {
   episodeCount: number;
 };
+
+export type ProjectSelectedModelType = "image" | "video";
+
+export type ProjectSelectedModelInfo = {
+  apiKey: string;
+  example: string;
+  id: string;
+  name: string;
+  selectedAt: string;
+  type: ProjectSelectedModelType;
+  videoReferenceMode?: string;
+};
+
+export type ProjectConfig = JsonObject & {
+  selectedModel?: ProjectSelectedModelInfo;
+  selectedModels?: Partial<Record<ProjectSelectedModelType, ProjectSelectedModelInfo>>;
+};

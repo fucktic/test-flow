@@ -1,8 +1,10 @@
 import type { FlowState } from "@/lib/flow-schema";
 import type {
+  ProjectConfig,
   ProjectDetail,
   ProjectImageAsset,
   ProjectListItem,
+  ProjectSelectedModelInfo,
   ProjectStoryboard,
   ProjectVideoAsset,
 } from "@/lib/project-types";
@@ -17,6 +19,15 @@ type ProjectResponse = {
 
 type ProjectImagesResponse = {
   images?: ProjectImageAsset[];
+};
+
+export type ProjectTempImage = {
+  id: string;
+  label: string;
+  name: string;
+  fileName: string;
+  type: string;
+  url: string;
 };
 
 export type ProjectCanvasData = {
@@ -100,6 +111,27 @@ export async function saveProjectFlow(projectId: string, flow: FlowState): Promi
   return data.flow;
 }
 
+export async function saveProjectSelectedModel(
+  projectId: string,
+  selectedModel: Omit<ProjectSelectedModelInfo, "selectedAt">,
+): Promise<ProjectConfig> {
+  const data = await readJsonResponse<{ config?: ProjectConfig }>(
+    await fetch(`/api/projects/${encodeURIComponent(projectId)}/config`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ selectedModel }),
+    }),
+  );
+
+  if (!data.config) {
+    throw new Error("PROJECT_CONFIG_SAVE_FAILED");
+  }
+
+  return data.config;
+}
+
 export async function deleteProjectImage(
   projectId: string,
   imageId: string,
@@ -112,6 +144,25 @@ export async function deleteProjectImage(
         cache: "no-store",
       },
     ),
+  );
+
+  return Array.isArray(data.images) ? data.images : [];
+}
+
+export async function uploadProjectTempImages(
+  projectId: string,
+  files: File[],
+): Promise<ProjectTempImage[]> {
+  const formData = new FormData();
+  files.forEach((file) => {
+    formData.append("files", file);
+  });
+
+  const data = await readJsonResponse<{ images?: ProjectTempImage[] }>(
+    await fetch(`/api/projects/${encodeURIComponent(projectId)}/temp`, {
+      method: "POST",
+      body: formData,
+    }),
   );
 
   return Array.isArray(data.images) ? data.images : [];

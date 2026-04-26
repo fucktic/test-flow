@@ -1,7 +1,7 @@
 "use client";
 
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { createJSONStorage, persist } from "zustand/middleware";
 
 type AgentStore = {
   selectedAgentId: string;
@@ -14,6 +14,9 @@ export const useAgentStore = create<AgentStore>()(
       selectedAgentId: "",
       setSelectedAgentId: (id) => set({ selectedAgentId: id }),
     }),
-    { name: "agent-store" },
+    {
+      name: "agent-store",
+      storage: createJSONStorage(() => localStorage),
+    },
   ),
 );

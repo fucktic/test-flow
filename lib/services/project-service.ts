@@ -10,8 +10,10 @@ import type {
   ProjectAssets,
   ProjectDetail,
   ProjectEpisode,
+  ProjectConfig,
   ProjectImageAsset,
   ProjectListItem,
+  ProjectSelectedModelInfo,
   ProjectStoryboard,
   ProjectVideoAsset,
 } from "@/lib/project-types";
@@ -20,6 +22,22 @@ const PROJECT_ROOT = process.cwd();
 const PROJECTS_DIR = path.resolve(PROJECT_ROOT, "projects");
 const CURRENT_PROJECT_PATH = path.resolve(PROJECTS_DIR, "currentProject.json");
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const TEMP_FILE_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.[a-z0-9]{1,12}$/i;
+
+export type ProjectTempImage = {
+  id: string;
+  label: string;
+  name: string;
+  fileName: string;
+  type: string;
+  url: string;
+};
+
+type ProjectTempImageInput = {
+  buffer: Buffer;
+  contentType: string;
+  name: string;
+};
 
 function assertSafeProjectPath(targetPath: string) {
   if (targetPath !== PROJECTS_DIR && !targetPath.startsWith(`${PROJECTS_DIR}${path.sep}`)) {
@@ -167,6 +185,10 @@ function readFlowState(value: unknown): FlowState {
   return { nodes: [], edges: [] };
 }
 
+function readProjectConfig(value: unknown): ProjectConfig {
+  return isRecord(value) ? (value as ProjectConfig) : {};
+}
+
 function toProjectDetail(value: unknown): ProjectDetail | null {
   if (!isRecord(value)) return null;
 
@@ -205,6 +227,40 @@ function getProjectDir(projectId: string) {
   const projectDir = path.resolve(PROJECTS_DIR, projectId);
   assertSafeProjectPath(projectDir);
   return projectDir;
+}
+
+function getProjectTempDir(projectId: string) {
+  const tempDir = path.resolve(getProjectDir(projectId), "temp");
+  assertSafeProjectPath(tempDir);
+  return tempDir;
+}
+
+function getImageExtension(contentType: string, fileName: string) {
+  const normalizedContentType = contentType.toLowerCase();
+  if (normalizedContentType === "image/png") return "png";
+  if (normalizedContentType === "image/jpeg" || normalizedContentType === "image/jpg") return "jpg";
+  if (normalizedContentType === "image/webp") return "webp";
+  if (normalizedContentType === "image/gif") return "gif";
+
+  const extension = path.extname(fileName).replace(".", "").toLowerCase();
+  if (["png", "jpg", "jpeg", "webp", "gif"].includes(extension)) return extension;
+
+  throw new Error("Unsupported image type.");
+}
+
+function getSafeFileExtension(fileName: string) {
+  const extension = path.extname(fileName).replace(".", "").toLowerCase();
+  if (/^[a-z0-9]{1,12}$/.test(extension)) return extension;
+  return "bin";
+}
+
+function getTempFileContentType(fileName: string) {
+  const extension = path.extname(fileName).replace(".", "").toLowerCase();
+  if (extension === "png") return "image/png";
+  if (extension === "jpg" || extension === "jpeg") return "image/jpeg";
+  if (extension === "webp") return "image/webp";
+  if (extension === "gif") return "image/gif";
+  return "application/octet-stream";
 }
 
 async function readProjectDetail(projectId: string): Promise<ProjectDetail | null> {
@@ -441,6 +497,58 @@ export async function saveProjectFlow(params: {
   }
 }
 
+export async function getProjectConfig(
+  projectId: string,
+): Promise<{ success: true; config: ProjectConfig } | { success: false; error: string }> {
+  try {
+    const configJsonPath = path.resolve(getProjectDir(projectId), "config.json");
+    assertSafeProjectPath(configJsonPath);
+
+    const config = await readFile(configJsonPath, "utf8")
+      .then((content) => readProjectConfig(JSON.parse(content)))
+      .catch((): ProjectConfig => ({}));
+
+    return { success: true, config };
+  } catch (err) {
+    if (err instanceof Error) {
+      return { success: false, error: err.message };
+    }
+    return { success: false, error: "未知错误" };
+  }
+}
+
+export async function saveProjectSelectedModel(params: {
+  model: ProjectSelectedModelInfo;
+  projectId: string;
+}): Promise<{ success: true; config: ProjectConfig } | { success: false; error: string }> {
+  try {
+    const configJsonPath = path.resolve(getProjectDir(params.projectId), "config.json");
+    assertSafeProjectPath(configJsonPath);
+
+    const currentConfig = await readFile(configJsonPath, "utf8")
+      .then((content) => readProjectConfig(JSON.parse(content)))
+      .catch((): ProjectConfig => ({}));
+    const selectedModels = {
+      ...(currentConfig.selectedModels ?? {}),
+      [params.model.type]: params.model,
+    };
+    const nextConfig: ProjectConfig = {
+      ...currentConfig,
+      selectedModel: params.model,
+      selectedModels,
+    };
+
+    await writeFile(configJsonPath, JSON.stringify(nextConfig, null, 2), "utf8");
+
+    return { success: true, config: nextConfig };
+  } catch (err) {
+    if (err instanceof Error) {
+      return { success: false, error: err.message };
+    }
+    return { success: false, error: "未知错误" };
+  }
+}
+
 export async function deleteProjectImage(params: {
   projectId: string;
   imageId: string;
@@ -456,6 +564,110 @@ export async function deleteProjectImage(params: {
     await writeFile(imagesJsonPath, JSON.stringify(nextImages, null, 2), "utf8");
 
     return { success: true, images: nextImages };
+  } catch (err) {
+    if (err instanceof Error) {
+      return { success: false, error: err.message };
+    }
+    return { success: false, error: "未知错误" };
+  }
+}
+
+export async function saveProjectTempImages(params: {
+  projectId: string;
+  images: ProjectTempImageInput[];
+}): Promise<{ success: true; images: ProjectTempImage[] } | { success: false; error: string }> {
+  try {
+    const tempDir = getProjectTempDir(params.projectId);
+    await mkdir(tempDir, { recursive: true });
+
+    const images = await Promise.all(
+      params.images.map(async (image, index) => {
+        const id = randomUUID();
+        const extension = getImageExtension(image.contentType, image.name);
+        const fileName = `${id}.${extension}`;
+        const filePath = path.resolve(tempDir, fileName);
+        assertSafeProjectPath(filePath);
+        await writeFile(filePath, image.buffer);
+
+        return {
+          id,
+          label: `图片${index + 1}`,
+          name: image.name,
+          fileName,
+          type: image.contentType,
+          url: `/api/projects/${encodeURIComponent(params.projectId)}/temp/${encodeURIComponent(fileName)}`,
+        };
+      }),
+    );
+
+    return { success: true, images };
+  } catch (err) {
+    if (err instanceof Error) {
+      return { success: false, error: err.message };
+    }
+    return { success: false, error: "未知错误" };
+  }
+}
+
+export async function saveProjectTempFiles(params: {
+  projectId: string;
+  files: ProjectTempImageInput[];
+}): Promise<{ success: true; images: ProjectTempImage[] } | { success: false; error: string }> {
+  try {
+    const tempDir = getProjectTempDir(params.projectId);
+    await mkdir(tempDir, { recursive: true });
+
+    const images = await Promise.all(
+      params.files.map(async (file, index) => {
+        const id = randomUUID();
+        const extension = file.contentType.startsWith("image/")
+          ? getImageExtension(file.contentType, file.name)
+          : getSafeFileExtension(file.name);
+        const fileName = `${id}.${extension}`;
+        const filePath = path.resolve(tempDir, fileName);
+        assertSafeProjectPath(filePath);
+        await writeFile(filePath, file.buffer);
+
+        return {
+          id,
+          label: file.contentType.startsWith("image/") ? `图片${index + 1}` : `文件${index + 1}`,
+          name: file.name,
+          fileName,
+          type: file.contentType || "application/octet-stream",
+          url: `/api/projects/${encodeURIComponent(params.projectId)}/temp/${encodeURIComponent(fileName)}`,
+        };
+      }),
+    );
+
+    return { success: true, images };
+  } catch (err) {
+    if (err instanceof Error) {
+      return { success: false, error: err.message };
+    }
+    return { success: false, error: "未知错误" };
+  }
+}
+
+export async function readProjectTempImage(params: {
+  projectId: string;
+  fileName: string;
+}): Promise<
+  { success: true; buffer: Buffer; contentType: string } | { success: false; error: string }
+> {
+  try {
+    if (!TEMP_FILE_PATTERN.test(params.fileName)) {
+      return { success: false, error: "INVALID_TEMP_FILE_NAME" };
+    }
+
+    const filePath = path.resolve(getProjectTempDir(params.projectId), params.fileName);
+    assertSafeProjectPath(filePath);
+    const buffer = await readFile(filePath);
+
+    return {
+      success: true,
+      buffer,
+      contentType: getTempFileContentType(params.fileName),
+    };
   } catch (err) {
     if (err instanceof Error) {
       return { success: false, error: err.message };

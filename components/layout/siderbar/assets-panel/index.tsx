@@ -1,10 +1,13 @@
 "use client";
 
 import { Fragment, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { ImageIcon, Info, ListTree, Plus, Search, Trash2, WandSparkles } from "lucide-react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
 
+import { ChatWindow, type ChatWindowModelOption } from "@/components/canvas/chat-window";
+import { useSilentAgentCommand } from "@/components/canvas/use-silent-agent-command";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -19,7 +22,12 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { deleteProjectImage, fetchProjectImages } from "@/lib/project-api";
+import type { AppConfig } from "@/lib/config-schema";
+import {
+  deleteProjectImage,
+  fetchProjectImages,
+  saveProjectSelectedModel,
+} from "@/lib/project-api";
 import type { ProjectAssets, ProjectImageAsset } from "@/lib/project-types";
 import { cn } from "@/lib/utils";
 import { useCanvasStore } from "@/store/use-canvas-store";
@@ -40,7 +48,13 @@ const ASSET_TYPE_TOKENS: Record<AssetCategoryKey, string[]> = {
 
 const ASSET_GRID_COLUMNS = 5;
 const ASSET_DETAIL_SPAN = 3;
-const ASSET_DETAIL_CLOSE_SELECTOR = "[data-asset-detail-card], [data-asset-detail-trigger]";
+const ASSET_DETAIL_CLOSE_SELECTOR =
+  "[data-asset-detail-card], [data-asset-detail-trigger], [data-asset-chat-window], [data-slot='select-content']";
+const EMPTY_CONFIG: AppConfig = {
+  imageBeds: [],
+  imageModels: [],
+  videoModels: [],
+};
 
 function matchesAssetTab(asset: ProjectImageAsset, activeTab: AssetTabKey) {
   if (activeTab === "all") return true;
@@ -59,9 +73,12 @@ function getAssetChildIds(projectAssets: ProjectAssets | undefined, assetId: str
 
 export function AssetsPanel() {
   const t = useTranslations("Sidebar");
+  const tCanvas = useTranslations("Canvas");
+  const { execute: executeSilentAgentCommand } = useSilentAgentCommand();
   const currentProject = useCanvasStore((state) => state.currentProject);
   const [activeTab, setActiveTab] = useState<AssetTabKey>("all");
   const [searchValue, setSearchValue] = useState("");
+  const [config, setConfig] = useState<AppConfig>(EMPTY_CONFIG);
   const [projectImages, setProjectImages] = useState<ProjectImageAsset[]>([]);
   const [loadingImages, setLoadingImages] = useState(false);
   const [failedImageIds, setFailedImageIds] = useState<Set<string>>(() => new Set());
@@ -69,6 +86,11 @@ export function AssetsPanel() {
   const [deletingImage, setDeletingImage] = useState(false);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction>(null);
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
+  const [selectedChatAssetId, setSelectedChatAssetId] = useState<string | null>(null);
+  const [assetChatPosition, setAssetChatPosition] = useState<{ left: number; top: number } | null>(
+    null,
+  );
+  const [selectedImageModelId, setSelectedImageModelId] = useState("");
   const tabs: { key: AssetTabKey; label: string }[] = [
     { key: "all", label: t("assetTabs.all") },
     { key: "character", label: t("assetTabs.character") },
@@ -108,6 +130,28 @@ export function AssetsPanel() {
     };
   }, [currentProject?.id]);
 
+  useEffect(() => {
+    let active = true;
+
+    async function loadConfig() {
+      try {
+        const response = await fetch("/api/config");
+        if (!response.ok) return;
+
+        const payload = (await response.json()) as { config?: AppConfig };
+        if (active && payload.config) setConfig(payload.config);
+      } catch {
+        // Keep the asset chat available even if settings are temporarily unavailable.
+      }
+    }
+
+    void loadConfig();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const visibleAssets = useMemo(() => {
     const normalizedSearch = searchValue.trim().toLowerCase();
     return projectImages.filter(
@@ -124,6 +168,22 @@ export function AssetsPanel() {
     () => visibleAssets.find((asset) => asset.id === selectedAssetId) ?? null,
     [selectedAssetId, visibleAssets],
   );
+  const selectedChatAsset = useMemo(
+    () => visibleAssets.find((asset) => asset.id === selectedChatAssetId) ?? null,
+    [selectedChatAssetId, visibleAssets],
+  );
+  const imageModelOptions = useMemo<ChatWindowModelOption[]>(
+    () =>
+      config.imageModels.map((model) => ({
+        id: model.id,
+        name: model.name,
+      })),
+    [config.imageModels],
+  );
+  const selectedModelId = imageModelOptions.some((model) => model.id === selectedImageModelId)
+    ? selectedImageModelId
+    : imageModelOptions[0]?.id ?? "";
+  const selectedImageModel = config.imageModels.find((model) => model.id === selectedModelId);
   const selectedAssetChildren = useMemo(() => {
     if (!selectedAsset) return [];
 
@@ -154,6 +214,35 @@ export function AssetsPanel() {
     };
   }, [selectedAssetId]);
 
+  useEffect(() => {
+    if (!selectedChatAssetId) return;
+
+    function handlePointerDown(event: PointerEvent) {
+      const target = event.target;
+      if (!(target instanceof Element)) {
+        setSelectedChatAssetId(null);
+        setAssetChatPosition(null);
+        return;
+      }
+
+      const isSelectedAssetTile = Boolean(
+        target.closest(`[data-asset-chat-trigger="${selectedChatAssetId}"]`),
+      );
+      const isChatWindow = Boolean(target.closest("[data-asset-chat-window]"));
+      const isSelectContent = Boolean(target.closest("[data-slot='select-content']"));
+
+      if (isSelectedAssetTile || isChatWindow || isSelectContent) return;
+      setSelectedChatAssetId(null);
+      setAssetChatPosition(null);
+    }
+
+    document.addEventListener("pointerdown", handlePointerDown, true);
+
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown, true);
+    };
+  }, [selectedChatAssetId]);
+
   const handleDeleteAsset = async () => {
     if (!currentProject || !deletingAsset) return;
 
@@ -169,6 +258,10 @@ export function AssetsPanel() {
       if (selectedAssetId === deletingAsset.id) {
         setSelectedAssetId(null);
       }
+      if (selectedChatAssetId === deletingAsset.id) {
+        setSelectedChatAssetId(null);
+        setAssetChatPosition(null);
+      }
       setDeletingAsset(null);
     } catch {
       setDeletingAsset(null);
@@ -178,6 +271,15 @@ export function AssetsPanel() {
   };
   const handleImageError = (assetId: string) => {
     setFailedImageIds((currentFailedIds) => new Set(currentFailedIds).add(assetId));
+  };
+  const openAssetChat = (assetId: string, anchorElement: HTMLElement) => {
+    const anchorRect = anchorElement.getBoundingClientRect();
+
+    setSelectedChatAssetId(assetId);
+    setAssetChatPosition({
+      left: anchorRect.right + 12,
+      top: Math.max(120, anchorRect.top + anchorRect.height / 2),
+    });
   };
   const confirmActionTitleKey = confirmAction
     ? `assetPanel.actions.${confirmAction}.title`
@@ -313,7 +415,11 @@ export function AssetsPanel() {
 
                       return (
                         <Fragment key={asset.id}>
-                          <div className="group relative overflow-hidden rounded-lg cursor-pointer ">
+                          <div
+                            data-asset-chat-trigger={asset.id}
+                            className="group relative cursor-pointer overflow-hidden rounded-lg"
+                            onClick={(event) => openAssetChat(asset.id, event.currentTarget)}
+                          >
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <Button
@@ -322,7 +428,10 @@ export function AssetsPanel() {
                                   variant="ghost"
                                   size="icon-xs"
                                   aria-label={t("assetPanel.deleteAsset")}
-                                  onClick={() => setDeletingAsset(asset)}
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    setDeletingAsset(asset);
+                                  }}
                                   className="absolute top-1 right-1 z-10 size-6 bg-background/90 text-muted-foreground opacity-0 shadow-sm transition-opacity hover:text-destructive group-hover:opacity-100"
                                 >
                                   <Trash2 className="size-3.5" />
@@ -340,11 +449,12 @@ export function AssetsPanel() {
                                   size="icon-xs"
                                   aria-label={t("assetPanel.detail.open")}
                                   aria-pressed={selectedAssetId === asset.id}
-                                  onClick={() =>
+                                  onClick={(event) => {
+                                    event.stopPropagation();
                                     setSelectedAssetId((currentAssetId) =>
                                       currentAssetId === asset.id ? null : asset.id,
-                                    )
-                                  }
+                                    );
+                                  }}
                                   className="absolute top-1 left-1 z-10 size-6 bg-background/90 text-muted-foreground opacity-0 shadow-sm transition-opacity hover:text-foreground aria-pressed:opacity-100 aria-pressed:text-foreground group-hover:opacity-100"
                                 >
                                   <Info className="size-3.5" />
@@ -379,6 +489,12 @@ export function AssetsPanel() {
                                   )}
                                 </div>
                               )}
+                              {selectedChatAssetId && selectedChatAssetId !== asset.id ? (
+                                <div
+                                  className="pointer-events-none absolute inset-0 z-20 bg-background/70 backdrop-blur-[1px]"
+                                  aria-hidden="true"
+                                />
+                              ) : null}
                             </div>
                             <div className="flex min-h-7 items-center px-1.5 py-1">
                               <span className="truncate text-xs">{asset.name || asset.id}</span>
@@ -404,6 +520,82 @@ export function AssetsPanel() {
           </TabsContent>
         ))}
       </Tabs>
+
+      {typeof document !== "undefined" && selectedChatAsset && assetChatPosition
+        ? createPortal(
+            <div
+              data-asset-chat-window
+              className="fixed z-[999] w-[min(640px,calc(100vw-32px))] -translate-y-1/2"
+              style={{
+                left: assetChatPosition.left,
+                top: assetChatPosition.top,
+              }}
+            >
+              <ChatWindow
+                projectId={currentProject?.id ?? ""}
+                emptyModelLabel={tCanvas("chatWindow.emptyModel")}
+                placeholder={tCanvas("chatWindow.placeholder")}
+                inputLabel={tCanvas("chatWindow.inputLabel")}
+                addAttachmentLabel={tCanvas("chatWindow.addAttachment")}
+                attachmentFallbackLabel={(index) => tCanvas("chatWindow.imageFallback", { index })}
+                attachmentListLabel={tCanvas("chatWindow.attachmentList")}
+                removeAttachmentLabel={tCanvas("chatWindow.removeAttachment")}
+                firstFrameLabel={tCanvas("chatWindow.firstFrame")}
+                lastFrameLabel={tCanvas("chatWindow.lastFrame")}
+                promptPairSeparator={tCanvas("chatWindow.promptPairSeparator")}
+                modelSelectLabel={tCanvas("chatWindow.modelSelect")}
+                modelOptions={imageModelOptions}
+                mediaMentionImages={[]}
+                referenceImages={[]}
+                requiresFirstLastFrame={false}
+                selectedModelId={selectedModelId}
+                sendLabel={tCanvas("chatWindow.send")}
+                showVideoOptions={false}
+                videoDurationLabel={tCanvas("chatWindow.videoDuration")}
+                videoDurationUnitLabel={tCanvas("chatWindow.videoDurationUnit")}
+                videoShotLabel={tCanvas("chatWindow.videoShot")}
+                videoShotLabels={{
+                  static: tCanvas("chatWindow.videoShots.static"),
+                  "push-in": tCanvas("chatWindow.videoShots.pushIn"),
+                  "pull-out": tCanvas("chatWindow.videoShots.pullOut"),
+                  pan: tCanvas("chatWindow.videoShots.pan"),
+                  tilt: tCanvas("chatWindow.videoShots.tilt"),
+                  tracking: tCanvas("chatWindow.videoShots.tracking"),
+                  orbit: tCanvas("chatWindow.videoShots.orbit"),
+                handheld: tCanvas("chatWindow.videoShots.handheld"),
+              }}
+              onModelChange={setSelectedImageModelId}
+              onSubmit={(payload) => {
+                if (!selectedChatAsset) return;
+
+                void (async () => {
+                  if (!currentProject || !selectedImageModel) return;
+
+                  try {
+                    await saveProjectSelectedModel(currentProject.id, {
+                      apiKey: selectedImageModel.apiKey,
+                      example: selectedImageModel.example,
+                      id: selectedImageModel.id,
+                      name: selectedImageModel.name,
+                      type: "image",
+                    });
+
+                    await executeSilentAgentCommand(payload, {
+                      mediaId: selectedChatAsset.id,
+                      mediaName: selectedChatAsset.name || selectedChatAsset.id,
+                      mediaType: selectedChatAsset.type,
+                      scope: "asset-grid",
+                    });
+                  } catch {
+                    // The agent run depends on the project model config being current.
+                  }
+                })();
+              }}
+            />
+            </div>,
+            document.body,
+          )
+        : null}
 
       <Dialog open={!!deletingAsset} onOpenChange={(open) => !open && setDeletingAsset(null)}>
         <DialogContent className="w-[min(92vw,420px)]" showCloseButton={false}>

@@ -5,13 +5,26 @@ import Image from "next/image";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import type { MediaItem } from "@/store/use-canvas-store";
+import { cn } from "@/lib/utils";
+import { useCanvasStore, type MediaItem } from "@/store/use-canvas-store";
 
 const MEDIA_GRID_TWO_ROW_HEIGHT = "h-[16.625rem]";
 // Keep tile corners modest so ReactFlow zoom does not make thumbnails look over-rounded.
 const MEDIA_TILE_RADIUS_CLASS = "rounded-[6px]";
 
-function MediaPreview({ item, showName }: { item: MediaItem; showName: boolean }) {
+function MediaPreview({
+  hasActiveSelection,
+  isSelected,
+  item,
+  onSelect,
+  showName,
+}: {
+  hasActiveSelection: boolean;
+  isSelected: boolean;
+  item: MediaItem;
+  onSelect: (item: MediaItem, anchorRect: DOMRect) => void;
+  showName: boolean;
+}) {
   const t = useTranslations("Canvas");
   const [failed, setFailed] = useState(false);
   const source = item.type === "video" ? item.poster || item.url : item.url;
@@ -19,9 +32,22 @@ function MediaPreview({ item, showName }: { item: MediaItem; showName: boolean }
   const isError = failed || status === "error" || status === "failed";
 
   return (
-    <div className={`group relative cursor-pointer ${MEDIA_TILE_RADIUS_CLASS}`}>
+    <button
+      type="button"
+      aria-label={t("mediaGrid.select", { name: item.name || item.id })}
+      aria-pressed={isSelected}
+      data-selected-media-grid-item={isSelected ? "true" : undefined}
+      className={`group relative cursor-pointer text-left ${MEDIA_TILE_RADIUS_CLASS}`}
+      onClick={(event) => {
+        event.stopPropagation();
+        onSelect(item, event.currentTarget.getBoundingClientRect());
+      }}
+    >
       <div
-        className={`relative flex aspect-square items-center justify-center overflow-hidden border border-border ring-inset transition-colors duration-150 group-hover:border-primary group-hover:ring-1 group-hover:ring-primary ${MEDIA_TILE_RADIUS_CLASS}`}
+        className={cn(
+          "relative flex aspect-square items-center justify-center overflow-hidden border border-border ring-inset transition-colors duration-150 group-hover:border-primary group-hover:ring-1 group-hover:ring-primary",
+          MEDIA_TILE_RADIUS_CLASS,
+        )}
       >
         {source && !isError ? (
           // Project media URLs are data from the project JSON and remain serializable in flow nodes.
@@ -45,9 +71,15 @@ function MediaPreview({ item, showName }: { item: MediaItem; showName: boolean }
           <span className="truncate text-[10px]">{item.name || item.id}</span>
         </div>
       ) : null}
+        {hasActiveSelection && !isSelected ? (
+          <div
+            className="pointer-events-none absolute inset-0 z-20 bg-black/55 backdrop-blur-[1px]"
+            aria-hidden="true"
+          />
+        ) : null}
       </div>
       
-    </div>
+    </button>
   );
 }
 
@@ -70,18 +102,45 @@ function EmptyMediaTile({ label }: { label: string }) {
 export function MediaGrid({
   addLabel,
   items,
+  nodeId,
+  sceneId,
   showItemNames,
 }: {
   addLabel: string;
   items: MediaItem[];
+  nodeId: string;
+  sceneId: string;
   showItemNames: boolean;
 }) {
+  const selectedMediaGridItem = useCanvasStore((state) => state.selectedMediaGridItem);
+  const selectMediaGridItem = useCanvasStore((state) => state.selectMediaGridItem);
+  const hasActiveSelection = Boolean(selectedMediaGridItem);
+
   return (
     <ScrollArea className={`nowheel ${MEDIA_GRID_TWO_ROW_HEIGHT} `}>
       <div className="grid grid-cols-2 gap-2 p-1">
         <EmptyMediaTile label={addLabel} />
         {items.map((item) => (
-          <MediaPreview key={item.id} item={item} showName={showItemNames} />
+          <MediaPreview
+            key={item.id}
+            hasActiveSelection={hasActiveSelection}
+            isSelected={selectedMediaGridItem?.nodeId === nodeId && selectedMediaGridItem.item.id === item.id}
+            item={item}
+            showName={showItemNames}
+            onSelect={(selectedItem, anchorRect) => {
+              selectMediaGridItem({
+                nodeId,
+                sceneId,
+                item: selectedItem,
+                anchorRect: {
+                  height: anchorRect.height,
+                  left: anchorRect.left,
+                  top: anchorRect.top,
+                  width: anchorRect.width,
+                },
+              });
+            }}
+          />
         ))}
       </div>
     </ScrollArea>

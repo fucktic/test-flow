@@ -65,6 +65,12 @@
       "deleteError": "智能体删除失败。"
     }
   },
+  "AgentExecute": {
+    "systemStart": "[系统] 启动任务：{executable}\n\n",
+    "processExitCode": "\n[进程退出码：{code}]",
+    "errorMessage": "\n[错误：{message}]",
+    "invalidAgentCommand": "无效的 Agent 命令"
+  },
   "Home": {
     "eyebrow": "画布工作区",
     "title": "从带语言感知的应用外壳开始构建多语言体验。",
@@ -119,9 +125,41 @@
       "title": "视频",
       "add": "添加视频"
     },
+    "chatWindow": {
+      "placeholder": "描述任何你想要生成的内容",
+      "emptyModel": "请选择模型",
+      "modelSelect": "选择生成模型",
+      "inputLabel": "输入生成内容",
+      "addAttachment": "临时上传图片",
+      "imageFallback": "图片{index}",
+      "attachmentList": "临时上传图片列表",
+      "removeAttachment": "移除图片",
+      "promptPairSeparator": "：",
+      "firstFrame": "首帧图",
+      "lastFrame": "尾帧图",
+      "videoShot": "镜头",
+      "videoDuration": "时长",
+      "videoDurationUnit": "s",
+      "videoShots": {
+        "static": "固定",
+        "pushIn": "推进",
+        "pullOut": "拉远",
+        "pan": "摇镜",
+        "tilt": "俯仰",
+        "tracking": "跟拍",
+        "orbit": "环绕",
+        "handheld": "手持"
+      },
+      "expand": "展开输入框",
+      "voice": "语音输入",
+      "modelMultiplier": "1×",
+      "count": "1",
+      "send": "发送生成请求"
+    },
     "mediaGrid": {
       "pending": "待生成",
-      "error": "Error"
+      "error": "Error",
+      "select": "选择 {name}"
     }
   },
   "Sidebar": {
@@ -132,6 +170,45 @@
     "skills": "技能",
     "chat": "聊天",
     "video": "视频",
+    "globalChat": {
+      "title": "全局聊天",
+      "subtitle": "随时处理当前项目上下文",
+      "close": "关闭全局聊天",
+      "welcome": "我在这里，可以随时帮你整理想法、执行 Agent 命令或推进项目。输入 /help 查看可用命令。",
+      "placeholder": "输入消息、生成需求或 /help",
+      "inputLabel": "输入全局聊天消息",
+      "send": "发送消息",
+      "userMessage": "用户消息",
+      "assistantMessage": "助手消息",
+      "attachmentOnly": "已添加图片附件",
+      "listSeparator": "、",
+      "processSummary": "执行过程",
+      "commands": {
+        "help": "/help：查看可用命令",
+        "clear": "/clear：清空当前聊天",
+        "project": "/project：查看当前项目信息",
+        "agent": "/agent：查看当前 Agent",
+        "models": "/models：查看可用生成模型"
+      },
+      "commandReplies": {
+        "agent": "当前 Agent：{name}\n描述：{description}",
+        "cleared": "聊天已清空。",
+        "default": "我会把这条消息交给当前 Agent 执行。",
+        "emptyDescription": "暂无描述",
+        "emptyResponse": "Agent 没有返回响应体。",
+        "executing": "正在执行 {name}...",
+        "executionCompleteNoOutput": "执行完成，但没有输出。",
+        "executionFailed": "执行失败",
+        "executionFailedMessage": "执行失败：{message}",
+        "models": "可用模型：{models}",
+        "noAgent": "请先在左侧 Agent 选择器中选择一个 Agent，并确保它的指令字段是可执行命令。",
+        "noModels": "当前没有可用模型。",
+        "noProject": "当前还没有选择项目。",
+        "project": "当前项目：{name}\n分集数：{episodes}\n画幅：{aspectRatio}\n分辨率：{resolution}",
+        "stopped": "执行已停止。",
+        "unknown": "未知命令：{command}。输入 /help 查看可用命令。"
+      }
+    },
     "episodePanel": {
       "selectedCount": "{count}/{max}",
       "empty": "当前项目暂无分集",

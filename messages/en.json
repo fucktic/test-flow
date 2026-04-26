@@ -65,6 +65,12 @@
       "deleteError": "Unable to delete agent."
     }
   },
+  "AgentExecute": {
+    "systemStart": "[System] Starting task: {executable}\n\n",
+    "processExitCode": "\n[Process exit code: {code}]",
+    "errorMessage": "\n[Error: {message}]",
+    "invalidAgentCommand": "Invalid agent command"
+  },
   "Home": {
     "eyebrow": "Canvas workspace",
     "title": "Build multilingual experiences from a locale-aware app shell.",
@@ -119,9 +125,41 @@
       "title": "Video",
       "add": "Add video"
     },
+    "chatWindow": {
+      "placeholder": "Describe anything you want to generate",
+      "emptyModel": "Select a model",
+      "modelSelect": "Select generation model",
+      "inputLabel": "Enter generation content",
+      "addAttachment": "Temporarily upload images",
+      "imageFallback": "Image {index}",
+      "attachmentList": "Temporary uploaded image list",
+      "removeAttachment": "Remove image",
+      "promptPairSeparator": ": ",
+      "firstFrame": "First frame image",
+      "lastFrame": "Last frame image",
+      "videoShot": "Shot",
+      "videoDuration": "Duration",
+      "videoDurationUnit": "s",
+      "videoShots": {
+        "static": "Static",
+        "pushIn": "Push in",
+        "pullOut": "Pull out",
+        "pan": "Pan",
+        "tilt": "Tilt",
+        "tracking": "Tracking",
+        "orbit": "Orbit",
+        "handheld": "Handheld"
+      },
+      "expand": "Expand input",
+      "voice": "Voice input",
+      "modelMultiplier": "1×",
+      "count": "1",
+      "send": "Send generation request"
+    },
     "mediaGrid": {
       "pending": "Pending",
-      "error": "Error"
+      "error": "Error",
+      "select": "Select {name}"
     }
   },
   "Sidebar": {
@@ -132,6 +170,45 @@
     "skills": "Skills",
     "chat": "Chat",
     "video": "Video",
+    "globalChat": {
+      "title": "Global chat",
+      "subtitle": "Work with the current project context anytime",
+      "close": "Close global chat",
+      "welcome": "I am here whenever you want to shape ideas, run agent commands, or move the project forward. Type /help to see commands.",
+      "placeholder": "Type a message, request, or /help",
+      "inputLabel": "Enter global chat message",
+      "send": "Send message",
+      "userMessage": "User message",
+      "assistantMessage": "Assistant message",
+      "attachmentOnly": "Image attachments added",
+      "listSeparator": ", ",
+      "processSummary": "Process",
+      "commands": {
+        "help": "/help: Show available commands",
+        "clear": "/clear: Clear this chat",
+        "project": "/project: Show current project details",
+        "agent": "/agent: Show current agent",
+        "models": "/models: Show available generation models"
+      },
+      "commandReplies": {
+        "agent": "Current agent: {name}\nDescription: {description}",
+        "cleared": "Chat cleared.",
+        "default": "I will send this message to the current agent command.",
+        "emptyDescription": "No description",
+        "emptyResponse": "The agent returned no response body.",
+        "executing": "Running {name}...",
+        "executionCompleteNoOutput": "Execution completed with no output.",
+        "executionFailed": "Execution failed",
+        "executionFailedMessage": "Execution failed: {message}",
+        "models": "Available models: {models}",
+        "noAgent": "Select an agent from the left agent switcher first, and make sure its instructions field is an executable command.",
+        "noModels": "No models are available.",
+        "noProject": "No project is selected.",
+        "project": "Current project: {name}\nEpisodes: {episodes}\nAspect ratio: {aspectRatio}\nResolution: {resolution}",
+        "stopped": "Execution stopped.",
+        "unknown": "Unknown command: {command}. Type /help to see available commands."
+      }
+    },
     "episodePanel": {
       "selectedCount": "{count}/{max}",
       "empty": "No episodes in the current project",

@@ -42,6 +42,18 @@ export type StoryboardMediaNodeData = Record<string, unknown> & {
   selected: boolean;
 };
 
+export type SelectedMediaGridItem = {
+  nodeId: string;
+  sceneId: string;
+  item: MediaItem;
+  anchorRect: {
+    height: number;
+    left: number;
+    top: number;
+    width: number;
+  };
+};
+
 type CanvasNodeData = Record<string, unknown>;
 type CanvasNode = Node<CanvasNodeData>;
 type CanvasEdge = Edge;
@@ -59,11 +71,14 @@ type CanvasState = {
   edges: CanvasEdge[];
   selectedEpisodeIds: string[];
   selectedStoryboardIds: string[];
+  selectedMediaGridItem: SelectedMediaGridItem | null;
   addNode: (label: string) => void;
   addStoryboard: (episodeId: string) => void;
+  clearSelectedMediaGridItem: () => void;
   clearCurrentProject: () => void;
   deleteStoryboard: (storyboardId: string) => void;
   moveStoryboard: (storyboardId: string, direction: -1 | 1) => void;
+  selectMediaGridItem: (selection: SelectedMediaGridItem) => void;
   setProjectCanvasData: (projectId: string, episodeId: string, data: ProjectCanvasData) => void;
   setCurrentProject: (project: ProjectDetail) => void;
   setProjects: (projects: ProjectListItem[]) => void;
@@ -254,16 +269,20 @@ export const useCanvasStore = create<CanvasState>((set) => ({
   currentCanvasData: null,
   selectedEpisodeIds: [],
   selectedStoryboardIds: [],
+  selectedMediaGridItem: null,
   ...buildInitialState(),
-  clearCurrentProject: () => set({ currentProject: null }),
+  clearCurrentProject: () => set({ currentProject: null, selectedMediaGridItem: null }),
+  clearSelectedMediaGridItem: () => set({ selectedMediaGridItem: null }),
+  selectMediaGridItem: (selection) => set({ selectedMediaGridItem: selection }),
   setCurrentProject: (project) =>
     set((state) => ({
       currentProject: project,
+      selectedMediaGridItem: null,
       selectedEpisodeIds:
         state.selectedEpisodeIds.length > 0 ? state.selectedEpisodeIds : project.episodes.slice(0, 1).map((episode) => episode.id),
     })),
   setProjects: (projects) => set({ projects }),
-  setSelectedEpisodeIds: (episodeIds) => set({ selectedEpisodeIds: episodeIds }),
+  setSelectedEpisodeIds: (episodeIds) => set({ selectedEpisodeIds: episodeIds, selectedMediaGridItem: null }),
   setProjectCanvasData: (_projectId, episodeId, data) =>
     set((state) => {
       const episodeName =
@@ -284,6 +303,7 @@ export const useCanvasStore = create<CanvasState>((set) => ({
 
       return {
         currentCanvasData,
+        selectedMediaGridItem: null,
         nodes: nextCanvas.nodes,
         edges: nextCanvas.edges,
         selectedStoryboardIds:
@@ -313,14 +333,20 @@ export const useCanvasStore = create<CanvasState>((set) => ({
       };
 
       if (state.selectedStoryboardIds.includes(storyboardId)) {
-        return toCanvasState(state.selectedStoryboardIds.filter((id) => id !== storyboardId));
+        return {
+          ...toCanvasState(state.selectedStoryboardIds.filter((id) => id !== storyboardId)),
+          selectedMediaGridItem: null,
+        };
       }
 
       if (state.selectedStoryboardIds.length >= MAX_SELECTED_STORYBOARDS) {
         return {};
       }
 
-      return toCanvasState([...state.selectedStoryboardIds, storyboardId]);
+      return {
+        ...toCanvasState([...state.selectedStoryboardIds, storyboardId]),
+        selectedMediaGridItem: null,
+      };
     }),
   addStoryboard: (episodeId) =>
     set((state) => {
@@ -352,6 +378,7 @@ export const useCanvasStore = create<CanvasState>((set) => ({
 
       return {
         currentCanvasData: nextCanvasData,
+        selectedMediaGridItem: null,
         nodes: nextCanvas.nodes,
         edges: nextCanvas.edges,
         selectedStoryboardIds: nextCanvas.selectedStoryboardIds,
@@ -388,6 +415,7 @@ export const useCanvasStore = create<CanvasState>((set) => ({
 
       return {
         currentCanvasData: nextCanvasData,
+        selectedMediaGridItem: null,
         nodes: nextCanvas.nodes,
         edges: nextCanvas.edges,
         selectedStoryboardIds: nextCanvas.selectedStoryboardIds,
@@ -434,6 +462,7 @@ export const useCanvasStore = create<CanvasState>((set) => ({
 
       return {
         currentCanvasData: nextCanvasData,
+        selectedMediaGridItem: null,
         nodes: nextCanvas.nodes,
         edges: nextCanvas.edges,
         selectedStoryboardIds: nextCanvas.selectedStoryboardIds,
@@ -477,5 +506,5 @@ export const useCanvasStore = create<CanvasState>((set) => ({
     set((state) => ({
       nodes: applyNodeChanges(changes, state.nodes),
     })),
-  reset: () => set(buildInitialState()),
+  reset: () => set({ ...buildInitialState(), selectedMediaGridItem: null }),
 }));

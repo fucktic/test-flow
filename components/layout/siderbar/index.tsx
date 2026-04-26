@@ -22,6 +22,7 @@ import { AssetsPanel } from "./assets-panel";
 import { ProjectsPanel } from "./projects-panel";
 import { SettingsPanel } from "./settings-panel";
 import { SkillsPanel } from "./skills-panel";
+import { GlobalChatDrawer } from "../global-chat-drawer";
 
 type NavSection =
   | "episodes"
@@ -37,7 +38,8 @@ type NavItem = { key: Exclude<NavSection, null>; icon: typeof Layers; group: num
 
 const FLOAT_KEYS = new Set(["episodes", "assets"]);
 const DIALOG_KEYS = new Set(["projects", "settings", "skills"]);
-const PASSIVE_KEYS = new Set(["chat", "video"]);
+const DRAWER_KEYS = new Set(["chat"]);
+const PASSIVE_KEYS = new Set(["video"]);
 
 const NAV_ITEMS: NavItem[] = [
   { key: "episodes", icon: Layers, group: 0 },
@@ -176,11 +178,33 @@ const Sidebar = () => {
         ))}
       </aside>
 
+      <Button
+        type="button"
+        size="icon-lg"
+        className={cn(
+          "fixed right-5 top-20 z-30 size-12 rounded-full border border-border bg-card text-foreground shadow-[0_0_28px_rgba(255,255,255,0.16)] transition-transform hover:scale-105 hover:bg-accent hover:text-foreground",
+          active === "chat" ? "scale-105 ring-4 ring-foreground/15" : "animate-pulse animation-duration-[2.35s]",
+        )}
+        aria-label={t("chat")}
+        aria-expanded={active === "chat"}
+        onClick={() => toggle("chat")}
+      >
+        <span className="relative flex size-5 items-center justify-center">
+          <span className="absolute inset-0 rounded-full bg-foreground/20 animate-ping animation-duration-[2.2s]" />
+          <MessageCircle className="relative size-5" />
+        </span>
+      </Button>
+
       {/* Floating panel: episodes, assets */}
       <FloatingPanel active={active} onClose={() => setActive(null)} />
 
       {/* Modal dialog: projects, settings, skills */}
       <DialogPanel active={active} t={t} onClose={() => setActive(null)} />
+
+      <GlobalChatDrawer
+        open={active !== null && DRAWER_KEYS.has(active)}
+        onClose={() => setActive(null)}
+      />
     </TooltipProvider>
   );
 };

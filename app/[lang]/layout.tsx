@@ -4,6 +4,7 @@ import { getMessages, getTranslations, setRequestLocale } from "next-intl/server
 import { notFound } from "next/navigation";
 import { hasLocale } from "use-intl";
 import "../globals.css";
+import Sidebar from "@/components/layout/siderbar";
 import { ThemeProvider } from "@/components/theme-provider";
 import { routing } from "@/i18n/routing";
 import { Toaster } from "sonner";
@@ -61,6 +62,7 @@ export default async function RootLayout({
           <NextIntlClientProvider messages={messages}>
             <Toaster position="top-center" theme="dark" />
             <ProjectBootstrap />
+            <Sidebar />
             {children}
           </NextIntlClientProvider>
         </ThemeProvider>
