@@ -2,6 +2,7 @@ import { setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { hasLocale } from "use-intl";
 import { CanvasWorkspace } from "@/components/canvas/workspace";
+import { VideoFooter } from "@/components/layout/video-footer";
 import { routing } from "@/i18n/routing";
 import Header from "@/components/layout/Header";
 import Siderbar from "@/components/layout/siderbar";
@@ -26,7 +27,7 @@ export default async function HomePage({
         <CanvasWorkspace />
       </main>
       <footer>
-
+        <VideoFooter />
       </footer>
     </div>
 

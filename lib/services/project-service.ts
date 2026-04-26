@@ -1,7 +1,9 @@
 "use server";
 
+import { execFile } from "node:child_process";
 import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { promisify } from "node:util";
 import { v4 as createUuid } from "uuid";
 import { parseScriptMD } from "@/lib/script-parser";
 import { flowStateSchema, type FlowState } from "@/lib/flow-schema";
@@ -25,8 +27,10 @@ const PROJECT_COMMAND_FILE_NAME = "command.json";
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const TEMP_FILE_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.[a-z0-9]{1,12}$/i;
 const IMAGE_FILE_PATTERN = /^image-[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.[a-z0-9]{1,12}$/i;
+const VIDEO_FILE_PATTERN = /^video-[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.[a-z0-9]{1,12}$/i;
 const COMMAND_STATUS_VALUES = new Set(["loading", "error", "success"]);
 const EMPTY_FLOW_STATE: FlowState = { nodes: [], edges: [] };
+const execFileAsync = promisify(execFile);
 
 export type ProjectTempImage = {
   id: string;
@@ -269,6 +273,12 @@ function getProjectTempDir(projectId: string) {
   return tempDir;
 }
 
+function getProjectVideosDir(projectId: string) {
+  const videosDir = path.resolve(getProjectDir(projectId), "videos");
+  assertSafeProjectPath(videosDir);
+  return videosDir;
+}
+
 function getProjectCommandPath(projectId: string) {
   const commandPath = path.resolve(getProjectDir(projectId), PROJECT_COMMAND_FILE_NAME);
   assertSafeProjectPath(commandPath);
@@ -337,6 +347,32 @@ function getVideoFileContentType(fileName: string) {
   if (extension === "webm") return "video/webm";
   if (extension === "mov") return "video/quicktime";
   return "application/octet-stream";
+}
+
+function getProjectVideoFileNameFromUrl(projectId: string, url: string) {
+  try {
+    const parsedUrl = new URL(url, "http://localhost");
+    const parts = parsedUrl.pathname.split("/").filter(Boolean);
+    const projectIndex = parts.findIndex((part) => part === "projects");
+    const fileName = decodeURIComponent(parts.at(-1) ?? "");
+
+    if (
+      projectIndex < 0 ||
+      parts[projectIndex + 1] !== projectId ||
+      parts[projectIndex + 2] !== "videos" ||
+      !VIDEO_FILE_PATTERN.test(fileName)
+    ) {
+      return "";
+    }
+
+    return fileName;
+  } catch {
+    return "";
+  }
+}
+
+function quoteFfmpegConcatPath(filePath: string) {
+  return `'${filePath.replaceAll("'", "'\\''")}'`;
 }
 
 function upsertAssetItem(items: ProjectAssetItem[], assetId: string) {
@@ -1020,6 +1056,121 @@ export async function deleteProjectVideo(params: {
   }
 }
 
+export async function mergeProjectVideos(params: {
+  projectId: string;
+  videoIds: string[];
+}): Promise<{ success: true; video: ProjectVideoAsset; videos: ProjectVideoAsset[] } | { success: false; error: string }> {
+  try {
+    const videosDir = getProjectVideosDir(params.projectId);
+    const tempDir = getProjectTempDir(params.projectId);
+    const videosJsonPath = path.resolve(videosDir, "videos.json");
+    assertSafeProjectPath(videosJsonPath);
+
+    const videoIds = params.videoIds.filter((videoId) => videoId);
+    if (videoIds.length === 0) return { success: false, error: "NO_VIDEO_SELECTED" };
+
+    await mkdir(videosDir, { recursive: true });
+    await mkdir(tempDir, { recursive: true });
+
+    const videos = await readFile(videosJsonPath, "utf8")
+      .then((content) => readProjectVideoAssets(JSON.parse(content)))
+      .catch(() => []);
+    const selectedVideos = videoIds.flatMap((videoId) => {
+      const video = videos.find((item) => item.id === videoId);
+      return video ? [video] : [];
+    });
+    if (selectedVideos.length !== videoIds.length) {
+      return { success: false, error: "VIDEO_NOT_FOUND" };
+    }
+
+    const inputPaths = selectedVideos.flatMap((video) => {
+      const fileName = getProjectVideoFileNameFromUrl(params.projectId, video.url);
+      if (!fileName) return [];
+
+      const filePath = path.resolve(videosDir, fileName);
+      assertSafeProjectPath(filePath);
+      return [filePath];
+    });
+    if (inputPaths.length !== selectedVideos.length) {
+      return { success: false, error: "VIDEO_FILE_NOT_FOUND" };
+    }
+
+    const mergeId = `video-${createUuid()}`;
+    const listPath = path.resolve(tempDir, `${mergeId}.txt`);
+    const outputFileName = `${mergeId}.mp4`;
+    const outputPath = path.resolve(videosDir, outputFileName);
+    assertSafeProjectPath(listPath);
+    assertSafeProjectPath(outputPath);
+
+    // ffmpeg's concat demuxer needs a local manifest; only validated project video files are listed.
+    await writeFile(
+      listPath,
+      inputPaths.map((filePath) => `file ${quoteFfmpegConcatPath(filePath)}`).join("\n"),
+      "utf8",
+    );
+
+    try {
+      await execFileAsync("ffmpeg", [
+        "-y",
+        "-f",
+        "concat",
+        "-safe",
+        "0",
+        "-i",
+        listPath,
+        "-c",
+        "copy",
+        outputPath,
+      ]);
+    } catch {
+      await execFileAsync("ffmpeg", [
+        "-y",
+        "-f",
+        "concat",
+        "-safe",
+        "0",
+        "-i",
+        listPath,
+        "-c:v",
+        "libx264",
+        "-c:a",
+        "aac",
+        "-movflags",
+        "+faststart",
+        outputPath,
+      ]);
+    } finally {
+      await rm(listPath, { force: true }).catch(() => {
+        // The manifest is generated per merge and can be ignored if cleanup is blocked.
+      });
+    }
+
+    const mergedVideo: ProjectVideoAsset = {
+      id: mergeId,
+      duration: "",
+      name: `merged-${new Date().toISOString()}.mp4`,
+      poster: selectedVideos[0]?.poster ?? "",
+      prompt: selectedVideos.map((video) => video.name || video.id).join("\n"),
+      source: "merge",
+      status: "success",
+      url: `/api/projects/${encodeURIComponent(params.projectId)}/videos/${encodeURIComponent(outputFileName)}`,
+    };
+    const nextVideos = [mergedVideo, ...videos];
+    await writeFile(videosJsonPath, JSON.stringify(nextVideos, null, 2), "utf8");
+
+    return {
+      success: true,
+      video: mergedVideo,
+      videos: nextVideos,
+    };
+  } catch (err) {
+    if (err instanceof Error) {
+      return { success: false, error: err.message };
+    }
+    return { success: false, error: "未知错误" };
+  }
+}
+
 export async function readProjectVideoFile(params: {
   fileName: string;
   projectId: string;
@@ -1027,7 +1178,7 @@ export async function readProjectVideoFile(params: {
   { success: true; buffer: Buffer; contentType: string } | { success: false; error: string }
 > {
   try {
-    if (!/^video-[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.[a-z0-9]{1,12}$/i.test(params.fileName)) {
+    if (!VIDEO_FILE_PATTERN.test(params.fileName)) {
       return { success: false, error: "INVALID_VIDEO_FILE_NAME" };
     }
 

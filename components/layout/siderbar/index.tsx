@@ -23,6 +23,7 @@ import { ProjectsPanel } from "./projects-panel";
 import { SettingsPanel } from "./settings-panel";
 import { SkillsPanel } from "./skills-panel";
 import { GlobalChatDrawer } from "../global-chat-drawer";
+import { useLayoutStore } from "@/store/use-layout-store";
 
 type NavSection =
   | "episodes"
@@ -39,7 +40,6 @@ type NavItem = { key: Exclude<NavSection, null>; icon: typeof Layers; group: num
 const FLOAT_KEYS = new Set(["episodes", "assets"]);
 const DIALOG_KEYS = new Set(["projects", "settings", "skills"]);
 const DRAWER_KEYS = new Set(["chat"]);
-const PASSIVE_KEYS = new Set(["video"]);
 
 const NAV_ITEMS: NavItem[] = [
   { key: "episodes", icon: Layers, group: 0 },
@@ -137,10 +137,13 @@ function DialogPanel({
 const Sidebar = () => {
   const t = useTranslations("Sidebar");
   const [active, setActive] = useState<NavSection>(null);
+  const videoFooterOpen = useLayoutStore((state) => state.videoFooterOpen);
+  const toggleVideoFooter = useLayoutStore((state) => state.toggleVideoFooter);
 
   const toggle = (key: NavSection) => {
-    if (key && PASSIVE_KEYS.has(key)) {
+    if (key === "video") {
       setActive(null);
+      toggleVideoFooter();
       return;
     }
 
@@ -162,7 +165,7 @@ const Sidebar = () => {
                   onClick={() => toggle(key)}
                   className={cn(
                     "flex size-9 items-center justify-center rounded-lg transition-colors",
-                    active === key
+                    active === key || (key === "video" && videoFooterOpen)
                       ? "bg-primary/10 text-primary"
                       : "text-muted-foreground hover:bg-accent hover:text-foreground",
                   )}

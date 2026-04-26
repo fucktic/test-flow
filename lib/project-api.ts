@@ -368,6 +368,24 @@ export async function deleteProjectVideo(
   return Array.isArray(data.videos) ? data.videos : [];
 }
 
+export async function mergeProjectVideos(projectId: string, videoIds: string[]): Promise<ProjectVideoAsset> {
+  const data = await readJsonResponse<ProjectVideosResponse>(
+    await fetch(`/api/projects/${encodeURIComponent(projectId)}/videos/merge`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ videoIds }),
+    }),
+  );
+
+  if (!data.video) {
+    throw new Error("PROJECT_VIDEO_MERGE_FAILED");
+  }
+
+  return data.video;
+}
+
 export async function uploadProjectTempImages(
   projectId: string,
   files: File[],

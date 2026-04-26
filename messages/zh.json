@@ -234,6 +234,22 @@
     "skills": "技能",
     "chat": "聊天",
     "video": "视频",
+    "videoFooter": {
+      "title": "视频合成",
+      "emptyTitle": "请选择分镜",
+      "count": "{count} 个已选视频",
+      "totalDuration": "总时长 {duration}",
+      "empty": "暂无视频",
+      "player": "预览",
+      "play": "一键播放",
+      "merge": "一键合成",
+      "merging": "合并中...",
+      "unknownDuration": "未知",
+      "export": "导出",
+      "mergeError": "视频合并失败，请确认已安装 ffmpeg。",
+      "close": "关闭视频栏",
+      "storyboardFallback": "S{index}"
+    },
     "globalChat": {
       "title": "全局聊天",
       "subtitle": "随时处理当前项目上下文",

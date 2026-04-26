@@ -167,6 +167,58 @@ const findMediaItems = (
 const getStoryboardDisplayName = (storyboard: ProjectStoryboard, index: number) =>
   storyboard.name.trim() || `S${index + 1}`;
 
+const resolveNodePosition = (
+  data: ProjectCanvasData,
+  nodeId: string,
+  fallback: { x: number; y: number },
+) => data.flow.nodes.find((flowNode) => flowNode.id === nodeId)?.position ?? fallback;
+
+const updateFlowFromCanvasNodes = (
+  canvasDataByEpisode: CanvasDataByEpisode,
+  nodes: CanvasNode[],
+): CanvasDataByEpisode => {
+  const nodeById = new Map(nodes.map((node) => [node.id, node]));
+
+  return Object.fromEntries(
+    Object.entries(canvasDataByEpisode).map(([episodeId, canvasData]) => {
+      const allowedNodeIds = new Set([
+        `storyboard-list-${episodeId}`,
+        ...canvasData.data.storyboards.flatMap((storyboard) => [
+          `storyboard-image-${storyboard.id}`,
+          `storyboard-video-${storyboard.id}`,
+        ]),
+      ]);
+      const nextFlowNodes = Array.from(allowedNodeIds).flatMap((nodeId) => {
+        const node = nodeById.get(nodeId);
+        if (!node) return [];
+
+        return [
+          {
+            id: node.id,
+            type: node.type,
+            position: node.position,
+            hidden: node.hidden,
+          },
+        ];
+      });
+
+      return [
+        episodeId,
+        {
+          ...canvasData,
+          data: {
+            ...canvasData.data,
+            flow: {
+              nodes: nextFlowNodes,
+              edges: canvasData.data.flow.edges,
+            },
+          },
+        },
+      ];
+    }),
+  );
+};
+
 const buildStoryboardCanvas = (
   episodeId: string,
   episodeName: string,
@@ -183,7 +235,7 @@ const buildStoryboardCanvas = (
       ? data.storyboards.filter((storyboard) => selectedIds.includes(storyboard.id))
       : [];
   const listNodeId = `storyboard-list-${episodeId}`;
-  const listPosition = listFallbackPosition;
+  const listPosition = resolveNodePosition(data, listNodeId, listFallbackPosition);
   const nodes: CanvasNode[] = [
     {
       id: listNodeId,
@@ -212,7 +264,7 @@ const buildStoryboardCanvas = (
       {
         id: imageNodeId,
         type: "storyboard-image-node",
-        position: { x: listPosition.x + 320, y: laneY },
+        position: resolveNodePosition(data, imageNodeId, { x: listPosition.x + 320, y: laneY }),
         data: {
           sceneId: storyboard.id,
           title: storyboardName,
@@ -225,7 +277,7 @@ const buildStoryboardCanvas = (
       {
         id: videoNodeId,
         type: "storyboard-video-node",
-        position: { x: listPosition.x + 640, y: laneY },
+        position: resolveNodePosition(data, videoNodeId, { x: listPosition.x + 640, y: laneY }),
         data: {
           sceneId: storyboard.id,
           title: storyboardName,
@@ -324,7 +376,7 @@ export const useCanvasStore = create<CanvasState>((set) => ({
       currentProject: project,
       selectedMediaGridItem: null,
       selectedEpisodeIds:
-        state.selectedEpisodeIds.length > 0 ? state.selectedEpisodeIds : project.episodes.slice(0, 1).map((episode) => episode.id),
+        state.selectedEpisodeIds.length > 0 ? state.selectedEpisodeIds : project.episodes.slice(0, 3).map((episode) => episode.id),
     })),
   setProjects: (projects) => set({ projects }),
   setSelectedEpisodeIds: (episodeIds) =>
@@ -919,8 +971,21 @@ export const useCanvasStore = create<CanvasState>((set) => ({
       edges: applyEdgeChanges(changes, state.edges),
     })),
   onNodesChange: (changes) =>
-    set((state) => ({
-      nodes: applyNodeChanges(changes, state.nodes),
-    })),
+    set((state) => {
+      const nextNodes = applyNodeChanges(changes, state.nodes);
+      const nextCanvasDataByEpisode = updateFlowFromCanvasNodes(
+        state.currentCanvasDataByEpisode,
+        nextNodes,
+      );
+      const currentCanvasData = state.currentCanvasData?.episodeId
+        ? nextCanvasDataByEpisode[state.currentCanvasData.episodeId] ?? state.currentCanvasData
+        : state.currentCanvasData;
+
+      return {
+        currentCanvasData,
+        currentCanvasDataByEpisode: nextCanvasDataByEpisode,
+        nodes: nextNodes,
+      };
+    }),
   reset: () => set({ ...buildInitialState(), selectedMediaGridItem: null }),
 }));

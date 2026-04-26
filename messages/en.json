@@ -234,6 +234,22 @@
     "skills": "Skills",
     "chat": "Chat",
     "video": "Video",
+    "videoFooter": {
+      "title": "Video merge",
+      "emptyTitle": "Select a storyboard",
+      "count": "{count, plural, one {# selected video} other {# selected videos}}",
+      "totalDuration": "Total {duration}",
+      "empty": "No videos",
+      "player": "Preview",
+      "play": "Play",
+      "merge": "Merge",
+      "merging": "Merging...",
+      "unknownDuration": "Unknown",
+      "export": "Export",
+      "mergeError": "Unable to merge videos. Check that ffmpeg is installed.",
+      "close": "Close video footer",
+      "storyboardFallback": "S{index}"
+    },
     "globalChat": {
       "title": "Global chat",
       "subtitle": "Work with the current project context anytime",
