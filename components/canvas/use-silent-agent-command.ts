@@ -5,6 +5,7 @@ import { useLocale } from "next-intl";
 import type { ChatWindowSubmitPayload } from "@/components/canvas/chat-window";
 import { resolveGlobalAgentCommand } from "@/components/layout/global-chat-drawer/resolve-agent-command";
 import type { AgentRecord } from "@/lib/agent-schema";
+import { saveProjectCommandStatus } from "@/lib/project-api";
 import { useAgentStore } from "@/store/use-agent-store";
 import { useCanvasStore } from "@/store/use-canvas-store";
 
@@ -63,6 +64,7 @@ function buildInlineGridCommand(params: {
 export function useSilentAgentCommand() {
   const locale = useLocale();
   const currentProject = useCanvasStore((state) => state.currentProject);
+  const setCommandStatus = useCanvasStore((state) => state.setCommandStatus);
   const selectedAgentId = useAgentStore((state) => state.selectedAgentId);
   const [agents, setAgents] = useState<AgentRecord[]>([]);
   const [isExecuting, setIsExecuting] = useState(false);
@@ -97,7 +99,7 @@ export function useSilentAgentCommand() {
 
   const execute = useCallback(
     async (payload: ChatWindowSubmitPayload, context: SilentAgentContext) => {
-      if (!selectedAgent || !currentProject || isExecuting) return;
+      if (!selectedAgent || !currentProject || isExecuting || !context.mediaId) return;
 
       const contextKey = `${selectedAgent.id}:${currentProject.id}:${context.scope}`;
       const isFirstContextMessage = lastContextKeyRef.current !== contextKey;
@@ -127,6 +129,9 @@ export function useSilentAgentCommand() {
       setIsExecuting(true);
 
       try {
+        setCommandStatus(context.mediaId, "loading");
+        await saveProjectCommandStatus(currentProject.id, context.mediaId, "loading");
+
         const response = await fetch("/api/agents/execute", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -137,7 +142,11 @@ export function useSilentAgentCommand() {
           }),
         });
 
-        if (!response.ok || !response.body) return;
+        if (!response.ok || !response.body) {
+          setCommandStatus(context.mediaId, "error");
+          await saveProjectCommandStatus(currentProject.id, context.mediaId, "error");
+          return;
+        }
 
         const reader = response.body.getReader();
         try {
@@ -148,13 +157,20 @@ export function useSilentAgentCommand() {
         } finally {
           reader.releaseLock();
         }
+
+        setCommandStatus(context.mediaId, "success");
+        await saveProjectCommandStatus(currentProject.id, context.mediaId, "success");
       } catch {
+        setCommandStatus(context.mediaId, "error");
+        await saveProjectCommandStatus(currentProject.id, context.mediaId, "error").catch(() => {
+          // command.json status is best-effort and should not surface inline UI errors.
+        });
         // Inline grid chat intentionally does not render execution output.
       } finally {
         setIsExecuting(false);
       }
     },
-    [currentProject, isExecuting, locale, selectedAgent],
+    [currentProject, isExecuting, locale, selectedAgent, setCommandStatus],
   );
 
   return {

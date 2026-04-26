@@ -1,6 +1,6 @@
 "use client";
 
-import { ImageIcon, Plus, Video } from "lucide-react";
+import { AlertCircle, CheckCircle2, ImageIcon, Loader2, Plus, Video } from "lucide-react";
 import Image from "next/image";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
@@ -29,7 +29,17 @@ function MediaPreview({
   const [failed, setFailed] = useState(false);
   const source = item.type === "video" ? item.poster || item.url : item.url;
   const status = item.status.toLowerCase();
-  const isError = failed || status === "error" || status === "failed";
+  const commandStatus = status === "loading" || status === "error" || status === "success" ? status : "";
+  const isLoading = commandStatus === "loading";
+  const isError = failed || commandStatus === "error" || status === "failed";
+  const statusLabel =
+    commandStatus === "loading"
+      ? t("mediaGrid.loading")
+      : commandStatus === "success"
+        ? t("mediaGrid.success")
+        : isError
+          ? t("mediaGrid.error")
+          : "";
 
   return (
     <button
@@ -62,10 +72,28 @@ function MediaPreview({
           />
         ) : (
           <div className="flex flex-col items-center gap-1 text-muted-foreground">
-            {item.type === "video" ? <Video className="size-5" /> : <ImageIcon className="size-5" />}
-            <span className="text-xs">{isError ? t("mediaGrid.error") : t("mediaGrid.pending")}</span>
+            {isLoading ? (
+              <Loader2 className="size-5 animate-spin" />
+            ) : item.type === "video" ? (
+              <Video className="size-5" />
+            ) : (
+              <ImageIcon className="size-5" />
+            )}
+            <span className="text-xs">{statusLabel || t("mediaGrid.pending")}</span>
           </div>
         )}
+        {statusLabel && source && !isError ? (
+          <div className="pointer-events-none absolute right-1 top-1 z-10 flex items-center gap-1 rounded-full bg-background/90 px-1.5 py-0.5 text-[10px] text-foreground shadow-sm">
+            {isLoading ? (
+              <Loader2 className="size-3 animate-spin" />
+            ) : commandStatus === "success" ? (
+              <CheckCircle2 className="size-3 text-emerald-500" />
+            ) : (
+              <AlertCircle className="size-3 text-destructive" />
+            )}
+            <span>{statusLabel}</span>
+          </div>
+        ) : null}
         {showName ? (
         <div className="pointer-events-none absolute bottom-0 left-0 z-10 mt-1 flex w-full items-center justify-center px-1 py-0.5 bg-foreground/10">
           <span className="truncate text-[10px]">{item.name || item.id}</span>

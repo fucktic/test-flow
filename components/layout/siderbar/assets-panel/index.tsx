@@ -2,7 +2,18 @@
 
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import { ImageIcon, Info, ListTree, Plus, Search, Trash2, WandSparkles } from "lucide-react";
+import {
+  AlertCircle,
+  CheckCircle2,
+  ImageIcon,
+  Info,
+  ListTree,
+  Loader2,
+  Plus,
+  Search,
+  Trash2,
+  WandSparkles,
+} from "lucide-react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
 
@@ -76,6 +87,7 @@ export function AssetsPanel() {
   const tCanvas = useTranslations("Canvas");
   const { execute: executeSilentAgentCommand } = useSilentAgentCommand();
   const currentProject = useCanvasStore((state) => state.currentProject);
+  const commandStatuses = useCanvasStore((state) => state.commandStatuses);
   const [activeTab, setActiveTab] = useState<AssetTabKey>("all");
   const [searchValue, setSearchValue] = useState("");
   const [config, setConfig] = useState<AppConfig>(EMPTY_CONFIG);
@@ -184,6 +196,10 @@ export function AssetsPanel() {
     ? selectedImageModelId
     : imageModelOptions[0]?.id ?? "";
   const selectedImageModel = config.imageModels.find((model) => model.id === selectedModelId);
+  const selectedChatCommandStatus = selectedChatAsset ? commandStatuses[selectedChatAsset.id] : undefined;
+  const selectedChatCommandStatusLabel = selectedChatCommandStatus
+    ? tCanvas(`mediaGrid.${selectedChatCommandStatus}`)
+    : undefined;
   const selectedAssetChildren = useMemo(() => {
     if (!selectedAsset) return [];
 
@@ -406,6 +422,10 @@ export function AssetsPanel() {
 
                     {visibleAssets.map((asset, assetIndex) => {
                       const gridIndex = assetIndex + 1;
+                      const commandStatus = commandStatuses[asset.id];
+                      const commandStatusLabel = commandStatus
+                        ? tCanvas(`mediaGrid.${commandStatus}`)
+                        : "";
                       const gridColumn = gridIndex % ASSET_GRID_COLUMNS;
                       const canShowDetailToRight =
                         gridColumn <= ASSET_GRID_COLUMNS - ASSET_DETAIL_SPAN - 1;
@@ -483,12 +503,28 @@ export function AssetsPanel() {
                                 />
                               ) : (
                                 <div className="flex flex-col items-center gap-1 text-muted-foreground">
-                                  <ImageIcon className="size-6" />
-                                  {asset.url ? null : (
-                                    <span className="text-xs">{t("assetPanel.imagePending")}</span>
+                                  {commandStatus === "loading" ? (
+                                    <Loader2 className="size-6 animate-spin" />
+                                  ) : (
+                                    <ImageIcon className="size-6" />
                                   )}
+                                  <span className="text-xs">
+                                    {commandStatusLabel || t("assetPanel.imagePending")}
+                                  </span>
                                 </div>
                               )}
+                              {commandStatusLabel && asset.url && !failedImageIds.has(asset.id) ? (
+                                <div className="pointer-events-none absolute right-1 top-1 z-10 flex items-center gap-1 rounded-full bg-background/90 px-1.5 py-0.5 text-[10px] text-foreground shadow-sm">
+                                  {commandStatus === "loading" ? (
+                                    <Loader2 className="size-3 animate-spin" />
+                                  ) : commandStatus === "success" ? (
+                                    <CheckCircle2 className="size-3 text-emerald-500" />
+                                  ) : (
+                                    <AlertCircle className="size-3 text-destructive" />
+                                  )}
+                                  <span>{commandStatusLabel}</span>
+                                </div>
+                              ) : null}
                               {selectedChatAssetId && selectedChatAssetId !== asset.id ? (
                                 <div
                                   className="pointer-events-none absolute inset-0 z-20 bg-background/70 backdrop-blur-[1px]"
@@ -532,6 +568,8 @@ export function AssetsPanel() {
               }}
             >
               <ChatWindow
+                commandStatus={selectedChatCommandStatus}
+                commandStatusLabel={selectedChatCommandStatusLabel}
                 projectId={currentProject?.id ?? ""}
                 emptyModelLabel={tCanvas("chatWindow.emptyModel")}
                 placeholder={tCanvas("chatWindow.placeholder")}

@@ -99,6 +99,13 @@ function CanvasWorkspaceInner() {
   const selectedVideoModel = config.videoModels.find((model) => model.id === selectedModelId);
   const selectedProjectModel =
     selectedMediaGridItem?.item.type === "video" ? selectedVideoModel : selectedImageModel;
+  const commandStatus =
+    selectedMediaGridItem?.item.status === "loading" ||
+    selectedMediaGridItem?.item.status === "error" ||
+    selectedMediaGridItem?.item.status === "success"
+      ? selectedMediaGridItem.item.status
+      : undefined;
+  const commandStatusLabel = commandStatus ? t(`mediaGrid.${commandStatus}`) : undefined;
   const requiresFirstLastFrame =
     selectedMediaGridItem?.item.type === "video" &&
     selectedVideoModel?.videoReferenceMode === "first-last-frame";
@@ -336,6 +343,8 @@ function CanvasWorkspaceInner() {
           }}
         >
           <ChatWindow
+            commandStatus={commandStatus}
+            commandStatusLabel={commandStatusLabel}
             projectId={currentProject?.id ?? ""}
             emptyModelLabel={t("chatWindow.emptyModel")}
             placeholder={t("chatWindow.placeholder")}

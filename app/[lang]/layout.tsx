@@ -9,6 +9,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { routing } from "@/i18n/routing";
 import { Toaster } from "sonner";
 import { ProjectBootstrap } from "@/components/project/project-bootstrap";
+import { ProjectCommandGuard } from "@/components/project/project-command-guard";
 
 
 export function generateStaticParams() {
@@ -62,6 +63,7 @@ export default async function RootLayout({
           <NextIntlClientProvider messages={messages}>
             <Toaster position="top-center" theme="dark" />
             <ProjectBootstrap />
+            <ProjectCommandGuard />
             <Sidebar />
             {children}
           </NextIntlClientProvider>

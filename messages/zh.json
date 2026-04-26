@@ -158,7 +158,9 @@
     },
     "mediaGrid": {
       "pending": "待生成",
+      "loading": "生成中",
       "error": "Error",
+      "success": "已完成",
       "select": "选择 {name}"
     }
   },
@@ -370,6 +372,7 @@
     "deleteSuccess": "项目已删除",
     "deleteError": "项目删除失败",
     "enterSuccess": "已进入“{name}”",
+    "commandDataLossConfirm": "刷新或切换项目会丢失所有智能体返回数据，是否继续？",
     "addScript": {
       "title": "新建剧本项目",
       "uploadLabel": "上传剧本文件",

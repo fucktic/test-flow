@@ -21,8 +21,10 @@ import type {
 const PROJECT_ROOT = process.cwd();
 const PROJECTS_DIR = path.resolve(PROJECT_ROOT, "projects");
 const CURRENT_PROJECT_PATH = path.resolve(PROJECTS_DIR, "currentProject.json");
+const PROJECT_COMMAND_FILE_NAME = "command.json";
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const TEMP_FILE_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.[a-z0-9]{1,12}$/i;
+const COMMAND_STATUS_VALUES = new Set(["loading", "error", "success"]);
 
 export type ProjectTempImage = {
   id: string;
@@ -38,6 +40,8 @@ type ProjectTempImageInput = {
   contentType: string;
   name: string;
 };
+
+export type ProjectCommandStatus = "loading" | "error" | "success";
 
 function assertSafeProjectPath(targetPath: string) {
   if (targetPath !== PROJECTS_DIR && !targetPath.startsWith(`${PROJECTS_DIR}${path.sep}`)) {
@@ -235,6 +239,28 @@ function getProjectTempDir(projectId: string) {
   return tempDir;
 }
 
+function getProjectCommandPath(projectId: string) {
+  const commandPath = path.resolve(getProjectDir(projectId), PROJECT_COMMAND_FILE_NAME);
+  assertSafeProjectPath(commandPath);
+  return commandPath;
+}
+
+function readProjectCommandEntries(value: unknown): Record<string, ProjectCommandStatus> {
+  if (!isRecord(value)) return {};
+
+  return Object.entries(value).reduce<Record<string, ProjectCommandStatus>>(
+    (entries, [gridId, status]) => {
+      if (!gridId || typeof status !== "string" || !COMMAND_STATUS_VALUES.has(status)) {
+        return entries;
+      }
+
+      entries[gridId] = status as ProjectCommandStatus;
+      return entries;
+    },
+    {},
+  );
+}
+
 function getImageExtension(contentType: string, fileName: string) {
   const normalizedContentType = contentType.toLowerCase();
   if (normalizedContentType === "image/png") return "png";
@@ -360,6 +386,70 @@ export async function setCurrentProject(
 
     await writeCurrentProjectDetail(project);
     return { success: true, project };
+  } catch (err) {
+    if (err instanceof Error) {
+      return { success: false, error: err.message };
+    }
+    return { success: false, error: "未知错误" };
+  }
+}
+
+export async function saveProjectCommandStatus(params: {
+  gridId: string;
+  projectId: string;
+  status: ProjectCommandStatus;
+}): Promise<
+  { success: true; commands: Record<string, ProjectCommandStatus> } | { success: false; error: string }
+> {
+  try {
+    const commandPath = getProjectCommandPath(params.projectId);
+    const currentCommands = await readFile(commandPath, "utf8")
+      .then((content) => readProjectCommandEntries(JSON.parse(content)))
+      .catch(() => ({}));
+    const nextCommands = {
+      ...currentCommands,
+      [params.gridId]: params.status,
+    };
+
+    // command.json only stores serializable grid status and is recreated safely inside the project folder.
+    await writeFile(commandPath, JSON.stringify(nextCommands, null, 2), "utf8");
+
+    return { success: true, commands: nextCommands };
+  } catch (err) {
+    if (err instanceof Error) {
+      return { success: false, error: err.message };
+    }
+    return { success: false, error: "未知错误" };
+  }
+}
+
+export async function getProjectCommands(
+  projectId: string,
+): Promise<
+  { success: true; commands: Record<string, ProjectCommandStatus> } | { success: false; error: string }
+> {
+  try {
+    const commandPath = getProjectCommandPath(projectId);
+    const commands = await readFile(commandPath, "utf8")
+      .then((content) => readProjectCommandEntries(JSON.parse(content)))
+      .catch(() => ({}));
+
+    return { success: true, commands };
+  } catch (err) {
+    if (err instanceof Error) {
+      return { success: false, error: err.message };
+    }
+    return { success: false, error: "未知错误" };
+  }
+}
+
+export async function clearProjectCommands(
+  projectId: string,
+): Promise<{ success: true } | { success: false; error: string }> {
+  try {
+    const commandPath = getProjectCommandPath(projectId);
+    await writeFile(commandPath, JSON.stringify({}, null, 2), "utf8");
+    return { success: true };
   } catch (err) {
     if (err instanceof Error) {
       return { success: false, error: err.message };

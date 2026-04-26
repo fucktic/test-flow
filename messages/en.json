@@ -158,7 +158,9 @@
     },
     "mediaGrid": {
       "pending": "Pending",
+      "loading": "Loading",
       "error": "Error",
+      "success": "Done",
       "select": "Select {name}"
     }
   },
@@ -370,6 +372,7 @@
     "deleteSuccess": "Project deleted",
     "deleteError": "Failed to delete project",
     "enterSuccess": "Entered \"{name}\"",
+    "commandDataLossConfirm": "Refreshing or switching projects will discard all agent response data. Continue?",
     "addScript": {
       "title": "New Script Project",
       "uploadLabel": "Upload Script File",

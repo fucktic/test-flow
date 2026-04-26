@@ -42,6 +42,8 @@ export type ChatWindowModelOption = {
   name: string;
 };
 
+export type ChatWindowCommandStatus = "error" | "loading" | "success";
+
 type MentionRange = {
   from: number;
   to: number;
@@ -113,6 +115,8 @@ const ChatInlineTag = TiptapNode.create({
 
 type ChatWindowProps = {
   className?: string;
+  commandStatus?: ChatWindowCommandStatus;
+  commandStatusLabel?: string;
   projectId: string;
   emptyModelLabel: string;
   placeholder: string;
@@ -142,6 +146,8 @@ type ChatWindowProps = {
 
 export function ChatWindow({
   className,
+  commandStatus,
+  commandStatusLabel,
   projectId,
   emptyModelLabel,
   placeholder,
@@ -182,6 +188,7 @@ export function ChatWindow({
   );
   const activeAttachments = requiresFirstLastFrame ? selectedReferenceImages : attachments;
   const mentionSource = mediaMentionImages.length > 0 ? mediaMentionImages : attachments;
+  const isCommandLoading = commandStatus === "loading";
   const mentionOptions = useMemo(
     () =>
       mentionSource.filter((attachment) =>
@@ -537,6 +544,20 @@ export function ChatWindow({
           </div>
 
           <div className="flex shrink-0 items-center gap-2 text-muted-foreground">
+            {commandStatus && commandStatusLabel ? (
+              <span
+                className={cn(
+                  "max-w-20 truncate text-xs",
+                  commandStatus === "error"
+                    ? "text-destructive"
+                    : commandStatus === "success"
+                      ? "text-emerald-500"
+                      : "text-muted-foreground",
+                )}
+              >
+                {commandStatusLabel}
+              </span>
+            ) : null}
             {showVideoOptions ? (
               <>
                 <Select
@@ -605,7 +626,7 @@ export function ChatWindow({
               size="icon-sm"
               className="size-8 rounded-full bg-primary text-primary-foreground hover:bg-primary/90"
               aria-label={sendLabel}
-              disabled={!editor || (isEmpty && activeAttachments.length === 0)}
+              disabled={isCommandLoading || !editor || (isEmpty && activeAttachments.length === 0)}
               onClick={handleSubmit}
             >
               <ArrowUp className="size-5" />

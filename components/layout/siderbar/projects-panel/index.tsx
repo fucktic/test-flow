@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/dialog"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { fetchProjects, updateCurrentProject } from "@/lib/project-api"
+import { clearProjectCommands, fetchProjects, updateCurrentProject } from "@/lib/project-api"
 import { deleteProject, updateProject } from "@/lib/services/project-service"
 import type { ProjectListItem } from "@/lib/project-types"
 import { useCanvasStore } from "@/store/use-canvas-store"
@@ -265,6 +265,7 @@ export function ProjectsPanel() {
   const currentProject = useCanvasStore((state) => state.currentProject)
   const projects = useCanvasStore((state) => state.projects)
   const clearCurrentProject = useCanvasStore((state) => state.clearCurrentProject)
+  const setCommandStatuses = useCanvasStore((state) => state.setCommandStatuses)
   const setCurrentProject = useCanvasStore((state) => state.setCurrentProject)
   const setProjects = useCanvasStore((state) => state.setProjects)
   const [addScriptOpen, setAddScriptOpen] = useState(false)
@@ -294,9 +295,20 @@ export function ProjectsPanel() {
   }, [refreshProjects])
 
   const handleEnterProject = async (project: ProjectListItem) => {
+    if (currentProject?.id && currentProject.id !== project.id) {
+      const confirmed = window.confirm(t("commandDataLossConfirm"))
+      if (!confirmed) return
+    }
+
     setEnteringProjectId(project.id)
     try {
+      if (currentProject?.id && currentProject.id !== project.id) {
+        await clearProjectCommands(currentProject.id)
+      }
+      await clearProjectCommands(project.id)
+
       const projectDetail = await updateCurrentProject(project.id)
+      setCommandStatuses({})
       setCurrentProject(projectDetail)
       toast.success(t("enterSuccess", { name: projectDetail.name }))
     } catch {

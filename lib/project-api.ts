@@ -37,6 +37,8 @@ export type ProjectCanvasData = {
   videos: ProjectVideoAsset[];
 };
 
+export type ProjectCommandStatus = "loading" | "error" | "success";
+
 async function readJsonResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
     throw new Error("PROJECT_REQUEST_FAILED");
@@ -130,6 +132,57 @@ export async function saveProjectSelectedModel(
   }
 
   return data.config;
+}
+
+export async function saveProjectCommandStatus(
+  projectId: string,
+  gridId: string,
+  status: ProjectCommandStatus,
+): Promise<void> {
+  await readJsonResponse<{ commands?: Record<string, ProjectCommandStatus> }>(
+    await fetch(`/api/projects/${encodeURIComponent(projectId)}/command`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ gridId, status }),
+    }),
+  );
+}
+
+export async function fetchProjectCommands(
+  projectId: string,
+): Promise<Record<string, ProjectCommandStatus>> {
+  const data = await readJsonResponse<{ commands?: Record<string, ProjectCommandStatus> }>(
+    await fetch(`/api/projects/${encodeURIComponent(projectId)}/command`, {
+      cache: "no-store",
+    }),
+  );
+
+  return data.commands ?? {};
+}
+
+export async function clearProjectCommands(projectId: string): Promise<void> {
+  await readJsonResponse<{ ok?: boolean }>(
+    await fetch(`/api/projects/${encodeURIComponent(projectId)}/command`, {
+      method: "DELETE",
+    }),
+  );
+}
+
+export function queueClearProjectCommands(projectId: string) {
+  const url = `/api/projects/${encodeURIComponent(projectId)}/command`;
+  if (typeof navigator !== "undefined" && navigator.sendBeacon) {
+    navigator.sendBeacon(url, new Blob([], { type: "text/plain" }));
+    return;
+  }
+
+  void fetch(url, {
+    keepalive: true,
+    method: "DELETE",
+  }).catch(() => {
+    // Page unload cleanup is best-effort and will retry on the next explicit switch.
+  });
 }
 
 export async function deleteProjectImage(
