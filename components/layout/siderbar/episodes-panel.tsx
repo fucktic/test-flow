@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
@@ -13,33 +13,31 @@ const MAX_SELECTED_EPISODES = 3;
 export function EpisodesPanel() {
   const t = useTranslations("Sidebar");
   const currentProject = useCanvasStore((state) => state.currentProject);
+  const selectedEpisodeIds = useCanvasStore((state) => state.selectedEpisodeIds);
+  const setSelectedEpisodeIds = useCanvasStore((state) => state.setSelectedEpisodeIds);
   const episodes = useMemo(() => currentProject?.episodes ?? [], [currentProject?.episodes]);
   const availableEpisodeIds = useMemo(
     () => new Set(episodes.map((episode) => episode.id)),
     [episodes],
   );
-  const [selectedEpisodeIds, setSelectedEpisodeIds] = useState<string[]>([]);
   const visibleSelectedEpisodeIds = selectedEpisodeIds.filter((episodeId) =>
     availableEpisodeIds.has(episodeId),
   );
 
   const handleEpisodeToggle = (episodeId: string) => {
-    setSelectedEpisodeIds((currentIds) => {
-      const availableSelectedIds = currentIds.filter((selectedEpisodeId) =>
-        availableEpisodeIds.has(selectedEpisodeId),
+    if (visibleSelectedEpisodeIds.includes(episodeId)) {
+      setSelectedEpisodeIds(
+        visibleSelectedEpisodeIds.filter((selectedEpisodeId) => selectedEpisodeId !== episodeId),
       );
+      return;
+    }
 
-      if (availableSelectedIds.includes(episodeId)) {
-        return availableSelectedIds.filter((selectedEpisodeId) => selectedEpisodeId !== episodeId);
-      }
+    // Keep selection bounded so downstream episode workflows receive a predictable set.
+    if (visibleSelectedEpisodeIds.length >= MAX_SELECTED_EPISODES) {
+      return;
+    }
 
-      // Keep selection bounded so downstream episode workflows receive a predictable set.
-      if (availableSelectedIds.length >= MAX_SELECTED_EPISODES) {
-        return availableSelectedIds;
-      }
-
-      return [...availableSelectedIds, episodeId];
-    });
+    setSelectedEpisodeIds([...visibleSelectedEpisodeIds, episodeId]);
   };
 
   return (

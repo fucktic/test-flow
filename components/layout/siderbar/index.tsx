@@ -165,7 +165,7 @@ const Sidebar = () => {
                       : "text-muted-foreground hover:bg-accent hover:text-foreground",
                   )}
                 >
-                  <Icon className="size-4" />
+                  <Icon className="size-5" />
                 </button>
               </TooltipTrigger>
               <TooltipContent side="right">

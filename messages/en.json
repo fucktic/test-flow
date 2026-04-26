@@ -94,7 +94,35 @@
     "nodeCount": "{count, plural, one {# node} other {# nodes}}",
     "loadedProjectMeta": "{count, plural, one {# episode} other {# episodes}} · {aspectRatio} · {resolution}",
     "newNodeLabel": "Idea {count}",
-    "back": "Back to home"
+    "back": "Back to home",
+    "emptyProject": "Select a project",
+    "storyboardList": {
+      "title": "Storyboards",
+      "limit": "{count}/{max}",
+      "itemLabel": "S{index}",
+      "add": "Add storyboard",
+      "delete": "Delete {name}",
+      "moveUp": "Move {name} up",
+      "moveDown": "Move {name} down",
+      "confirmDeleteTitle": "Delete storyboard?",
+      "confirmDeleteDescription": "This will remove {name} from the storyboard list.",
+      "cancel": "Cancel",
+      "confirmDelete": "Delete",
+      "empty": "No storyboards",
+      "parse": "Parse now"
+    },
+    "storyboardImage": {
+      "title": "Image",
+      "add": "Add image"
+    },
+    "storyboardVideo": {
+      "title": "Video",
+      "add": "Add video"
+    },
+    "mediaGrid": {
+      "pending": "Pending",
+      "error": "Error"
+    }
   },
   "Sidebar": {
     "episodes": "Episodes",

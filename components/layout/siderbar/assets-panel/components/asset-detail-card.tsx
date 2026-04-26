@@ -49,7 +49,7 @@ function AssetPreview({
       ) : (
         <div className="flex size-full flex-col items-center justify-center gap-1 text-muted-foreground">
           <ImageIcon className="size-5" />
-          {asset.url ? null : <span className="text-[10px]">{t("assetPanel.imagePending")}</span>}
+          {asset.url ? null : <span className="text-xs">{t("assetPanel.imagePending")}</span>}
         </div>
       )}
     </div>

@@ -299,7 +299,7 @@ export function AssetsPanel() {
                       className="flex aspect-square h-auto flex-col gap-1 border-dashed text-muted-foreground"
                     >
                       <Plus className="size-4" />
-                      <span className="text-[11px]">{t("assetPanel.addAsset")}</span>
+                      <span className="text-xs">{t("assetPanel.addAsset")}</span>
                     </Button>
 
                     {visibleAssets.map((asset, assetIndex) => {

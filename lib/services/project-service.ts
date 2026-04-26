@@ -4,6 +4,7 @@ import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { parseScriptMD } from "@/lib/script-parser";
+import { flowStateSchema, type FlowState } from "@/lib/flow-schema";
 import type {
   ProjectAssetItem,
   ProjectAssets,
@@ -11,6 +12,8 @@ import type {
   ProjectEpisode,
   ProjectImageAsset,
   ProjectListItem,
+  ProjectStoryboard,
+  ProjectVideoAsset,
 } from "@/lib/project-types";
 
 const PROJECT_ROOT = process.cwd();
@@ -108,6 +111,60 @@ function readProjectImageAssets(value: unknown): ProjectImageAsset[] {
       },
     ];
   });
+}
+
+function readProjectVideoAssets(value: unknown): ProjectVideoAsset[] {
+  const videoRecords = Array.isArray(value) ? value : [value];
+
+  return videoRecords.flatMap((videoAsset) => {
+    if (!isRecord(videoAsset)) return [];
+
+    const id = readString(videoAsset.id);
+    if (!id) return [];
+
+    return [
+      {
+        id,
+        name: readString(videoAsset.name),
+        source: readString(videoAsset.source),
+        prompt: readString(videoAsset.prompt),
+        url: readString(videoAsset.url),
+        poster: readString(videoAsset.poster),
+        duration: readString(videoAsset.duration),
+        status: readString(videoAsset.status),
+      },
+    ];
+  });
+}
+
+function readProjectStoryboards(value: unknown): ProjectStoryboard[] {
+  const storyboardRecords = Array.isArray(value) ? value : [value];
+
+  return storyboardRecords.flatMap((storyboard) => {
+    if (!isRecord(storyboard)) return [];
+
+    const id = readString(storyboard.id);
+    if (!id) return [];
+
+    return [
+      {
+        id,
+        name: readString(storyboard.name),
+        description: readString(storyboard.description),
+        prompt: readString(storyboard.prompt),
+        images: readStringArray(storyboard.images),
+        videos: readStringArray(storyboard.videos),
+        selectedVideo: readString(storyboard.selectedVideo),
+      },
+    ];
+  });
+}
+
+function readFlowState(value: unknown): FlowState {
+  const parsedFlow = flowStateSchema.safeParse(value);
+  if (parsedFlow.success) return parsedFlow.data;
+
+  return { nodes: [], edges: [] };
 }
 
 function toProjectDetail(value: unknown): ProjectDetail | null {
@@ -301,6 +358,81 @@ export async function getProjectImages(
     } catch {
       return { success: true, images: [] };
     }
+  } catch (err) {
+    if (err instanceof Error) {
+      return { success: false, error: err.message };
+    }
+    return { success: false, error: "未知错误" };
+  }
+}
+
+export async function getProjectCanvasData(params: {
+  projectId: string;
+  episodeId: string;
+}): Promise<
+  | {
+      success: true;
+      flow: FlowState;
+      storyboards: ProjectStoryboard[];
+      images: ProjectImageAsset[];
+      videos: ProjectVideoAsset[];
+    }
+  | { success: false; error: string }
+> {
+  try {
+    const projectDir = getProjectDir(params.projectId);
+    const flowJsonPath = path.resolve(projectDir, "flow.json");
+    const projectStoryboardPath = path.resolve(projectDir, `${params.projectId}.json`);
+    const episodeStoryboardPath = path.resolve(projectDir, "episode", `${params.episodeId}.json`);
+    const imagesJsonPath = path.resolve(projectDir, "images", "images.json");
+    const videosJsonPath = path.resolve(projectDir, "videos", "videos.json");
+
+    [
+      flowJsonPath,
+      projectStoryboardPath,
+      episodeStoryboardPath,
+      imagesJsonPath,
+      videosJsonPath,
+    ].forEach(assertSafeProjectPath);
+
+    const flow = await readFile(flowJsonPath, "utf8")
+      .then((content) => readFlowState(JSON.parse(content)))
+      .catch(() => ({ nodes: [], edges: [] }));
+
+    const storyboardContent = await readFile(episodeStoryboardPath, "utf8").catch(async () =>
+      readFile(projectStoryboardPath, "utf8"),
+    );
+    const storyboards = readProjectStoryboards(JSON.parse(storyboardContent));
+
+    const images = await readFile(imagesJsonPath, "utf8")
+      .then((content) => readProjectImageAssets(JSON.parse(content)))
+      .catch(() => []);
+    const videos = await readFile(videosJsonPath, "utf8")
+      .then((content) => readProjectVideoAssets(JSON.parse(content)))
+      .catch(() => []);
+
+    return { success: true, flow, storyboards, images, videos };
+  } catch (err) {
+    if (err instanceof Error) {
+      return { success: false, error: err.message };
+    }
+    return { success: false, error: "未知错误" };
+  }
+}
+
+export async function saveProjectFlow(params: {
+  projectId: string;
+  flow: FlowState;
+}): Promise<{ success: true; flow: FlowState } | { success: false; error: string }> {
+  try {
+    const projectDir = getProjectDir(params.projectId);
+    const flowJsonPath = path.resolve(projectDir, "flow.json");
+    assertSafeProjectPath(flowJsonPath);
+
+    const flow = flowStateSchema.parse(params.flow);
+    await writeFile(flowJsonPath, JSON.stringify(flow, null, 2), "utf8");
+
+    return { success: true, flow };
   } catch (err) {
     if (err instanceof Error) {
       return { success: false, error: err.message };

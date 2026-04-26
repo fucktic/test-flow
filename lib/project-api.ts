@@ -1,4 +1,11 @@
-import type { ProjectDetail, ProjectImageAsset, ProjectListItem } from "@/lib/project-types";
+import type { FlowState } from "@/lib/flow-schema";
+import type {
+  ProjectDetail,
+  ProjectImageAsset,
+  ProjectListItem,
+  ProjectStoryboard,
+  ProjectVideoAsset,
+} from "@/lib/project-types";
 
 type ProjectsResponse = {
   projects?: ProjectListItem[];
@@ -10,6 +17,13 @@ type ProjectResponse = {
 
 type ProjectImagesResponse = {
   images?: ProjectImageAsset[];
+};
+
+export type ProjectCanvasData = {
+  flow: FlowState;
+  storyboards: ProjectStoryboard[];
+  images: ProjectImageAsset[];
+  videos: ProjectVideoAsset[];
 };
 
 async function readJsonResponse<T>(response: Response): Promise<T> {
@@ -52,6 +66,38 @@ export async function fetchProjectImages(projectId: string): Promise<ProjectImag
   );
 
   return Array.isArray(data.images) ? data.images : [];
+}
+
+export async function fetchProjectCanvasData(
+  projectId: string,
+  episodeId: string,
+): Promise<ProjectCanvasData> {
+  return readJsonResponse<ProjectCanvasData>(
+    await fetch(
+      `/api/projects/${encodeURIComponent(projectId)}/flow?episodeId=${encodeURIComponent(episodeId)}`,
+      {
+        cache: "no-store",
+      },
+    ),
+  );
+}
+
+export async function saveProjectFlow(projectId: string, flow: FlowState): Promise<FlowState> {
+  const data = await readJsonResponse<{ flow?: FlowState }>(
+    await fetch(`/api/projects/${encodeURIComponent(projectId)}/flow`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(flow),
+    }),
+  );
+
+  if (!data.flow) {
+    throw new Error("PROJECT_FLOW_SAVE_FAILED");
+  }
+
+  return data.flow;
 }
 
 export async function deleteProjectImage(

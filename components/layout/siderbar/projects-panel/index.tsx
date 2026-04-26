@@ -371,7 +371,7 @@ export function ProjectsPanel() {
                   <LogIn className="size-6" />
                 )}
               </Button>
-              <div className="flex w-full items-center justify-between gap-2 text-[11px] text-muted-foreground">
+              <div className="flex w-full items-center justify-between gap-2 text-xs text-muted-foreground">
                 <span>{t("episodeCount", { count: project.episodeCount })}</span>
                 <span>{project.aspectRatio}</span>
               </div>

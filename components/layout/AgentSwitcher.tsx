@@ -73,7 +73,7 @@ export default function AgentSwitcher() {
   const { selectedAgentId: storeSelectedId, setSelectedAgentId: storeSetSelectedId } =
     useAgentStore();
   const [agents, setAgents] = useState<AgentRecord[]>([]);
-  const [selectedAgentId, setSelectedAgentId] = useState(storeSelectedId);
+  const [selectedAgentId, setSelectedAgentId] = useState(() => storeSelectedId);
   const [selectOpen, setSelectOpen] = useState(false);
   const [managerOpen, setManagerOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<AgentRecord | null>(null);
@@ -87,13 +87,6 @@ export default function AgentSwitcher() {
     () => agents.find((agent) => agent.id === selectedAgentId) ?? null,
     [agents, selectedAgentId],
   );
-
-  // Sync store → local on load
-  useEffect(() => {
-    if (storeSelectedId) {
-      setSelectedAgentId(storeSelectedId);
-    }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadAgents = useCallback(async () => {
     try {

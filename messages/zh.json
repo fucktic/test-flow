@@ -94,7 +94,35 @@
     "nodeCount": "{count} 个节点",
     "loadedProjectMeta": "{count} 集 · {aspectRatio} · {resolution}",
     "newNodeLabel": "想法 {count}",
-    "back": "返回首页"
+    "back": "返回首页",
+    "emptyProject": "请选择项目",
+    "storyboardList": {
+      "title": "分镜列表",
+      "limit": "{count}/{max}",
+      "itemLabel": "S{index}",
+      "add": "新增分镜",
+      "delete": "删除 {name}",
+      "moveUp": "上移 {name}",
+      "moveDown": "下移 {name}",
+      "confirmDeleteTitle": "删除分镜？",
+      "confirmDeleteDescription": "将从分镜列表中移除 {name}。",
+      "cancel": "取消",
+      "confirmDelete": "删除",
+      "empty": "暂无分镜",
+      "parse": "一键解析"
+    },
+    "storyboardImage": {
+      "title": "图片",
+      "add": "添加图片"
+    },
+    "storyboardVideo": {
+      "title": "视频",
+      "add": "添加视频"
+    },
+    "mediaGrid": {
+      "pending": "待生成",
+      "error": "Error"
+    }
   },
   "Sidebar": {
     "episodes": "分集",

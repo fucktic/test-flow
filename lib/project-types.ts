@@ -23,6 +23,27 @@ export type ProjectImageAsset = {
   url: string;
 };
 
+export type ProjectVideoAsset = {
+  id: string;
+  name: string;
+  source: string;
+  prompt: string;
+  url: string;
+  poster: string;
+  duration: string;
+  status: string;
+};
+
+export type ProjectStoryboard = {
+  id: string;
+  name: string;
+  description: string;
+  prompt: string;
+  images: string[];
+  videos: string[];
+  selectedVideo: string;
+};
+
 export type ProjectAssets = {
   characters: ProjectAssetItem[];
   scenes: ProjectAssetItem[];
