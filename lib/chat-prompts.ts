@@ -18,26 +18,74 @@ type BuildFeaturePromptParams = {
   userText: string;
 };
 
+const joinPrompt = (parts: string[]) => parts.join(" ");
+
 export const FIXED_SYSTEM_PROMPT_TEMPLATE =
   "[System Instruction] " +
   "Skills are located at {projectRoot}/skills/. Before responding, list the available skill folders, read the best matching SKILL.md, and execute the matching workflow directly when useful. " +
   "All file reads and writes must stay within {projectRoot}/projects/{projectId}/. Never create or modify files inside the skills/ directory.";
 
+const COMMAND_PROMPTS = {
+  analyze:
+    "Command ~analyze: extract global assets, asset prompts, and the asset image call plan. Write detailed assets to images/images.json, grouped references to project.json.assets, and image call plans to image-curl-manifest.json.",
+  generateAssets:
+    "Command ~generate-assets: generate asset reference images from parsed asset prompts, save images to images/{uuid}.png, and update image-curl-manifest.json.",
+  generateStoryboardImages:
+    "Command ~generate-storyboard-images: generate first-frame and last-frame images, save images to images/{uuid}.png, and update frame prompt/url fields.",
+  linkAssets: "Command ~link-assets: link assets to a single storyboard shot by updating that storyboard's images field.",
+  splitEpisode: "Command ~split-episode: split a single episode script into storyboard shots and write episode/{episode_id}.json.",
+  status: "Command ~status: check the current project progress and output only a progress report.",
+  storyboardPrompts:
+    "Command ~storyboard-prompts: generate first-frame and last-frame image prompts and write episodes/{episode_id}/image-prompts/{storyboard_id}.md.",
+  uploadImages:
+    "Command ~upload-images: upload local images to the configured image host and write image-url-manifest.json.",
+  videoPrompts:
+    "Command ~video-prompts: generate the video prompt for a single storyboard shot and write episodes/{episode_id}/video-prompts/{storyboard_id}.md.",
+  generateVideos:
+    "Command ~generate-videos: generate a single storyboard video, save videos/{uuid}.mp4, update videos/videos.json, and update the storyboard videos field.",
+} as const;
+
+const ASSET_STORAGE_GUARD =
+  "Follow the storage contract in this feature task exactly, keep data serializable, do not create or write assets.json, use asset prompts in the current project/script language, and set project.json assetsParsed to true.";
+
+export const ASSET_PARSE_USER_PROMPT = "Run ~analyze for the current project.";
+export const ASSET_GENERATE_USER_PROMPT =
+  "Run ~generate-assets for the current filtered asset set.";
+
 const FEATURE_SKILL_PROMPTS: Record<ChatFeatureSkill, string> = {
-  "asset-parse":
-    "Feature skill: asset parsing. Parse the current project script and flow into reusable character, scene, prop, voice, and video asset records. Update only the project-scoped serializable asset data and keep every generated field ready for later image or video generation.",
-  "asset-map-generate":
-    "Feature skill: asset map generation. Build or refresh the storyboard asset map for the active scenes. Resolve which character, scene, prop, and reference assets each shot needs, preserve stable asset IDs, and keep references compatible with the video prompt workflow.",
-  "asset-generate":
-    "Feature skill: asset image generation. Generate or refresh production-ready global asset images from the parsed asset prompts. Save images only inside the current project, write serializable URLs and prompts back to project data, and keep existing valid assets unless the user asks to replace them.",
-  "general-chat":
-    "Feature skill: general project chat. Use the current project context, choose the most relevant available skill when useful, and answer or act without changing files unless the user clearly requests a project update.",
-  "node-image-generate":
-    "Feature skill: node image generation. Generate or replace the selected node image from the node prompt, user prompt, selected model, and any attached references. Save the resulting image in the current project and update only the selected image node or media item.",
-  "storyboard-parse":
-    "Feature skill: storyboard parsing. Parse the current episode or selected script content into storyboard scenes. Create concise shot names, descriptions, image prompts, video prompts, and serializable flow node data that can be persisted to flow.json.",
-  "video-generate":
-    "Feature skill: video generation. Generate or replace the selected storyboard video from the video prompt, selected model, duration, shot options, and referenced images. Save the video in the current project and update only the selected video node or media item.",
+  "asset-parse": joinPrompt(["Feature skill: asset parsing.", COMMAND_PROMPTS.analyze, ASSET_STORAGE_GUARD]),
+  "asset-map-generate": joinPrompt([
+    "Feature skill: asset map generation.",
+    COMMAND_PROMPTS.linkAssets,
+    "Build or refresh asset relationships for active scenes, resolve which character, scene, prop, and reference assets each shot needs, preserve stable asset IDs, and keep references compatible with the video prompt workflow.",
+  ]),
+  "asset-generate": joinPrompt([
+    "Feature skill: asset image generation.",
+    COMMAND_PROMPTS.generateAssets,
+    COMMAND_PROMPTS.uploadImages,
+    "Save images only inside the current project, write serializable URLs and prompts back to project data, and keep existing valid assets unless the user asks to replace them.",
+  ]),
+  "general-chat": joinPrompt([
+    "Feature skill: general project chat.",
+    "Use the current project context, choose the most relevant available skill when useful, and answer or act without changing files unless the user clearly requests a project update.",
+    `If the user asks for project progress or uses ~status, ${COMMAND_PROMPTS.status}`,
+  ]),
+  "node-image-generate": joinPrompt([
+    "Feature skill: node image generation.",
+    COMMAND_PROMPTS.generateStoryboardImages,
+    "Generate or replace the selected node image from the node prompt, user prompt, selected model, and any attached references. Save the resulting image in the current project and update only the selected image node or media item.",
+  ]),
+  "storyboard-parse": joinPrompt([
+    "Feature skill: storyboard parsing.",
+    COMMAND_PROMPTS.splitEpisode,
+    "Follow the storyboard-list-parser skill output contract exactly. Parse the current episode or selected script content into a serializable storyboard list with concise names, descriptions, matched asset UUIDs, empty prompt fields, preserved videos, and selectedVideo values.",
+  ]),
+  "video-generate": joinPrompt([
+    "Feature skill: video generation.",
+    COMMAND_PROMPTS.videoPrompts,
+    COMMAND_PROMPTS.generateVideos,
+    "Generate or replace storyboard video from the video prompt, selected model, duration, shot options, and referenced images.",
+  ]),
 };
 
 export function buildChatSystemPrompt({
@@ -59,8 +107,7 @@ export function buildChatSystemPrompt({
 
 export function buildFeatureUserPrompt({ featureSkill, userText }: BuildFeaturePromptParams) {
   return [
-    `[Requested Feature Skill]\n${featureSkill}`,
     `[Feature Task]\n${FEATURE_SKILL_PROMPTS[featureSkill]}`,
-    `[User Prompt]\n${userText}`,
+    `[User Instruction]\n${userText}`,
   ].join("\n");
 }

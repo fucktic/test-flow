@@ -19,7 +19,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { type StoryboardListNodeData, useCanvasStore } from "@/store/use-canvas-store";
-import { useLayoutStore } from "@/store/use-layout-store";
 import { NODE_WIDTH_CLASS } from "../constants";
 
 const MAX_SELECTED_STORYBOARDS = 3;
@@ -31,13 +30,14 @@ export function StoryboardListNode({ data, selected }: NodeProps<StoryboardListN
   const { execute: executeSilentAgentCommand } = useSilentAgentCommand();
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const addStoryboard = useCanvasStore((state) => state.addStoryboard);
+  const commandStatus = useCanvasStore((state) => state.commandStatuses[data.episodeId]);
   const currentProject = useCanvasStore((state) => state.currentProject);
   const deleteStoryboard = useCanvasStore((state) => state.deleteStoryboard);
   const moveStoryboard = useCanvasStore((state) => state.moveStoryboard);
   const selectedMediaGridSceneId = useCanvasStore((state) => state.selectedMediaGridItem?.sceneId);
   const selectedStoryboardIds = useCanvasStore((state) => state.selectedStoryboardIds);
   const toggleStoryboardSelection = useCanvasStore((state) => state.toggleStoryboardSelection);
-  const storyboardCommandLoading = useLayoutStore((state) => state.sidebarLoading.episodes > 0);
+  const storyboardCommandLoading = commandStatus === "loading";
   const active =
     selected ||
     data.storyboards.some(
@@ -154,7 +154,7 @@ export function StoryboardListNode({ data, selected }: NodeProps<StoryboardListN
                         {storyboardName}
                       </span>
                     </div>
-                    <p className="mt-2 line-clamp-3 h-15  text-xs leading-4 text-muted-foreground">
+                    <p className="mt-2 line-clamp-3 h-15  text-[10px] leading-4 text-muted-foreground p-1">
                       {storyboard.description}
                     </p>
                     <div className="nodrag absolute bottom-1.5 right-1.5 z-10 flex items-center gap-1 rounded-full border border-border bg-card/95 p-0.5 opacity-0 shadow-sm transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">

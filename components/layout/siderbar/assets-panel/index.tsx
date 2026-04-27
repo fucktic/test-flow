@@ -42,6 +42,7 @@ import {
   fetchProjectImages,
   saveProjectSelectedModel,
 } from "@/lib/project-api";
+import { ASSET_GENERATE_USER_PROMPT, ASSET_PARSE_USER_PROMPT } from "@/lib/chat-prompts";
 import type { ProjectAssets, ProjectImageAsset } from "@/lib/project-types";
 import type { ProjectDetail } from "@/lib/project-types";
 import { cn } from "@/lib/utils";
@@ -397,8 +398,8 @@ export function AssetsPanel() {
         html: "",
         text:
           action === "parse"
-            ? "Parse reusable production assets from the current project script and flow."
-            : "Generate production asset images for the current filtered asset set.",
+            ? ASSET_PARSE_USER_PROMPT
+            : ASSET_GENERATE_USER_PROMPT,
       },
       {
         featureSkill: action === "parse" ? "asset-parse" : "asset-generate",
@@ -545,7 +546,7 @@ export function AssetsPanel() {
                   ) : null}
                 </div>
               ) : (
-                <ScrollArea className="h-[392px] pr-2">
+                <ScrollArea className="h-98 pr-2">
                   <div className="grid grid-cols-5 gap-2">
                     {/* The add tile stays first so asset creation is reachable in every tab. */}
                     <Button
@@ -699,7 +700,7 @@ export function AssetsPanel() {
         ? createPortal(
             <div
               data-asset-chat-window
-              className="fixed z-[999] w-[min(640px,calc(100vw-32px))] -translate-y-1/2"
+              className="fixed z-999 w-[min(640px,calc(100vw-32px))] -translate-y-1/2"
               style={{
                 left: assetChatPosition.left,
                 top: assetChatPosition.top,
@@ -708,6 +709,8 @@ export function AssetsPanel() {
               <ChatWindow
                 commandStatus={selectedChatCommandStatus}
                 commandStatusLabel={selectedChatCommandStatusLabel}
+                initialPrompt={selectedChatAsset.prompt}
+                initialPromptKey={selectedChatAsset.id}
                 projectId={currentProject?.id ?? ""}
                 emptyModelLabel={tCanvas("chatWindow.emptyModel")}
                 placeholder={tCanvas("chatWindow.placeholder")}

@@ -6,6 +6,13 @@
       "instructions": "hermes",
       "icon": "https://hermes-agent.nousresearch.com/icon.png?icon.17972d59.png",
       "description": ""
+    },
+    {
+      "id": "220a2d72-1eb3-4543-8c9b-76408338b3ef",
+      "name": "opencode",
+      "instructions": "opencode",
+      "icon": "",
+      "description": ""
     }
   ]
 }

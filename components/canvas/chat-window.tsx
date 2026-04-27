@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
-import { mergeAttributes, Node as TiptapNode } from "@tiptap/core";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { mergeAttributes, Node as TiptapNode, type JSONContent } from "@tiptap/core";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { ArrowUp, Clapperboard, ImagePlus, Loader2, Plus, Sparkles, Timer, X } from "lucide-react";
@@ -48,6 +48,18 @@ type MentionRange = {
   from: number;
   to: number;
 };
+
+function createPromptContent(prompt: string): JSONContent {
+  const lines = prompt.split(/\r?\n/);
+
+  return {
+    type: "doc",
+    content: lines.map((line) => ({
+      type: "paragraph",
+      ...(line ? { content: [{ type: "text", text: line }] } : {}),
+    })),
+  };
+}
 
 const VIDEO_DURATION_MAX = 15;
 const VIDEO_SHOT_TYPES = [
@@ -117,6 +129,8 @@ type ChatWindowProps = {
   className?: string;
   commandStatus?: ChatWindowCommandStatus;
   commandStatusLabel?: string;
+  initialPrompt?: string;
+  initialPromptKey?: string;
   projectId: string;
   emptyModelLabel: string;
   placeholder: string;
@@ -148,6 +162,8 @@ export function ChatWindow({
   className,
   commandStatus,
   commandStatusLabel,
+  initialPrompt = "",
+  initialPromptKey = "",
   projectId,
   emptyModelLabel,
   placeholder,
@@ -182,6 +198,7 @@ export function ChatWindow({
   const [mentionRange, setMentionRange] = useState<MentionRange | null>(null);
   const [mentionQuery, setMentionQuery] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const loadedInitialPromptSignatureRef = useRef<string | null>(null);
   const selectedReferenceImages = useMemo(
     () => referenceImages.filter((image) => selectedReferenceImageIds.includes(image.id)),
     [referenceImages, selectedReferenceImageIds],
@@ -241,6 +258,25 @@ export function ChatWindow({
       updateMentionState(updatedEditor);
     },
   });
+
+  useEffect(() => {
+    if (!editor) return;
+
+    const promptSignature = `${initialPromptKey}:${initialPrompt}`;
+    if (loadedInitialPromptSignatureRef.current === promptSignature) return;
+
+    loadedInitialPromptSignatureRef.current = promptSignature;
+    if (initialPrompt) {
+      editor.commands.setContent(createPromptContent(initialPrompt));
+    } else {
+      editor.commands.clearContent();
+    }
+    setAttachments([]);
+    setSelectedReferenceImageIds([]);
+    setMentionRange(null);
+    setMentionQuery("");
+    setIsEmpty(initialPrompt.trim().length === 0);
+  }, [editor, initialPrompt, initialPromptKey]);
 
   const handleSubmit = () => {
     if (!editor || (editor.isEmpty && activeAttachments.length === 0)) return;

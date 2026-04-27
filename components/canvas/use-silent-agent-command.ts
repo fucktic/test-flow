@@ -59,7 +59,6 @@ function buildInlineGridCommand(params: {
     params.context.mediaId ? `Media ID: ${params.context.mediaId}` : "",
     params.context.mediaName ? `Media Name: ${params.context.mediaName}` : "",
     params.context.mediaType ? `Media Type: ${params.context.mediaType}` : "",
-    `Feature Skill: ${params.context.featureSkill}`,
     videoOptions ? `[Video Options]\n${videoOptions}` : "",
     attachmentContext ? `[Attached Files]\n${attachmentContext}` : "",
     buildFeatureUserPrompt({

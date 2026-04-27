@@ -25,6 +25,7 @@ const STORYBOARD_NODE_VERTICAL_GAP = 360;
 export type MediaItem = {
   id: string;
   name: string;
+  prompt: string;
   url: string;
   poster: string;
   type: "image" | "video";
@@ -160,6 +161,7 @@ const findMediaItems = (
       {
         id: asset.id,
         name: asset.name,
+        prompt: asset.prompt,
         url: asset.url,
         poster: "poster" in asset ? asset.poster : "",
         type: mediaType,

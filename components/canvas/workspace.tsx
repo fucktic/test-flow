@@ -468,6 +468,8 @@ function CanvasWorkspaceInner() {
           <ChatWindow
             commandStatus={commandStatus}
             commandStatusLabel={commandStatusLabel}
+            initialPrompt={selectedMediaGridItem?.item.prompt ?? ""}
+            initialPromptKey={selectedMediaGridItem?.item.id ?? ""}
             projectId={currentProject?.id ?? ""}
             emptyModelLabel={t("chatWindow.emptyModel")}
             placeholder={t("chatWindow.placeholder")}
