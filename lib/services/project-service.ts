@@ -412,6 +412,27 @@ async function createProjectVideoCover(params: {
   }
 }
 
+async function readProjectVideoDuration(videoFilePath: string): Promise<string> {
+  try {
+    const { stdout } = await execFileAsync("ffprobe", [
+      "-v",
+      "error",
+      "-show_entries",
+      "format=duration",
+      "-of",
+      "default=noprint_wrappers=1:nokey=1",
+      videoFilePath,
+    ]);
+    const durationSeconds = Number(stdout.trim());
+
+    if (!Number.isFinite(durationSeconds) || durationSeconds <= 0) return "";
+
+    return `${durationSeconds.toFixed(2)}s`;
+  } catch {
+    return "";
+  }
+}
+
 function upsertAssetItem(items: ProjectAssetItem[], assetId: string) {
   if (items.some((item) => item.id === assetId)) return items;
   return [{ id: assetId, children: [] }, ...items];
@@ -465,6 +486,50 @@ async function updateProjectStoryboard(params: {
     }
 
     return { success: false, error: "STORYBOARD_NOT_FOUND" };
+  } catch (err) {
+    if (err instanceof Error) {
+      return { success: false, error: err.message };
+    }
+    return { success: false, error: "未知错误" };
+  }
+}
+
+async function updateProjectStoryboards(params: {
+  projectId: string;
+  update: (storyboard: ProjectStoryboard) => ProjectStoryboard;
+}): Promise<{ success: true } | { success: false; error: string }> {
+  try {
+    const project = await readProjectDetail(params.projectId);
+    if (!project) return { success: false, error: "PROJECT_NOT_FOUND" };
+
+    const projectDir = getProjectDir(params.projectId);
+    const storyboardFiles = [
+      ...project.episodes.map((episode) => path.resolve(projectDir, "episode", `${episode.id}.json`)),
+      path.resolve(projectDir, `${params.projectId}.json`),
+    ];
+
+    await Promise.all(
+      storyboardFiles.map(async (filePath) => {
+        assertSafeProjectPath(filePath);
+
+        const content = await readFile(filePath, "utf8").catch(() => "");
+        if (!content) return;
+
+        const storyboards = readProjectStoryboards(JSON.parse(content));
+        let updated = false;
+        const nextStoryboards = storyboards.map((storyboard) => {
+          const nextStoryboard = params.update(storyboard);
+          if (nextStoryboard !== storyboard) updated = true;
+          return nextStoryboard;
+        });
+
+        if (updated) {
+          await writeFile(filePath, JSON.stringify(nextStoryboards, null, 2), "utf8");
+        }
+      }),
+    );
+
+    return { success: true };
   } catch (err) {
     if (err instanceof Error) {
       return { success: false, error: err.message };
@@ -1115,11 +1180,13 @@ export async function updateProjectVideoFile(params: {
         projectId: params.projectId,
         videoFilePath: filePath,
       })) || currentVideo.cover || currentVideo.coverUrl || currentVideo.poster;
+    const duration = (await readProjectVideoDuration(filePath)) || currentVideo.duration;
 
     const nextVideo: ProjectVideoAsset = {
       ...currentVideo,
       cover,
       coverUrl: cover,
+      duration,
       poster: cover,
       source: currentVideo.source || "local",
       url: `/api/projects/${encodeURIComponent(params.projectId)}/videos/${encodeURIComponent(fileName)}`,
@@ -1195,6 +1262,24 @@ export async function deleteProjectVideo(params: {
     const nextVideos = videos.filter((video) => video.id !== params.videoId);
 
     await writeFile(videosJsonPath, JSON.stringify(nextVideos, null, 2), "utf8");
+    const storyboardUpdate = await updateProjectStoryboards({
+      projectId: params.projectId,
+      update: (storyboard) => {
+        if (
+          !storyboard.videos.includes(params.videoId) &&
+          storyboard.selectedVideo !== params.videoId
+        ) {
+          return storyboard;
+        }
+
+        return {
+          ...storyboard,
+          selectedVideo: storyboard.selectedVideo === params.videoId ? "" : storyboard.selectedVideo,
+          videos: storyboard.videos.filter((videoId) => videoId !== params.videoId),
+        };
+      },
+    });
+    if (!storyboardUpdate.success) return storyboardUpdate;
 
     return { success: true, videos: nextVideos };
   } catch (err) {

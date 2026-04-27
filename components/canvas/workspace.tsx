@@ -413,7 +413,7 @@ function CanvasWorkspaceInner() {
 
   useEffect(() => {
     if (!currentProject || nodes.length === 0) return;
-    const fitViewKey = `${currentProjectId}:${activeEpisodeKey}:${nodes.length}`;
+    const fitViewKey = `${currentProjectId}:${activeEpisodeKey}`;
     if (fitViewKeyRef.current === fitViewKey) return;
     fitViewKeyRef.current = fitViewKey;
 

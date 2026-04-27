@@ -722,21 +722,26 @@ export const useCanvasStore = create<CanvasState>((set) => ({
     }),
   removeMediaFromStoryboard: (storyboardId, mediaId, mediaType) =>
     set((state) => {
-      if (!state.currentCanvasData) return {};
+      const targetEpisodeId = Object.entries(state.currentCanvasDataByEpisode).find(([, canvasData]) =>
+        canvasData.data.storyboards.some((storyboard) => storyboard.id === storyboardId),
+      )?.[0];
+      if (!targetEpisodeId) return {};
 
+      const targetCanvasData = state.currentCanvasDataByEpisode[targetEpisodeId];
+      if (!targetCanvasData) return {};
       const nextCanvasData: CurrentCanvasData = {
-        ...state.currentCanvasData,
+        ...targetCanvasData,
         data: {
-          ...state.currentCanvasData.data,
+          ...targetCanvasData.data,
           images:
             mediaType === "image"
-              ? state.currentCanvasData.data.images.filter((image) => image.id !== mediaId)
-              : state.currentCanvasData.data.images,
+              ? targetCanvasData.data.images.filter((image) => image.id !== mediaId)
+              : targetCanvasData.data.images,
           videos:
             mediaType === "video"
-              ? state.currentCanvasData.data.videos.filter((video) => video.id !== mediaId)
-              : state.currentCanvasData.data.videos,
-          storyboards: state.currentCanvasData.data.storyboards.map((storyboard) => {
+              ? targetCanvasData.data.videos.filter((video) => video.id !== mediaId)
+              : targetCanvasData.data.videos,
+          storyboards: targetCanvasData.data.storyboards.map((storyboard) => {
             if (storyboard.id !== storyboardId) return storyboard;
 
             return {
@@ -757,19 +762,24 @@ export const useCanvasStore = create<CanvasState>((set) => ({
           }),
         },
       };
-      const episodeName =
-        state.currentProject?.episodes.find(
-          (episode) => episode.id === state.currentCanvasData?.episodeId,
-        )?.name ?? "";
-      const nextCanvas = rebuildStoryboardCanvasState(
-        nextCanvasData,
+      const nextCanvasDataByEpisode = {
+        ...state.currentCanvasDataByEpisode,
+        [targetEpisodeId]: nextCanvasData,
+      };
+      const nextCanvas = buildSelectedEpisodesCanvas(
+        state.currentProject,
+        state.selectedEpisodeIds,
+        nextCanvasDataByEpisode,
         state.selectedStoryboardIds,
-        episodeName,
         state.commandStatuses,
       );
 
       return {
-        currentCanvasData: nextCanvasData,
+        currentCanvasData:
+          state.currentCanvasData?.episodeId === targetEpisodeId
+            ? nextCanvasData
+            : nextCanvas.currentCanvasData,
+        currentCanvasDataByEpisode: nextCanvasDataByEpisode,
         nodes: nextCanvas.nodes,
         edges: nextCanvas.edges,
         selectedMediaGridItem:
