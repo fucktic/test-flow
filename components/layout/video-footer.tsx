@@ -317,7 +317,7 @@ export function VideoFooter() {
                       {durationSeconds ? formatTimelineTime(durationSeconds) : t("unknownDuration")}
                     </span>
                   </div>
-                  <div className="relative h-[4.75rem] bg-muted">
+                  <div className="relative h-19 bg-muted">
                     <div
                       className={cn(
                         "absolute left-1.5 top-1.5 z-10 max-w-[calc(100%-0.75rem)] rounded-full px-2 py-0.5 text-[11px] font-semibold shadow-sm",
