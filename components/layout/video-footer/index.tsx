@@ -1,8 +1,9 @@
 "use client";
 
-import { Film, Pause, Play, Video, X } from "lucide-react";
+import { Combine, Download, Film, LoaderCircle, Pause, Play, Video, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -14,30 +15,17 @@ import {
 } from "@/components/ui/dialog";
 import { Slider } from "@/components/ui/slider";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import {
-  clearProjectStoryboardSelectedVideo,
-  fetchProjectCanvasData,
-  type ProjectCanvasData,
-} from "@/lib/project-api";
-import type { ProjectEpisode, ProjectVideoAsset } from "@/lib/project-types";
+import { clearProjectStoryboardSelectedVideo, mergeProjectVideos } from "@/lib/project-api";
 import { cn } from "@/lib/utils";
 import { useCanvasStore } from "@/store/use-canvas-store";
 import { useLayoutStore } from "@/store/use-layout-store";
 import { VideoFooterCard } from "./components/video-footer-card";
 import { VideoFooterPlayer } from "./components/video-footer-player";
+import {
+  useActiveEpisodeSelectedVideos,
+  type SelectedStoryboardVideo,
+} from "./use-active-episode-selected-videos";
 
-type SelectedStoryboardVideo = {
-  selected: boolean;
-  storyboardId: string;
-  storyboardName: string;
-  video: ProjectVideoAsset;
-};
-
-type CanvasDataByEpisode = Record<string, ProjectCanvasData>;
-type ActiveEpisode = {
-  canvasData: ProjectCanvasData;
-  episode: ProjectEpisode;
-};
 type TimelineVideo = SelectedStoryboardVideo & {
   durationSeconds: number | null;
   layoutSeconds: number;
@@ -47,19 +35,65 @@ type TimelineVideo = SelectedStoryboardVideo & {
 const FALLBACK_SEGMENT_SECONDS = 3;
 const SLIDER_THUMB_SIZE_PIXELS = 12;
 
-function createMissingVideo(videoId: string): ProjectVideoAsset {
-  return {
-    id: videoId,
-    cover: "",
-    coverUrl: "",
-    duration: "",
-    name: videoId,
-    poster: "",
-    prompt: "",
-    source: "",
-    status: "",
-    url: "",
+type WritableFileStream = {
+  close: () => Promise<void>;
+  write: (data: Blob) => Promise<void>;
+};
+
+type WritableFileHandle = {
+  createWritable: () => Promise<WritableFileStream>;
+};
+
+type WritableDirectoryHandle = {
+  getDirectoryHandle: (
+    name: string,
+    options: { create: boolean },
+  ) => Promise<WritableDirectoryHandle>;
+  getFileHandle: (name: string, options: { create: boolean }) => Promise<WritableFileHandle>;
+};
+
+type DirectoryPickerWindow = Window &
+  typeof globalThis & {
+    showDirectoryPicker?: () => Promise<WritableDirectoryHandle>;
   };
+
+function sanitizeFileName(name: string) {
+  return name.replace(/[<>:"/\\|?*\u0000-\u001f]/g, "_").trim() || "video";
+}
+
+function getVideoExtension(name: string, url: string) {
+  const source = name || url;
+  const match = source.match(/\.(mp4|mov|webm|m4v)$/i);
+  return match ? `.${match[1].toLowerCase()}` : ".mp4";
+}
+
+function isAbortError(error: unknown) {
+  return error instanceof DOMException && error.name === "AbortError";
+}
+
+async function pickDirectory() {
+  const showDirectoryPicker = (window as DirectoryPickerWindow).showDirectoryPicker;
+  if (!showDirectoryPicker) throw new Error("DIRECTORY_PICKER_UNSUPPORTED");
+
+  return showDirectoryPicker();
+}
+
+async function writeBlobToDirectory(
+  directory: WritableDirectoryHandle,
+  fileName: string,
+  blob: Blob,
+) {
+  const fileHandle = await directory.getFileHandle(fileName, { create: true });
+  const writable = await fileHandle.createWritable();
+  await writable.write(blob);
+  await writable.close();
+}
+
+async function fetchVideoBlob(url: string) {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error("VIDEO_DOWNLOAD_FAILED");
+
+  return response.blob();
 }
 
 function parseVideoDuration(duration: string) {
@@ -96,127 +130,21 @@ function formatTimelineTime(seconds: number) {
 
 export function VideoFooter() {
   const t = useTranslations("Sidebar.videoFooter");
-  const currentProject = useCanvasStore((state) => state.currentProject);
-  const currentCanvasData = useCanvasStore((state) => state.currentCanvasData);
-  const storeCanvasDataByEpisode = useCanvasStore((state) => state.currentCanvasDataByEpisode);
-  const activeEpisodeIdFromStore = useCanvasStore((state) => state.activeEpisodeId);
-  const selectedEpisodeIds = useCanvasStore((state) => state.selectedEpisodeIds);
   const open = useLayoutStore((state) => state.videoFooterOpen);
   const onClose = useLayoutStore((state) => state.closeVideoFooter);
   const toggleVideoFooter = useLayoutStore((state) => state.toggleVideoFooter);
   const clearStoryboardSelectedVideo = useCanvasStore(
     (state) => state.clearStoryboardSelectedVideo,
   );
-  const [canvasDataByEpisode, setCanvasDataByEpisode] = useState<CanvasDataByEpisode>({});
+  const { activeEpisode, currentProjectId, selectedVideos } = useActiveEpisodeSelectedVideos();
   const [playback, setPlayback] = useState({ playheadSeconds: 0, playing: false });
   const [playerVisible, setPlayerVisible] = useState(false);
   const [pendingDeleteVideo, setPendingDeleteVideo] = useState<SelectedStoryboardVideo | null>(
     null,
   );
+  const [busyAction, setBusyAction] = useState<"download" | "merge" | null>(null);
   const playerRef = useRef<HTMLVideoElement>(null);
-  const selectedEpisodeKey = selectedEpisodeIds.join(",");
-  const fallbackEpisodeId = currentProject?.episodes[0]?.id ?? "";
-  const currentProjectId = currentProject?.id ?? "";
 
-  useEffect(() => {
-    let active = true;
-    const episodeIds =
-      selectedEpisodeKey.length > 0
-        ? selectedEpisodeKey.split(",")
-        : fallbackEpisodeId
-          ? [fallbackEpisodeId]
-          : [];
-
-    const loadAllStoryboardVideos = async () => {
-      if (!currentProjectId) {
-        setCanvasDataByEpisode({});
-        return;
-      }
-
-      try {
-        const episodeEntries = await Promise.all(
-          episodeIds.map(async (episodeId) => [
-            episodeId,
-            await fetchProjectCanvasData(currentProjectId, episodeId),
-          ] as const),
-        );
-
-        if (active) setCanvasDataByEpisode(Object.fromEntries(episodeEntries));
-      } catch {
-        if (active) setCanvasDataByEpisode({});
-      }
-    };
-
-    void loadAllStoryboardVideos();
-
-    return () => {
-      active = false;
-    };
-  }, [currentProjectId, fallbackEpisodeId, selectedEpisodeKey]);
-
-  const visibleCanvasDataByEpisode = useMemo<CanvasDataByEpisode>(() => {
-    const storeData = Object.fromEntries(
-      Object.entries(storeCanvasDataByEpisode).map(([episodeId, canvasData]) => [
-        episodeId,
-        canvasData.data,
-      ]),
-    );
-
-    // Real-time canvas state wins over disk data so selectedVideo changes appear immediately.
-    return {
-      ...canvasDataByEpisode,
-      ...storeData,
-    };
-  }, [canvasDataByEpisode, storeCanvasDataByEpisode]);
-
-  const activeEpisode = useMemo<ActiveEpisode | null>(() => {
-    if (!currentProject) return null;
-
-    const activeEpisodeFromStore = currentProject.episodes.find(
-      (episode) => episode.id === activeEpisodeIdFromStore,
-    );
-    if (activeEpisodeFromStore) {
-      const canvasData = visibleCanvasDataByEpisode[activeEpisodeFromStore.id];
-      return canvasData ? { canvasData, episode: activeEpisodeFromStore } : null;
-    }
-
-    if (!currentCanvasData) return null;
-    const fallbackEpisode = currentProject.episodes.find(
-      (episode) => episode.id === currentCanvasData.episodeId,
-    );
-    if (!fallbackEpisode) return null;
-
-    return {
-      canvasData: currentCanvasData.data,
-      episode: fallbackEpisode,
-    };
-  }, [
-    activeEpisodeIdFromStore,
-    currentCanvasData,
-    currentProject,
-    visibleCanvasDataByEpisode,
-  ]);
-
-  const selectedVideos = useMemo<SelectedStoryboardVideo[]>(() => {
-    if (!activeEpisode) return [];
-
-    return activeEpisode.canvasData.storyboards.flatMap((storyboard, index) => {
-      if (!storyboard.selectedVideo) return [];
-
-      const video =
-        activeEpisode.canvasData.videos.find((item) => item.id === storyboard.selectedVideo) ??
-        createMissingVideo(storyboard.selectedVideo);
-
-      return [
-        {
-          selected: true,
-          storyboardId: storyboard.id,
-          storyboardName: storyboard.name.trim() || t("storyboardFallback", { index: index + 1 }),
-          video,
-        },
-      ];
-    });
-  }, [activeEpisode, t]);
   const timelineVideos = useMemo<TimelineVideo[]>(() => {
     return selectedVideos.reduce<{ elapsedSeconds: number; items: TimelineVideo[] }>(
       (timeline, item) => {
@@ -259,6 +187,8 @@ export function VideoFooter() {
     ) ?? timelineVideos.at(-1);
   const currentVideoStartSeconds = currentTimelineVideo?.startSeconds ?? 0;
   const currentVideoOffsetSeconds = Math.max(0, visiblePlayheadSeconds - currentVideoStartSeconds);
+  const exportDisabled =
+    !currentProjectId || !activeEpisode || selectedVideos.length === 0 || busyAction !== null;
 
   useEffect(() => {
     const player = playerRef.current;
@@ -334,6 +264,59 @@ export function VideoFooter() {
     });
   };
 
+  const handleMerge = async () => {
+    if (exportDisabled || !activeEpisode) return;
+
+    setBusyAction("merge");
+    try {
+      const directory = await pickDirectory();
+      const mergedVideo = await mergeProjectVideos(
+        currentProjectId,
+        selectedVideos.map((item) => item.video.id),
+      );
+      const blob = await fetchVideoBlob(mergedVideo.url);
+      await writeBlobToDirectory(
+        directory,
+        `${sanitizeFileName(activeEpisode.episode.name)}.mp4`,
+        blob,
+      );
+      toast.success(t("mergeSuccess"));
+    } catch (error) {
+      if (!isAbortError(error)) toast.error(t("mergeError"));
+    } finally {
+      setBusyAction(null);
+    }
+  };
+
+  const handleDownload = async () => {
+    if (exportDisabled || !activeEpisode) return;
+
+    setBusyAction("download");
+    try {
+      const directory = await pickDirectory();
+      const episodeDirectory = await directory.getDirectoryHandle(
+        sanitizeFileName(activeEpisode.episode.name),
+        { create: true },
+      );
+
+      await Promise.all(
+        selectedVideos.map(async (item, index) => {
+          const blob = await fetchVideoBlob(item.video.url);
+          const fileName = `${String(index + 1).padStart(2, "0")}-${sanitizeFileName(
+            item.storyboardName,
+          )}${getVideoExtension(item.video.name, item.video.url)}`;
+
+          await writeBlobToDirectory(episodeDirectory, fileName, blob);
+        }),
+      );
+      toast.success(t("downloadSuccess"));
+    } catch (error) {
+      if (!isAbortError(error)) toast.error(t("downloadError"));
+    } finally {
+      setBusyAction(null);
+    }
+  };
+
   return (
     <>
       {!open ? (
@@ -384,17 +367,6 @@ export function VideoFooter() {
         }}
         aria-hidden={!open}
       >
-        <Button
-          type="button"
-          size="icon"
-          variant="secondary"
-          aria-label={t("close")}
-          className="absolute top-1 right-2 z-20 rounded-full border border-border bg-card shadow-xl"
-          onClick={onClose}
-        >
-          <X className="size-4" />
-        </Button>
-
         <div className="flex h-50 w-full flex-col px-5 py-3">
           <div className="mb-2 flex shrink-0 items-center gap-2">
             <Film className="size-4 text-primary" />
@@ -404,6 +376,70 @@ export function VideoFooter() {
             <span className="rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground">
               {t("count", { count: selectedVideos.length })}
             </span>
+            <div className="flex-1" />
+            <TooltipProvider delayDuration={300}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    size="icon-sm"
+                    variant="ghost"
+                    aria-label={t("merge")}
+                    disabled={exportDisabled}
+                    className={cn(
+                      "rounded-full",
+                      busyAction === "merge" && "text-primary",
+                      busyAction !== null && busyAction !== "merge" && "opacity-60",
+                    )}
+                    onClick={handleMerge}
+                  >
+                    {busyAction === "merge" ? (
+                      <LoaderCircle className="size-4 animate-spin" />
+                    ) : (
+                      <Combine className="size-4 transition-transform duration-300 hover:-translate-x-0.5 hover:scale-110" />
+                    )}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  <p>{t("merge")}</p>
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    size="icon-sm"
+                    variant="ghost"
+                    aria-label={t("download")}
+                    disabled={exportDisabled}
+                    className={cn("rounded-full", busyAction === "download" && "text-primary")}
+                    onClick={handleDownload}
+                  >
+                    <Download className="size-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  <p>{t("download")}</p>
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    size="icon-sm"
+                    variant="secondary"
+                    aria-label={t("close")}
+                    className="rounded-full border border-border bg-card shadow-sm"
+                    onClick={onClose}
+                  >
+                    <X className="size-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  <p>{t("close")}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
 
           <div className="min-h-0 flex-1 overflow-x-auto overflow-y-hidden pb-1">
