@@ -17,7 +17,6 @@ import type { ProjectCanvasData, ProjectCommandStatus } from "@/lib/project-api"
 import type { ProjectDetail, ProjectListItem } from "@/lib/project-types";
 import type { ProjectImageAsset, ProjectStoryboard, ProjectVideoAsset } from "@/lib/project-types";
 
-const MAX_SELECTED_STORYBOARDS = 3;
 const STORYBOARD_LIST_MAX_HEIGHT = 420;
 const EPISODE_NODE_VERTICAL_GAP = STORYBOARD_LIST_MAX_HEIGHT + 100;
 const STORYBOARD_NODE_VERTICAL_GAP = 360;
@@ -241,10 +240,6 @@ const buildStoryboardCanvas = (
   const availableStoryboardIds = new Set(data.storyboards.map((storyboard) => storyboard.id));
   const visibleSelectedIds = selectedStoryboardIds.filter((id) => availableStoryboardIds.has(id));
   const selectedIds = visibleSelectedIds;
-  const selectedStoryboards =
-    selectedIds.length > 0
-      ? data.storyboards.filter((storyboard) => selectedIds.includes(storyboard.id))
-      : [];
   const listNodeId = `storyboard-list-${episodeId}`;
   const listPosition = resolveNodePosition(data, listNodeId, listFallbackPosition);
   const nodes: CanvasNode[] = [
@@ -261,7 +256,8 @@ const buildStoryboardCanvas = (
   ];
   const edges: CanvasEdge[] = [];
 
-  selectedStoryboards.forEach((storyboard, index) => {
+  // Every storyboard owns media nodes; selection only highlights a storyboard on the canvas.
+  data.storyboards.forEach((storyboard, index) => {
     const imageNodeId = `storyboard-image-${storyboard.id}`;
     const videoNodeId = `storyboard-video-${storyboard.id}`;
     const storyboardIndex = data.storyboards.findIndex((item) => item.id === storyboard.id);
@@ -903,10 +899,6 @@ export const useCanvasStore = create<CanvasState>((set) => ({
         activeStoryboardId: storyboardId,
         selectedMediaGridItem: null,
       };
-      }
-
-      if (state.selectedStoryboardIds.length >= MAX_SELECTED_STORYBOARDS) {
-        return {};
       }
 
       return {

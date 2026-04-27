@@ -21,7 +21,6 @@ import { cn } from "@/lib/utils";
 import { type StoryboardListNodeData, useCanvasStore } from "@/store/use-canvas-store";
 import { NODE_WIDTH_CLASS } from "../constants";
 
-const MAX_SELECTED_STORYBOARDS = 3;
 // ReactFlow honors nodrag/nowheel classes, keeping inner node scrolling separate from canvas gestures.
 const NODE_SCROLL_AREA_CLASS =
   "nodrag nowheel overflow-hidden rounded-2xl border bg-card text-card-foreground shadow-xl transition-[border-color,box-shadow] duration-200";
@@ -60,9 +59,9 @@ export function StoryboardListNode({ data, selected }: NodeProps<StoryboardListN
       })
     : "";
 
-  const toggleSelectedStoryboard = (storyboardId: string, disabled: boolean) => {
+  const toggleSelectedStoryboard = (storyboardId: string) => {
     setActiveStoryboardId(storyboardId);
-    if (!disabled) toggleStoryboardSelection(storyboardId);
+    toggleStoryboardSelection(storyboardId);
   };
 
   const handleAddStoryboard = () => {
@@ -76,12 +75,11 @@ export function StoryboardListNode({ data, selected }: NodeProps<StoryboardListN
   const handleStoryboardKeyDown = (
     event: KeyboardEvent<HTMLDivElement>,
     storyboardId: string,
-    disabled: boolean,
   ) => {
     if (event.key !== "Enter" && event.key !== " ") return;
 
     event.preventDefault();
-    toggleSelectedStoryboard(storyboardId, disabled);
+    toggleSelectedStoryboard(storyboardId);
   };
   const handleParseStoryboard = () => {
     if (!currentProject?.assetsParsed) {
@@ -144,8 +142,6 @@ export function StoryboardListNode({ data, selected }: NodeProps<StoryboardListN
             <div className={NODE_SCROLL_CONTENT_CLASS}>
               {data.storyboards.map((storyboard, index) => {
                 const selected = selectedStoryboardIds.includes(storyboard.id);
-                const disabled =
-                  !selected && selectedStoryboardIds.length >= MAX_SELECTED_STORYBOARDS;
                 const storyboardName =
                   storyboard.name.trim() ||
                   t("storyboardList.itemLabel", {
@@ -156,19 +152,17 @@ export function StoryboardListNode({ data, selected }: NodeProps<StoryboardListN
                   <div
                     key={storyboard.id}
                     role="button"
-                    tabIndex={disabled ? -1 : 0}
+                    tabIndex={0}
                     aria-pressed={selected}
-                    aria-disabled={disabled}
-                    onClick={() => toggleSelectedStoryboard(storyboard.id, disabled)}
+                    onClick={() => toggleSelectedStoryboard(storyboard.id)}
                     onKeyDown={(event) =>
-                      handleStoryboardKeyDown(event, storyboard.id, disabled)
+                      handleStoryboardKeyDown(event, storyboard.id)
                     }
                     className={cn(
                       "group relative w-full cursor-pointer overflow-hidden rounded-xl border bg-muted text-left transition-colors",
                       selected
                         ? "border-primary bg-primary/10 "
                         : "border-border hover:bg-accent",
-                      disabled && "cursor-not-allowed opacity-45 hover:border-border",
                     )}
                   >
                     <div className="mb-1 flex items-center gap-2">
