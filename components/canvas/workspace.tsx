@@ -105,6 +105,7 @@ function CanvasWorkspaceInner() {
   const t = useTranslations("Canvas");
   const { fitView } = useReactFlow();
   const workspaceRef = useRef<HTMLDivElement>(null);
+  const fitViewKeyRef = useRef("");
   const { execute: executeSilentAgentCommand } = useSilentAgentCommand();
   const episodeCommandLoading = useLayoutStore((state) => state.sidebarLoading.episodes > 0);
   const episodeLoadingVersion = useLayoutStore((state) => state.sidebarLoadingVersion.episodes);
@@ -412,11 +413,14 @@ function CanvasWorkspaceInner() {
 
   useEffect(() => {
     if (!currentProject || nodes.length === 0) return;
+    const fitViewKey = `${currentProjectId}:${activeEpisodeKey}:${nodes.length}`;
+    if (fitViewKeyRef.current === fitViewKey) return;
+    fitViewKeyRef.current = fitViewKey;
 
     window.requestAnimationFrame(() => {
       void fitView({ duration: 240, padding: 0.18 });
     });
-  }, [currentProject, fitView, nodes]);
+  }, [activeEpisodeKey, currentProject, currentProjectId, fitView, nodes.length]);
 
   return (
     <div
@@ -430,7 +434,6 @@ function CanvasWorkspaceInner() {
       ) : null}
       
       <ReactFlow
-        fitView
         colorMode="dark"
         edges={edges}
         nodes={nodes}

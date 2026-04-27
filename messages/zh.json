@@ -107,6 +107,7 @@
       "limit": "{count}/{max}",
       "itemLabel": "S{index}",
       "add": "新增分镜",
+      "addAfterCurrent": "在当前分镜下新增",
       "delete": "删除 {name}",
       "moveUp": "上移 {name}",
       "moveDown": "下移 {name}",

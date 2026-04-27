@@ -22,6 +22,15 @@ import { type StoryboardListNodeData, useCanvasStore } from "@/store/use-canvas-
 import { NODE_WIDTH_CLASS } from "../constants";
 
 const MAX_SELECTED_STORYBOARDS = 3;
+// ReactFlow honors nodrag/nowheel classes, keeping inner node scrolling separate from canvas gestures.
+const NODE_SCROLL_AREA_CLASS =
+  "nodrag nowheel overflow-hidden rounded-2xl border bg-card text-card-foreground shadow-xl transition-[border-color,box-shadow] duration-200";
+const NODE_SCROLL_CONTENT_CLASS = "flex flex-col gap-2 p-2 ";
+const NODE_SCROLL_BAR_CLASS = "nodrag data-vertical:w-4 data-horizontal:h-4 p-1";
+const NODE_SCROLL_THUMB_CLASS =
+  "bg-muted-foreground/55 transition-colors hover:bg-muted-foreground/80";
+const NODE_EMPTY_STATE_CLASS =
+  "bg-card flex h-105 border border-border rounded-2xl flex-col items-center justify-center gap-3 text-xs text-muted-foreground";
 
 type StoryboardListNodeType = Node<StoryboardListNodeData, "storyboard-list-node">;
 
@@ -34,16 +43,13 @@ export function StoryboardListNode({ data, selected }: NodeProps<StoryboardListN
   const currentProject = useCanvasStore((state) => state.currentProject);
   const deleteStoryboard = useCanvasStore((state) => state.deleteStoryboard);
   const moveStoryboard = useCanvasStore((state) => state.moveStoryboard);
-  const selectedMediaGridSceneId = useCanvasStore((state) => state.selectedMediaGridItem?.sceneId);
+  const activeEpisodeId = useCanvasStore((state) => state.activeEpisodeId);
+  const activeStoryboardId = useCanvasStore((state) => state.activeStoryboardId);
   const selectedStoryboardIds = useCanvasStore((state) => state.selectedStoryboardIds);
+  const setActiveStoryboardId = useCanvasStore((state) => state.setActiveStoryboardId);
   const toggleStoryboardSelection = useCanvasStore((state) => state.toggleStoryboardSelection);
   const storyboardCommandLoading = commandStatus === "loading";
-  const active =
-    selected ||
-    data.storyboards.some(
-      (storyboard) =>
-        storyboard.id === selectedMediaGridSceneId || selectedStoryboardIds.includes(storyboard.id),
-    );
+  const active = selected || activeEpisodeId === data.episodeId;
   const pendingDeleteStoryboard = data.storyboards.find(
     (storyboard) => storyboard.id === pendingDeleteId,
   );
@@ -55,7 +61,16 @@ export function StoryboardListNode({ data, selected }: NodeProps<StoryboardListN
     : "";
 
   const toggleSelectedStoryboard = (storyboardId: string, disabled: boolean) => {
+    setActiveStoryboardId(storyboardId);
     if (!disabled) toggleStoryboardSelection(storyboardId);
+  };
+
+  const handleAddStoryboard = () => {
+    const afterStoryboardId = data.storyboards.some((storyboard) => storyboard.id === activeStoryboardId)
+      ? activeStoryboardId
+      : undefined;
+
+    addStoryboard(data.episodeId, afterStoryboardId);
   };
 
   const handleStoryboardKeyDown = (
@@ -100,19 +115,33 @@ export function StoryboardListNode({ data, selected }: NodeProps<StoryboardListN
             {data.episodeName}
           </span>
         </div>
+        <Button
+          type="button"
+          size="icon-xs"
+          variant="outline"
+          aria-label={t("storyboardList.addAfterCurrent")}
+          className="nodrag shrink-0 bg-card"
+          onClick={(event) => {
+            event.stopPropagation();
+            handleAddStoryboard();
+          }}
+        >
+          <Plus className="size-3.5" />
+        </Button>
       </div>
 
-      <section
-        className={cn(
-          "rounded-2xl border bg-card p-1.5 text-card-foreground shadow-xl transition-[border-color,box-shadow] duration-200",
-          active
-            ? "border-foreground/45 shadow-[0_0_30px_hsl(var(--foreground)/0.24),0_12px_40px_rgba(0,0,0,0.42)]"
-            : "border-border",
-        )}
-      >
+      <div>
         {data.storyboards.length > 0 ? (
-          <ScrollArea className="h-105 ">
-            <div className="flex flex-col gap-2">
+          <ScrollArea
+            className={cn(
+              NODE_SCROLL_AREA_CLASS,
+              "h-105 ",
+              active ? "border-foreground/45" : "border-border",
+            )}
+            scrollBarClassName={NODE_SCROLL_BAR_CLASS}
+            thumbClassName={NODE_SCROLL_THUMB_CLASS}
+          >
+            <div className={NODE_SCROLL_CONTENT_CLASS}>
               {data.storyboards.map((storyboard, index) => {
                 const selected = selectedStoryboardIds.includes(storyboard.id);
                 const disabled =
@@ -219,42 +248,44 @@ export function StoryboardListNode({ data, selected }: NodeProps<StoryboardListN
             </div>
           </ScrollArea>
         ) : (
-          <div className="flex h-45 flex-col items-center justify-center gap-3 rounded-3xl border border-dashed border-border text-xs text-muted-foreground">
-            <span>{t("storyboardList.empty")}</span>
-            <TooltipProvider delayDuration={200}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span
-                    className={cn(
-                      "inline-flex rounded-md",
-                      !currentProject?.assetsParsed && "cursor-not-allowed",
-                    )}
-                  >
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      disabled={!currentProject?.assetsParsed || storyboardCommandLoading}
-                      className="gap-2 bg-transparent disabled:pointer-events-none"
-                      onClick={handleParseStoryboard}
+          
+            <div className={NODE_EMPTY_STATE_CLASS}>
+              <span>{t("storyboardList.empty")}</span>
+              <TooltipProvider delayDuration={200}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span
+                      className={cn(
+                        "inline-flex rounded-md",
+                        !currentProject?.assetsParsed && "cursor-not-allowed",
+                      )}
                     >
-                      {storyboardCommandLoading ? (
-                        <Loader2 className="size-3.5 animate-spin" />
-                      ) : null}
-                      {t("storyboardList.parse")}
-                    </Button>
-                  </span>
-                </TooltipTrigger>
-                {!currentProject?.assetsParsed ? (
-                  <TooltipContent side="top">
-                    {t("storyboardList.parseAssetsFirst")}
-                  </TooltipContent>
-                ) : null}
-              </Tooltip>
-            </TooltipProvider>
-          </div>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={!currentProject?.assetsParsed || storyboardCommandLoading}
+                        className="gap-2 bg-transparent disabled:pointer-events-none"
+                        onClick={handleParseStoryboard}
+                      >
+                        {storyboardCommandLoading ? (
+                          <Loader2 className="size-3.5 animate-spin" />
+                        ) : null}
+                        {t("storyboardList.parse")}
+                      </Button>
+                    </span>
+                  </TooltipTrigger>
+                  {!currentProject?.assetsParsed ? (
+                    <TooltipContent side="top">
+                      {t("storyboardList.parseAssetsFirst")}
+                    </TooltipContent>
+                  ) : null}
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+          
         )}
-      </section>
+      </div>
       <Handle type="source" position={Position.Right} className="bg-primary!" />
       <Dialog
         open={pendingDeleteId !== null}

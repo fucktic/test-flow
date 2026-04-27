@@ -26,24 +26,16 @@ export function StoryboardImageNode({ data, id, selected }: NodeProps<Storyboard
         </span>
       </div>
 
-      <section
-        className={cn(
-          "rounded-2xl border bg-card p-2 text-card-foreground shadow-xl transition-[border-color,box-shadow,transform] duration-200",
-          active
-            ? "border-foreground/45 shadow-[0_0_30px_hsl(var(--foreground)/0.24),0_12px_40px_rgba(0,0,0,0.42)]"
-            : "border-border",
-        )}
-      >
-        <MediaGrid
-          addLabel={t("storyboardImage.add")}
-          items={data.items}
-          mediaType={data.mediaType}
-          nodeId={id}
-          sceneId={data.sceneId}
-          selectedVideoId={data.selectedVideoId}
-          showItemNames
-        />
-      </section>
+      <MediaGrid
+        active={active}
+        addLabel={t("storyboardImage.add")}
+        items={data.items}
+        mediaType={data.mediaType}
+        nodeId={id}
+        sceneId={data.sceneId}
+        selectedVideoId={data.selectedVideoId}
+        showItemNames
+      />
       <Handle type="source" position={Position.Right} className="bg-primary! " />
     </div>
   );

@@ -107,6 +107,7 @@
       "limit": "{count}/{max}",
       "itemLabel": "S{index}",
       "add": "Add storyboard",
+      "addAfterCurrent": "Add below current storyboard",
       "delete": "Delete {name}",
       "moveUp": "Move {name} up",
       "moveDown": "Move {name} down",

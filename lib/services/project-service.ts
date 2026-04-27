@@ -164,6 +164,7 @@ function readProjectVideoAssets(value: unknown): ProjectVideoAsset[] {
 
     const id = readString(videoAsset.id);
     if (!id) return [];
+    const cover = readString(videoAsset.cover) || readString(videoAsset.coverUrl) || readString(videoAsset.poster);
 
     return [
       {
@@ -172,7 +173,9 @@ function readProjectVideoAssets(value: unknown): ProjectVideoAsset[] {
         source: readString(videoAsset.source),
         prompt: readString(videoAsset.prompt),
         url: readString(videoAsset.url),
-        poster: readString(videoAsset.poster),
+        cover,
+        coverUrl: cover,
+        poster: cover,
         duration: readString(videoAsset.duration),
         status: readString(videoAsset.status),
       },
@@ -279,6 +282,12 @@ function getProjectVideosDir(projectId: string) {
   return videosDir;
 }
 
+function getProjectImagesDir(projectId: string) {
+  const imagesDir = path.resolve(getProjectDir(projectId), "images");
+  assertSafeProjectPath(imagesDir);
+  return imagesDir;
+}
+
 function getProjectCommandPath(projectId: string) {
   const commandPath = path.resolve(getProjectDir(projectId), PROJECT_COMMAND_FILE_NAME);
   assertSafeProjectPath(commandPath);
@@ -375,9 +384,93 @@ function quoteFfmpegConcatPath(filePath: string) {
   return `'${filePath.replaceAll("'", "'\\''")}'`;
 }
 
+async function createProjectVideoCover(params: {
+  projectId: string;
+  videoFilePath: string;
+}): Promise<string> {
+  try {
+    const imagesDir = getProjectImagesDir(params.projectId);
+    await mkdir(imagesDir, { recursive: true });
+    const coverFileName = `image-${createUuid()}.png`;
+    const coverFilePath = path.resolve(imagesDir, coverFileName);
+    assertSafeProjectPath(coverFilePath);
+
+    await execFileAsync("ffmpeg", [
+      "-y",
+      "-i",
+      params.videoFilePath,
+      "-frames:v",
+      "1",
+      "-vf",
+      "thumbnail,scale=640:-1",
+      coverFilePath,
+    ]);
+
+    return `/api/projects/${encodeURIComponent(params.projectId)}/images/${encodeURIComponent(coverFileName)}`;
+  } catch {
+    return "";
+  }
+}
+
 function upsertAssetItem(items: ProjectAssetItem[], assetId: string) {
   if (items.some((item) => item.id === assetId)) return items;
   return [{ id: assetId, children: [] }, ...items];
+}
+
+async function updateProjectStoryboard(params: {
+  projectId: string;
+  update: (storyboard: ProjectStoryboard) => ProjectStoryboard;
+}): Promise<
+  | { success: true; episodeId: string; storyboards: ProjectStoryboard[] }
+  | { success: false; error: string }
+> {
+  try {
+    const project = await readProjectDetail(params.projectId);
+    if (!project) return { success: false, error: "PROJECT_NOT_FOUND" };
+
+    const projectDir = getProjectDir(params.projectId);
+    const storyboardFiles = [
+      ...project.episodes.map((episode) => ({
+        episodeId: episode.id,
+        filePath: path.resolve(projectDir, "episode", `${episode.id}.json`),
+      })),
+      {
+        episodeId: "",
+        filePath: path.resolve(projectDir, `${params.projectId}.json`),
+      },
+    ];
+
+    for (const storyboardFile of storyboardFiles) {
+      assertSafeProjectPath(storyboardFile.filePath);
+
+      const content = await readFile(storyboardFile.filePath, "utf8").catch(() => "");
+      if (!content) continue;
+
+      const storyboards = readProjectStoryboards(JSON.parse(content));
+      let updated = false;
+      const nextStoryboards = storyboards.map((storyboard) => {
+        const nextStoryboard = params.update(storyboard);
+        if (nextStoryboard !== storyboard) updated = true;
+        return nextStoryboard;
+      });
+
+      if (!updated) continue;
+
+      await writeFile(storyboardFile.filePath, JSON.stringify(nextStoryboards, null, 2), "utf8");
+      return {
+        success: true,
+        episodeId: storyboardFile.episodeId,
+        storyboards: nextStoryboards,
+      };
+    }
+
+    return { success: false, error: "STORYBOARD_NOT_FOUND" };
+  } catch (err) {
+    if (err instanceof Error) {
+      return { success: false, error: err.message };
+    }
+    return { success: false, error: "未知错误" };
+  }
 }
 
 function upsertChildAssetItem(items: ProjectAssetItem[], parentId: string, childId: string) {
@@ -973,6 +1066,8 @@ export async function createProjectVideo(params: {
     const id = `video-${createUuid()}`;
     const video: ProjectVideoAsset = {
       id,
+      cover: "",
+      coverUrl: "",
       duration: "",
       name: params.video.name,
       poster: "",
@@ -1015,9 +1110,17 @@ export async function updateProjectVideoFile(params: {
     const filePath = path.resolve(videosDir, fileName);
     assertSafeProjectPath(filePath);
     await writeFile(filePath, params.file.buffer);
+    const cover =
+      (await createProjectVideoCover({
+        projectId: params.projectId,
+        videoFilePath: filePath,
+      })) || currentVideo.cover || currentVideo.coverUrl || currentVideo.poster;
 
     const nextVideo: ProjectVideoAsset = {
       ...currentVideo,
+      cover,
+      coverUrl: cover,
+      poster: cover,
       source: currentVideo.source || "local",
       url: `/api/projects/${encodeURIComponent(params.projectId)}/videos/${encodeURIComponent(fileName)}`,
     };
@@ -1031,6 +1134,52 @@ export async function updateProjectVideoFile(params: {
     }
     return { success: false, error: "未知错误" };
   }
+}
+
+export async function addProjectVideoToStoryboard(params: {
+  projectId: string;
+  storyboardId: string;
+  videoId: string;
+}): Promise<
+  | { success: true; episodeId: string; storyboards: ProjectStoryboard[] }
+  | { success: false; error: string }
+> {
+  return updateProjectStoryboard({
+    projectId: params.projectId,
+    update: (storyboard) => {
+      if (storyboard.id !== params.storyboardId) return storyboard;
+      if (storyboard.videos.includes(params.videoId)) return storyboard;
+
+      return {
+        ...storyboard,
+        videos: [params.videoId, ...storyboard.videos],
+      };
+    },
+  });
+}
+
+export async function setProjectStoryboardSelectedVideo(params: {
+  projectId: string;
+  storyboardId: string;
+  videoId: string;
+}): Promise<
+  | { success: true; episodeId: string; storyboards: ProjectStoryboard[] }
+  | { success: false; error: string }
+> {
+  return updateProjectStoryboard({
+    projectId: params.projectId,
+    update: (storyboard) => {
+      if (storyboard.id !== params.storyboardId) return storyboard;
+
+      return {
+        ...storyboard,
+        selectedVideo: params.videoId,
+        videos: storyboard.videos.includes(params.videoId)
+          ? storyboard.videos
+          : [params.videoId, ...storyboard.videos],
+      };
+    },
+  });
 }
 
 export async function deleteProjectVideo(params: {
@@ -1147,9 +1296,11 @@ export async function mergeProjectVideos(params: {
 
     const mergedVideo: ProjectVideoAsset = {
       id: mergeId,
+      cover: selectedVideos[0]?.cover || selectedVideos[0]?.coverUrl || selectedVideos[0]?.poster || "",
+      coverUrl: selectedVideos[0]?.cover || selectedVideos[0]?.coverUrl || selectedVideos[0]?.poster || "",
       duration: "",
       name: `merged-${new Date().toISOString()}.mp4`,
-      poster: selectedVideos[0]?.poster ?? "",
+      poster: selectedVideos[0]?.cover || selectedVideos[0]?.coverUrl || selectedVideos[0]?.poster || "",
       prompt: selectedVideos.map((video) => video.name || video.id).join("\n"),
       source: "merge",
       status: "success",

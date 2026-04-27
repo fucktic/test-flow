@@ -78,7 +78,7 @@ const FEATURE_SKILL_PROMPTS: Record<ChatFeatureSkill, string> = {
   "storyboard-parse": joinPrompt([
     "Feature skill: storyboard parsing.",
     COMMAND_PROMPTS.splitEpisode,
-    "Follow the storyboard-list-parser skill output contract exactly. Parse the current episode or selected script content into a serializable storyboard list with concise names, descriptions, matched asset UUIDs, empty prompt fields, preserved videos, and selectedVideo values.",
+    "Follow the storyboard-list-parser skill output contract exactly. Parse the current episode or selected script content into a serializable storyboard list with concise names, descriptions, generation-ready storyboard prompts, matched asset UUIDs, preserved videos, and selectedVideo values.",
   ]),
   "video-generate": joinPrompt([
     "Feature skill: video generation.",

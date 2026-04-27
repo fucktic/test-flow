@@ -37,6 +37,8 @@ const MIN_TIMELINE_SEGMENT_WIDTH = 120;
 function createMissingVideo(videoId: string): ProjectVideoAsset {
   return {
     id: videoId,
+    cover: "",
+    coverUrl: "",
     duration: "",
     name: videoId,
     poster: "",
@@ -194,25 +196,20 @@ export function VideoFooter() {
     if (!activeEpisode) return [];
 
     return activeEpisode.canvasData.storyboards.flatMap((storyboard, index) => {
-      const videoIds = storyboard.videos.length > 0
-        ? storyboard.videos
-        : storyboard.selectedVideo
-          ? [storyboard.selectedVideo]
-          : [];
-      if (videoIds.length === 0) return [];
+      if (!storyboard.selectedVideo) return [];
 
-      return videoIds.map((videoId) => {
-        const video =
-          activeEpisode.canvasData.videos.find((item) => item.id === videoId) ??
-          createMissingVideo(videoId);
+      const video =
+        activeEpisode.canvasData.videos.find((item) => item.id === storyboard.selectedVideo) ??
+        createMissingVideo(storyboard.selectedVideo);
 
-        return {
-          selected: storyboard.selectedVideo === videoId,
+      return [
+        {
+          selected: true,
           storyboardId: storyboard.id,
           storyboardName: storyboard.name.trim() || t("storyboardFallback", { index: index + 1 }),
           video,
-        };
-      });
+        },
+      ];
     });
   }, [activeEpisode, t]);
   const timelineVideos = useMemo<TimelineVideo[]>(() => {
@@ -343,9 +340,9 @@ export function VideoFooter() {
                     >
                       <span className="block truncate">{storyboardName}</span>
                     </div>
-                    {video.poster ? (
+                    {video.cover || video.coverUrl || video.poster ? (
                       <Image
-                        src={video.poster}
+                        src={video.cover || video.coverUrl || video.poster}
                         alt={video.name || storyboardName}
                         fill
                         sizes="160px"

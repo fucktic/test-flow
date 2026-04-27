@@ -354,6 +354,38 @@ export async function updateProjectVideoFile(
   };
 }
 
+export async function addProjectVideoToStoryboard(
+  projectId: string,
+  storyboardId: string,
+  videoId: string,
+): Promise<void> {
+  await readJsonResponse<{ storyboards?: ProjectStoryboard[] }>(
+    await fetch(`/api/projects/${encodeURIComponent(projectId)}/videos`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ storyboardId, videoId }),
+    }),
+  );
+}
+
+export async function selectProjectStoryboardVideo(
+  projectId: string,
+  storyboardId: string,
+  videoId: string,
+): Promise<void> {
+  await readJsonResponse<{ storyboards?: ProjectStoryboard[] }>(
+    await fetch(`/api/projects/${encodeURIComponent(projectId)}/videos`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ action: "select", storyboardId, videoId }),
+    }),
+  );
+}
+
 export async function deleteProjectVideo(
   projectId: string,
   videoId: string,

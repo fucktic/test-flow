@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import {
+  addProjectVideoToStoryboard,
   createProjectVideo,
   deleteProjectVideo,
   getProjectVideos,
+  setProjectStoryboardSelectedVideo,
   updateProjectVideoFile,
 } from "@/lib/services/project-service";
 
@@ -68,6 +70,33 @@ export async function PUT(request: Request, context: { params: Promise<{ project
     if (!result.success) return toErrorResponse();
 
     return NextResponse.json({ video: result.video, videos: result.videos });
+  } catch {
+    return toErrorResponse();
+  }
+}
+
+export async function PATCH(request: Request, context: { params: Promise<{ projectId: string }> }) {
+  try {
+    const { projectId } = await context.params;
+    const body = (await request.json()) as {
+      action?: unknown;
+      storyboardId?: unknown;
+      videoId?: unknown;
+    };
+    const storyboardId = typeof body.storyboardId === "string" ? body.storyboardId : "";
+    const videoId = typeof body.videoId === "string" ? body.videoId : "";
+    if (!storyboardId || !videoId) return toErrorResponse();
+
+    const result =
+      body.action === "select"
+        ? await setProjectStoryboardSelectedVideo({ projectId, storyboardId, videoId })
+        : await addProjectVideoToStoryboard({ projectId, storyboardId, videoId });
+    if (!result.success) return toErrorResponse();
+
+    return NextResponse.json({
+      episodeId: result.episodeId,
+      storyboards: result.storyboards,
+    });
   } catch {
     return toErrorResponse();
   }

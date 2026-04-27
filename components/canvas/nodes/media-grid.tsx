@@ -7,6 +7,7 @@ import {
   Loader2,
   PackagePlus,
   Plus,
+  Star,
   Trash2,
   Upload,
   Video,
@@ -26,9 +27,11 @@ import {
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
+  addProjectVideoToStoryboard,
   createProjectVideo,
   deleteProjectImage,
   deleteProjectVideo,
+  selectProjectStoryboardVideo,
   updateProjectImageFile,
   updateProjectVideoFile,
 } from "@/lib/project-api";
@@ -36,7 +39,14 @@ import type { ProjectImageAsset } from "@/lib/project-types";
 import { cn } from "@/lib/utils";
 import { useCanvasStore, type MediaItem } from "@/store/use-canvas-store";
 
-const MEDIA_GRID_TWO_ROW_HEIGHT = "h-[16.625rem]";
+const MEDIA_GRID_SCROLL_AREA_CLASS =
+  "nodrag nowheel h-[16.625rem] overflow-hidden rounded-2xl border bg-card text-card-foreground shadow-xl transition-[border-color,box-shadow,transform] duration-200";
+const MEDIA_GRID_ACTIVE_CLASS =
+  "border-border shadow-[0_0_34px_hsl(var(--primary)/0.48),0_20px_60px_rgba(0,0,0,0.62)] translate-y-[-1px]";
+const MEDIA_GRID_SCROLL_CONTENT_CLASS = "grid grid-cols-2 gap-2 p-2";
+const MEDIA_GRID_SCROLL_BAR_CLASS = "nodrag data-vertical:w-4 data-horizontal:h-4 p-1";
+const MEDIA_GRID_SCROLL_THUMB_CLASS =
+  "bg-muted-foreground/55 transition-colors hover:bg-muted-foreground/80";
 // Keep tile corners modest so ReactFlow zoom does not make thumbnails look over-rounded.
 const MEDIA_TILE_RADIUS_CLASS = "rounded-[6px]";
 
@@ -66,7 +76,7 @@ function MediaPreview({
   const t = useTranslations("Canvas");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [failed, setFailed] = useState(false);
-  const source = item.type === "video" ? item.poster : item.url;
+  const source = item.type === "video" ? item.cover || item.coverUrl || item.poster : item.url;
   const status = item.status.toLowerCase();
   const commandStatus = status === "loading" || status === "error" || status === "success" ? status : "";
   const isLoading = commandStatus === "loading";
@@ -152,7 +162,7 @@ function MediaPreview({
             aria-label={t("mediaGrid.selectVideo", { name: item.name || item.id })}
             aria-pressed={isSelectedVideo}
             className={cn(
-              "absolute bottom-1 left-1 z-30 flex size-6 items-center justify-center rounded-full border bg-background/90 shadow-sm transition-colors",
+              "absolute bottom-1 left-1 z-30 flex size-6 items-center justify-center rounded-md border bg-background/90 shadow-sm transition-colors",
               isSelectedVideo
                 ? "border-primary text-primary"
                 : "border-border text-muted-foreground hover:border-primary hover:text-primary",
@@ -162,10 +172,10 @@ function MediaPreview({
               onSelectVideo(item);
             }}
           >
-            <span
+            <Star
               className={cn(
-                "size-2.5 rounded-full transition-colors",
-                isSelectedVideo ? "bg-primary" : "bg-transparent",
+                "size-3.5 transition-colors",
+                isSelectedVideo ? "fill-primary text-primary" : "fill-transparent",
               )}
             />
           </button>
@@ -260,7 +270,9 @@ export function MediaGrid({
   sceneId,
   selectedVideoId,
   showItemNames,
+  active,
 }: {
+  active: boolean;
   addLabel: string;
   items: MediaItem[];
   mediaType: "image" | "video";
@@ -299,6 +311,7 @@ export function MediaGrid({
           prompt: "",
           source: "manual",
         });
+        await addProjectVideoToStoryboard(currentProject.id, sceneId, result.video.id);
         addVideoToStoryboard(sceneId, result.video);
       } catch {
         // Creation can be retried from the add tile.
@@ -344,8 +357,16 @@ export function MediaGrid({
 
   return (
     <>
-      <ScrollArea className={`nowheel ${MEDIA_GRID_TWO_ROW_HEIGHT} p-2`}>
-        <div className="grid grid-cols-2 gap-2 p-1">
+      {/* Keep wheel and drag gestures local to the node's media scroller. */}
+      <ScrollArea
+        className={cn(
+          MEDIA_GRID_SCROLL_AREA_CLASS,
+          active ? MEDIA_GRID_ACTIVE_CLASS : "border-border",
+        )}
+        scrollBarClassName={MEDIA_GRID_SCROLL_BAR_CLASS}
+        thumbClassName={MEDIA_GRID_SCROLL_THUMB_CLASS}
+      >
+        <div className={MEDIA_GRID_SCROLL_CONTENT_CLASS}>
           <EmptyMediaTile
             label={addLabel}
             onClick={handleAddMedia}
@@ -380,7 +401,18 @@ export function MediaGrid({
               }}
               onSelectVideo={
                 mediaType === "video"
-                  ? (selectedItem) => setStoryboardSelectedVideo(sceneId, selectedItem.id)
+                  ? (selectedItem) => {
+                      setStoryboardSelectedVideo(sceneId, selectedItem.id);
+                      if (!currentProject) return;
+
+                      void selectProjectStoryboardVideo(
+                        currentProject.id,
+                        sceneId,
+                        selectedItem.id,
+                      ).catch(() => {
+                        // The local selection stays visible; persistence can retry on the next click.
+                      });
+                    }
                   : undefined
               }
               selectedVideoId={selectedVideoId}

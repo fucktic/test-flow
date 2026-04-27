@@ -29,6 +29,8 @@ export type ProjectVideoAsset = {
   source: string;
   prompt: string;
   url: string;
+  cover: string;
+  coverUrl: string;
   poster: string;
   duration: string;
   status: string;
