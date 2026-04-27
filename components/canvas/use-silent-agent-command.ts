@@ -3,7 +3,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocale } from "next-intl";
 import type { ChatWindowSubmitPayload } from "@/components/canvas/chat-window";
-import { resolveGlobalAgentCommand } from "@/components/layout/global-chat-drawer/resolve-agent-command";
+import { extractAgentSessionId } from "@/components/layout/global-chat-drawer/parse-agent-output";
+import {
+  getGlobalAgentStreamKind,
+  resolveGlobalAgentCommand,
+  type AgentStreamKind,
+} from "@/components/layout/global-chat-drawer/resolve-agent-command";
 import type { AgentRecord } from "@/lib/agent-schema";
 import {
   buildFeatureUserPrompt,
@@ -97,6 +102,30 @@ function logAgentStreamReceive(featureSkill: ChatFeatureSkill, chunk: string) {
   });
 }
 
+function buildSilentAgentContextKey(params: {
+  agentId: string;
+  featureSkill: ChatFeatureSkill;
+  projectId: string;
+  scope: SilentAgentContext["scope"];
+}) {
+  return `${params.agentId}:${params.projectId}:${params.scope}:${params.featureSkill}`;
+}
+
+function getSessionIdForSilentAgent(streamKind: AgentStreamKind, contextKey: string) {
+  if (streamKind === "generic") return undefined;
+  return useAgentStore.getState().getAgentSession(contextKey);
+}
+
+function persistSilentAgentSessionId(
+  streamKind: AgentStreamKind,
+  contextKey: string,
+  stdout: string,
+) {
+  const sessionId = extractAgentSessionId(streamKind, stdout);
+  if (!sessionId) return;
+  useAgentStore.getState().setAgentSession(contextKey, sessionId);
+}
+
 export function useSilentAgentCommand() {
   const locale = useLocale();
   const currentProject = useCanvasStore((state) => state.currentProject);
@@ -106,7 +135,6 @@ export function useSilentAgentCommand() {
   const selectedAgentId = useAgentStore((state) => state.selectedAgentId);
   const [agents, setAgents] = useState<AgentRecord[]>([]);
   const [isExecuting, setIsExecuting] = useState(false);
-  const codexSessionIdRef = useRef<string | null>(null);
   const lastContextKeyRef = useRef<string | null>(null);
   const selectedAgent = useMemo(
     () => agents.find((agent) => agent.id === selectedAgentId),
@@ -136,11 +164,17 @@ export function useSilentAgentCommand() {
     async (payload: ChatWindowSubmitPayload, context: SilentAgentContext) => {
       if (!selectedAgent || !currentProject || isExecuting) return;
 
-      const contextKey = `${selectedAgent.id}:${currentProject.id}:${context.scope}:${context.featureSkill}`;
-      const isFirstContextMessage = lastContextKeyRef.current !== contextKey;
-      if (lastContextKeyRef.current !== contextKey) {
-        codexSessionIdRef.current = null;
-      }
+      const contextKey = buildSilentAgentContextKey({
+        agentId: selectedAgent.id,
+        featureSkill: context.featureSkill,
+        projectId: currentProject.id,
+        scope: context.scope,
+      });
+      const streamKind = getGlobalAgentStreamKind(selectedAgent);
+      const storedSessionId = getSessionIdForSilentAgent(streamKind, contextKey);
+      const sessionId =
+        storedSessionId ?? (streamKind === "openclaw" ? contextKey : undefined);
+      const isFirstContextMessage = !sessionId && lastContextKeyRef.current !== contextKey;
 
       const commandText = buildInlineGridCommand({
         context,
@@ -154,7 +188,7 @@ export function useSilentAgentCommand() {
         : `Current selected project ID is: ${currentProject.id}.\n[Latest Command]\nUser: ${commandText}`;
       const resolvedCommand = resolveGlobalAgentCommand(selectedAgent, finalCommandText, {
         isFirstMessage: isFirstContextMessage,
-        sessionId: codexSessionIdRef.current ?? undefined,
+        sessionId,
       });
 
       logAgentStreamSend({
@@ -196,20 +230,29 @@ export function useSilentAgentCommand() {
 
         const reader = response.body.getReader();
         const decoder = new TextDecoder("utf-8");
+        let stdout = "";
         try {
           while (true) {
             const { done, value } = await reader.read();
             if (done) break;
 
             const chunk = decoder.decode(value, { stream: true });
-            if (chunk) logAgentStreamReceive(context.featureSkill, chunk);
+            if (chunk) {
+              stdout += chunk;
+              logAgentStreamReceive(context.featureSkill, chunk);
+            }
           }
 
           const tailChunk = decoder.decode();
-          if (tailChunk) logAgentStreamReceive(context.featureSkill, tailChunk);
+          if (tailChunk) {
+            stdout += tailChunk;
+            logAgentStreamReceive(context.featureSkill, tailChunk);
+          }
         } finally {
           reader.releaseLock();
         }
+
+        persistSilentAgentSessionId(resolvedCommand.streamKind, contextKey, stdout);
 
         if (context.mediaId) {
           setCommandStatus(context.mediaId, "success");

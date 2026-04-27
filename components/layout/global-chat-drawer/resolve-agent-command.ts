@@ -35,7 +35,11 @@ export function resolveGlobalAgentCommand(
 
   if (streamKind === "opencode") {
     const args = ["run", "--format", "json", flatText];
-    if (!options.isFirstMessage) args.push("--continue");
+    if (options.sessionId) {
+      args.push("--session", options.sessionId);
+    } else if (!options.isFirstMessage) {
+      args.push("--continue");
+    }
     return { args, executable, streamKind };
   }
 
@@ -48,7 +52,11 @@ export function resolveGlobalAgentCommand(
       "--verbose",
       "--include-partial-messages",
     ];
-    if (!options.isFirstMessage) args.push("--continue");
+    if (options.sessionId) {
+      args.push("--resume", options.sessionId);
+    } else if (!options.isFirstMessage) {
+      args.push("--continue");
+    }
     return { args, executable, streamKind };
   }
 
@@ -56,7 +64,7 @@ export function resolveGlobalAgentCommand(
     const args = ["exec", "--json", "--full-auto"];
     const sessionId = options.sessionId?.trim();
 
-    if (sessionId && !options.isFirstMessage) {
+    if (sessionId) {
       args.push("resume", sessionId, flatText);
     } else {
       args.push(flatText);

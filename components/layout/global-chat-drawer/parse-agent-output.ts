@@ -84,8 +84,29 @@ function collectTextFromContent(content: unknown): string {
   return "";
 }
 
+function collectTextFromPayloads(payloads: unknown): string {
+  if (!Array.isArray(payloads)) return "";
+
+  return payloads
+    .map((payload) => {
+      if (!isJsonObject(payload)) return "";
+      return typeof payload.text === "string" ? payload.text : "";
+    })
+    .filter(Boolean)
+    .join("\n");
+}
+
 function readKnownFinalField(value: JsonObject) {
-  const directKeys = ["result", "final", "final_message", "finalMessage", "message", "response", "output"];
+  const directKeys = [
+    "result",
+    "final",
+    "final_message",
+    "finalMessage",
+    "message",
+    "response",
+    "output",
+    "text",
+  ];
 
   for (const key of directKeys) {
     const fieldValue = value[key];
@@ -99,6 +120,9 @@ function readKnownFinalField(value: JsonObject) {
     const messageText = collectTextFromContent(value.message.content);
     if (messageText.trim()) return messageText;
   }
+
+  const payloadText = collectTextFromPayloads(value.payloads);
+  if (payloadText.trim()) return payloadText;
 
   return "";
 }
@@ -127,6 +151,50 @@ function parseJsonLines(stdout: string) {
   return { nonJsonLines, objects };
 }
 
+export function extractAgentSessionId(kind: AgentStreamKind, stdout: string) {
+  const normalizedOutput = normalizeAgentStreamPreview(stdout);
+  const { objects } = parseJsonLines(normalizedOutput);
+  let sessionId: string | null = null;
+
+  objects.forEach((event) => {
+    if (typeof event.session_id === "string") sessionId = event.session_id;
+    if (typeof event.sessionId === "string") sessionId = event.sessionId;
+    if (typeof event.sessionID === "string") sessionId = event.sessionID;
+    if (typeof event.thread_id === "string") sessionId = event.thread_id;
+    if (typeof event.threadId === "string") sessionId = event.threadId;
+    if (typeof event.threadID === "string") sessionId = event.threadID;
+
+    const meta = isJsonObject(event.meta) ? event.meta : null;
+    const agentMeta = meta && isJsonObject(meta.agentMeta) ? meta.agentMeta : null;
+    if (typeof agentMeta?.sessionId === "string") sessionId = agentMeta.sessionId;
+    if (typeof agentMeta?.session_id === "string") sessionId = agentMeta.session_id;
+  });
+
+  if (sessionId) return sessionId;
+
+  if (kind === "hermes") {
+    const hermesResumeMatch =
+      normalizedOutput.match(/--?-?resume\s+([^\s]+)/i) ??
+      normalizedOutput.match(/\bsession_id\s*:\s*([^\s]+)/i) ??
+      normalizedOutput.match(/\bSession:\s*([^\s]+)(?:\s+Duration:|\s*$)/i);
+    if (hermesResumeMatch?.[1]) return hermesResumeMatch[1].trim();
+
+    const standaloneHermesSessionMatch = normalizedOutput.match(
+      /^\s*(\d{8}_\d{6}_[a-z0-9]{4,})\s*$/im,
+    );
+    if (standaloneHermesSessionMatch?.[1]) return standaloneHermesSessionMatch[1].trim();
+  }
+
+  if (kind === "openclaw") {
+    const openclawSessionMatch =
+      normalizedOutput.match(/--session-id\s+([^\s]+)/i) ??
+      normalizedOutput.match(/\bsession[_ -]?id\s*[:=]\s*([^\s]+)/i);
+    if (openclawSessionMatch?.[1]) return openclawSessionMatch[1].trim();
+  }
+
+  return null;
+}
+
 function parseGenericJsonEvents(stdout: string, kind: AgentStreamKind): ParsedAgentOutput | null {
   const { nonJsonLines, objects } = parseJsonLines(normalizeAgentStreamPreview(stdout));
   if (objects.length === 0) return null;
@@ -138,11 +206,24 @@ function parseGenericJsonEvents(stdout: string, kind: AgentStreamKind): ParsedAg
   objects.forEach((event) => {
     if (typeof event.session_id === "string") threadId = event.session_id;
     if (typeof event.sessionId === "string") threadId = event.sessionId;
+    if (typeof event.sessionID === "string") threadId = event.sessionID;
     if (typeof event.thread_id === "string") threadId = event.thread_id;
+    if (typeof event.threadId === "string") threadId = event.threadId;
+    if (typeof event.threadID === "string") threadId = event.threadID;
+
+    const meta = isJsonObject(event.meta) ? event.meta : null;
+    const agentMeta = meta && isJsonObject(meta.agentMeta) ? meta.agentMeta : null;
+    if (typeof agentMeta?.sessionId === "string") threadId = agentMeta.sessionId;
+    if (typeof agentMeta?.session_id === "string") threadId = agentMeta.session_id;
 
     const eventType = typeof event.type === "string" ? event.type : "";
     const subtype = typeof event.subtype === "string" ? event.subtype : "";
     const eventText = readKnownFinalField(event);
+
+    if (eventText.trim() && (eventType === "text" || Array.isArray(event.payloads))) {
+      final = eventText;
+      return;
+    }
 
     if (kind === "claude") {
       if (eventType === "result") {
@@ -384,7 +465,7 @@ function isToolLine(line: string, kind: AgentStreamKind) {
   if (/^(read_file|write_file|edit_file|delete_file|apply_patch|search_replace)\b/i.test(trimmedLine)) return true;
   if (/^(reading|read|listing|preparing|running|executing|tool|command|shell|bash)\b/i.test(trimmedLine)) return true;
   if (/^(git|npm|pnpm|yarn|npx|bun|node|python|python3|curl|wget|ls|cat|grep|find|sed|awk)\b/i.test(trimmedLine)) return true;
-  if (/^(Session|Duration|Messages|Tokens?|Cost|Model):\s*/i.test(trimmedLine)) return true;
+  if (/^(Session|session_id|Duration|Messages|Tokens?|Cost|Model):\s*/i.test(trimmedLine)) return true;
   if (/^\d{8}_\d{6}_[a-f0-9]{4,}$/i.test(trimmedLine)) return true;
   if (/^⏺\s/u.test(trimmedLine) || trimmedLine.startsWith("⎿")) return true;
   if (/^[dl-][rwx-]{9}\+?@?\s+\d+\s/.test(trimmedLine) || /^total\s+\d+$/i.test(trimmedLine)) return true;
@@ -462,7 +543,7 @@ export function parsePlainAgentOutput(kind: AgentStreamKind, stdout: string): Pa
       return {
         final: hermesTranscript.final,
         process: hermesTranscript.process,
-        threadId: null,
+        threadId: extractAgentSessionId(kind, stdout),
       };
     }
   }
@@ -493,7 +574,7 @@ export function parsePlainAgentOutput(kind: AgentStreamKind, stdout: string): Pa
   return {
     final: text.trim(),
     process: collectedProcess.filter(Boolean).join("\n\n").trim(),
-    threadId: null,
+    threadId: extractAgentSessionId(kind, stdout),
   };
 }
 

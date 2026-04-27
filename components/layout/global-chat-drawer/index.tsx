@@ -16,10 +16,15 @@ import {
   type GlobalChatAttachment,
 } from "./global-chat-composer";
 import {
+  extractAgentSessionId,
   normalizeAgentStreamPreview,
   parseAgentOutput,
 } from "./parse-agent-output";
-import { resolveGlobalAgentCommand } from "./resolve-agent-command";
+import {
+  getGlobalAgentStreamKind,
+  resolveGlobalAgentCommand,
+  type AgentStreamKind,
+} from "./resolve-agent-command";
 import { buildFeatureUserPrompt } from "@/lib/chat-prompts";
 import { fetchAgentsCached, fetchConfigCached } from "@/lib/client-data-cache";
 import { useLayoutStore } from "@/store/use-layout-store";
@@ -61,6 +66,26 @@ const createMessageId = () => {
   return createUuid();
 };
 
+const buildAgentContextKey = (agentId: string, projectId: string) => {
+  return `${agentId}:${projectId}`;
+};
+
+const getSessionIdForAgent = (streamKind: AgentStreamKind, contextKey: string) => {
+  if (streamKind === "generic") return undefined;
+  return useAgentStore.getState().getAgentSession(contextKey);
+};
+
+const persistSessionIdForAgent = (
+  streamKind: AgentStreamKind,
+  contextKey: string,
+  stdout: string,
+) => {
+  const sessionId = extractAgentSessionId(streamKind, stdout);
+  if (!sessionId) return;
+
+  useAgentStore.getState().setAgentSession(contextKey, sessionId);
+};
+
 function AgentGlyph({ agent }: { agent?: AgentRecord }) {
   const icon = agent?.icon.trim() ?? "";
 
@@ -94,7 +119,6 @@ export function GlobalChatDrawer({ open, onClose }: GlobalChatDrawerProps) {
   const startSidebarLoading = useLayoutStore((state) => state.startSidebarLoading);
   const selectedAgentId = useAgentStore((state) => state.selectedAgentId);
   const abortControllerRef = useRef<AbortController | null>(null);
-  const codexSessionIdRef = useRef<string | null>(null);
   const lastContextKeyRef = useRef<string | null>(null);
   const [agents, setAgents] = useState<AgentRecord[]>([]);
   const [config, setConfig] = useState<AppConfig>(EMPTY_CONFIG);
@@ -181,33 +205,36 @@ export function GlobalChatDrawer({ open, onClose }: GlobalChatDrawerProps) {
   };
 
   const executeAgentCommand = useCallback(
-    async (commandText: string) => {
+    async (commandText: string, options?: { silent?: boolean }) => {
       if (!selectedAgent) {
-        setMessages((currentMessages) => [
-          ...currentMessages,
-          createAssistantMessage(t("commandReplies.noAgent")),
-        ]);
+        if (!options?.silent) {
+          setMessages((currentMessages) => [
+            ...currentMessages,
+            createAssistantMessage(t("commandReplies.noAgent")),
+          ]);
+        }
         return;
       }
 
-      const contextKey = `${selectedAgent.id}:${currentProject?.id ?? ""}`;
-      const isFirstContextMessage = lastContextKeyRef.current !== contextKey;
-      if (lastContextKeyRef.current !== contextKey) {
-        codexSessionIdRef.current = null;
-      }
-
       const projectId = currentProject?.id ?? "";
+      const contextKey = buildAgentContextKey(selectedAgent.id, projectId);
+      const streamKind = getGlobalAgentStreamKind(selectedAgent);
+      const storedSessionId = getSessionIdForAgent(streamKind, contextKey);
+      const sessionId = storedSessionId ?? (streamKind === "openclaw" && projectId ? contextKey : undefined);
+      const isFirstContextMessage =
+        !sessionId &&
+        !autoHelloContextKeys.has(contextKey) &&
+        lastContextKeyRef.current !== contextKey;
       const projectContext = currentProject ? `\nCurrent selected project ID is: ${projectId}.` : "";
-      const featureCommandText = buildFeatureUserPrompt({
-        featureSkill: "general-chat",
-        userText: commandText,
-      });
-      const finalCommandText = isFirstContextMessage
-        ? `${projectContext}\n[Latest Command]\nUser: ${featureCommandText}`
-        : `${projectContext}\n[Latest Command]\nUser: ${featureCommandText}`;
+      const finalCommandText = options?.silent
+        ? commandText
+        : `${projectContext}\n[Latest Command]\nUser: ${buildFeatureUserPrompt({
+            featureSkill: "general-chat",
+            userText: commandText,
+          })}`;
       const resolvedCommand = resolveGlobalAgentCommand(selectedAgent, finalCommandText, {
         isFirstMessage: isFirstContextMessage,
-        sessionId: codexSessionIdRef.current ?? undefined,
+        sessionId,
       });
       const abortController = new AbortController();
       const agentMessageId = createMessageId();
@@ -216,15 +243,17 @@ export function GlobalChatDrawer({ open, onClose }: GlobalChatDrawerProps) {
       lastContextKeyRef.current = contextKey;
       setIsExecuting(true);
       startSidebarLoading("chat");
-      setMessages((currentMessages) => [
-        ...currentMessages,
-        {
-          id: agentMessageId,
-          process: t("commandReplies.executing", { name: selectedAgent.name }),
-          role: "agent",
-          text: "",
-        },
-      ]);
+      if (!options?.silent) {
+        setMessages((currentMessages) => [
+          ...currentMessages,
+          {
+            id: agentMessageId,
+            process: t("commandReplies.executing", { name: selectedAgent.name }),
+            role: "agent",
+            text: "",
+          },
+        ]);
+      }
 
       try {
         const response = await fetch("/api/agents/execute", {
@@ -258,12 +287,14 @@ export function GlobalChatDrawer({ open, onClose }: GlobalChatDrawerProps) {
 
             const chunk = decoder.decode(value, { stream: true });
             stdout += chunk;
-            updateMessage(
-              agentMessageId,
-              "",
-              normalizeAgentStreamPreview(stdout) ||
-                t("commandReplies.executing", { name: selectedAgent.name }),
-            );
+            if (!options?.silent) {
+              updateMessage(
+                agentMessageId,
+                "",
+                normalizeAgentStreamPreview(stdout) ||
+                  t("commandReplies.executing", { name: selectedAgent.name }),
+              );
+            }
           }
 
           const tailChunk = decoder.decode();
@@ -275,21 +306,29 @@ export function GlobalChatDrawer({ open, onClose }: GlobalChatDrawerProps) {
         }
 
         const parsedOutput = parseAgentOutput(resolvedCommand.streamKind, stdout);
-        if (parsedOutput.threadId) codexSessionIdRef.current = parsedOutput.threadId;
+        if (parsedOutput.threadId) {
+          useAgentStore.getState().setAgentSession(contextKey, parsedOutput.threadId);
+        } else {
+          persistSessionIdForAgent(resolvedCommand.streamKind, contextKey, stdout);
+        }
 
-        updateMessage(
-          agentMessageId,
-          parsedOutput.final || t("commandReplies.executionCompleteNoOutput"),
-          parsedOutput.process || undefined,
-        );
+        if (!options?.silent) {
+          updateMessage(
+            agentMessageId,
+            parsedOutput.final || t("commandReplies.executionCompleteNoOutput"),
+            parsedOutput.process || undefined,
+          );
+        }
       } catch (error) {
         if (error instanceof Error && error.name === "AbortError") {
-          updateMessage(agentMessageId, t("commandReplies.stopped"));
+          if (!options?.silent) updateMessage(agentMessageId, t("commandReplies.stopped"));
           return;
         }
 
         const message = error instanceof Error ? error.message : t("commandReplies.executionFailed");
-        updateMessage(agentMessageId, t("commandReplies.executionFailedMessage", { message }));
+        if (!options?.silent) {
+          updateMessage(agentMessageId, t("commandReplies.executionFailedMessage", { message }));
+        }
       } finally {
         abortControllerRef.current = null;
         setIsExecuting(false);
@@ -302,13 +341,13 @@ export function GlobalChatDrawer({ open, onClose }: GlobalChatDrawerProps) {
   useEffect(() => {
     if (!selectedAgent || !currentProject || isExecuting) return;
 
-    const contextKey = `${selectedAgent.id}:${currentProject.id}`;
+    const contextKey = buildAgentContextKey(selectedAgent.id, currentProject.id);
     if (autoHelloContextKeys.has(contextKey)) return;
 
     autoHelloContextKeys.add(contextKey);
     let active = true;
     queueMicrotask(() => {
-      if (active) void executeAgentCommand(AUTO_HELLO_PROMPT);
+      if (active) void executeAgentCommand(AUTO_HELLO_PROMPT, { silent: true });
     });
 
     return () => {
