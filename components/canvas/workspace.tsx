@@ -38,6 +38,7 @@ const EMPTY_CONFIG: AppConfig = {
   imageModels: [],
   videoModels: [],
 };
+const EMPTY_CHAT_REFERENCE_IMAGES: ChatWindowReferenceImage[] = [];
 
 function toSerializableFlow(nodes: Node[], edges: Edge[], baseFlow: FlowState): FlowState | null {
   const nodeById = new Map(nodes.map((node) => [node.id, node]));
@@ -52,6 +53,7 @@ function toSerializableFlow(nodes: Node[], edges: Edge[], baseFlow: FlowState): 
         return currentNode
           ? {
               ...baseNode,
+              data: currentNode.data,
               hidden: currentNode.hidden,
               position: currentNode.position,
               type: currentNode.type ?? baseNode.type,
@@ -127,6 +129,7 @@ function CanvasWorkspaceInner() {
     commandStatuses,
     selectedEpisodeIds,
     selectedMediaGridItem,
+    currentCanvasDataByEpisode,
     setActiveEpisodeId,
     setProjectCanvasDataBatch,
   } = useCanvasStore();
@@ -177,20 +180,37 @@ function CanvasWorkspaceInner() {
     (index: number) => t("chatWindow.imageFallback", { index }),
     [t],
   );
+  const getAssetCategoryLabel = useCallback(
+    (categoryKey: string) => {
+      if (categoryKey === "character") return t("chatWindow.assetCategories.character");
+      if (categoryKey === "prop") return t("chatWindow.assetCategories.prop");
+      if (categoryKey === "scene") return t("chatWindow.assetCategories.scene");
+      if (categoryKey === "reference") return t("chatWindow.assetCategories.reference");
+      return t("chatWindow.assetCategories.unknown");
+    },
+    [t],
+  );
   const referenceImages = useMemo<ChatWindowReferenceImage[]>(() => {
-    if (!selectedMediaGridItem || !currentCanvasData) return [];
+    if (!selectedMediaGridItem) return [];
 
-    const storyboard = currentCanvasData.data.storyboards.find(
+    const storyboardCanvasData = Object.values(currentCanvasDataByEpisode).find((canvasData) =>
+      canvasData.data.storyboards.some((item) => item.id === selectedMediaGridItem.sceneId),
+    );
+    const storyboard = storyboardCanvasData?.data.storyboards.find(
       (item) => item.id === selectedMediaGridItem.sceneId,
     );
-    if (!storyboard) return [];
+    if (!storyboardCanvasData || !storyboard) return [];
+
+    const excludeReferenceMentions = selectedMediaGridItem.item.assetType === "reference";
 
     return storyboard.images.flatMap((imageId, index) => {
-      const image = currentCanvasData.data.images.find((item) => item.id === imageId);
-      if (!image) return [];
+      const image = storyboardCanvasData.data.images.find((item) => item.id === imageId);
+      if (!image || (excludeReferenceMentions && image.type === "reference")) return [];
 
       return [
         {
+          categoryKey: image.type,
+          categoryLabel: getAssetCategoryLabel(image.type),
           id: image.id,
           label: image.name.trim() || imageFallbackLabel(index + 1),
           name: image.name.trim() || imageFallbackLabel(index + 1),
@@ -198,8 +218,13 @@ function CanvasWorkspaceInner() {
         },
       ];
     });
-  }, [currentCanvasData, imageFallbackLabel, selectedMediaGridItem]);
-  const mediaMentionImages = selectedMediaGridItem?.item.type === "video" ? referenceImages : [];
+  }, [currentCanvasDataByEpisode, getAssetCategoryLabel, imageFallbackLabel, selectedMediaGridItem]);
+  const usesStoryboardAssetMentions =
+    selectedMediaGridItem?.item.type === "video" ||
+    selectedMediaGridItem?.item.assetType === "reference";
+  const mediaMentionImages = usesStoryboardAssetMentions
+    ? referenceImages
+    : EMPTY_CHAT_REFERENCE_IMAGES;
   const handleModelChange =
     selectedMediaGridItem?.item.type === "video" ? setSelectedVideoModelId : setSelectedImageModelId;
   const saveSelectedProjectModel = useCallback(async () => {
@@ -471,8 +496,11 @@ function CanvasWorkspaceInner() {
           <ChatWindow
             commandStatus={commandStatus}
             commandStatusLabel={commandStatusLabel}
-            initialPrompt={selectedMediaGridItem?.item.prompt ?? ""}
+            initialPrompt={
+              selectedMediaGridItem?.scenePrompt || selectedMediaGridItem?.item.prompt || ""
+            }
             initialPromptKey={selectedMediaGridItem?.item.id ?? ""}
+            initialMentionTags={mediaMentionImages}
             projectId={currentProject?.id ?? ""}
             emptyModelLabel={t("chatWindow.emptyModel")}
             placeholder={t("chatWindow.placeholder")}
@@ -487,6 +515,7 @@ function CanvasWorkspaceInner() {
             modelSelectLabel={t("chatWindow.modelSelect")}
             modelOptions={modelOptions}
             mediaMentionImages={mediaMentionImages}
+            preferMediaMentions={usesStoryboardAssetMentions}
             referenceImages={referenceImages}
             requiresFirstLastFrame={requiresFirstLastFrame}
             selectedModelId={selectedModelId}

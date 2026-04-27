@@ -32,6 +32,8 @@ export function StoryboardImageNode({ data, id, selected }: NodeProps<Storyboard
         items={data.items}
         mediaType={data.mediaType}
         nodeId={id}
+        scenePrompt={data.prompt}
+        sceneTitle={data.title}
         sceneId={data.sceneId}
         selectedVideoId={data.selectedVideoId}
         showItemNames

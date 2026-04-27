@@ -300,6 +300,22 @@ export async function addProjectImageToAssets(
   return data.project;
 }
 
+export async function addProjectImageToStoryboard(
+  projectId: string,
+  storyboardId: string,
+  imageId: string,
+): Promise<void> {
+  await readJsonResponse<{ storyboards?: ProjectStoryboard[] }>(
+    await fetch(`/api/projects/${encodeURIComponent(projectId)}/images`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ action: "storyboard", storyboardId, imageId }),
+    }),
+  );
+}
+
 export async function createProjectVideo(
   projectId: string,
   params: {

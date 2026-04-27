@@ -13,7 +13,7 @@ import {
   Video,
 } from "lucide-react";
 import Image from "next/image";
-import { useRef, useState } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { AssetCreateDialog } from "@/components/assets/asset-create-dialog";
 import { Button } from "@/components/ui/button";
@@ -26,7 +26,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
+  addProjectImageToStoryboard,
   addProjectVideoToStoryboard,
   createProjectVideo,
   deleteProjectImage,
@@ -49,6 +51,21 @@ const MEDIA_GRID_SCROLL_THUMB_CLASS =
   "bg-muted-foreground/55 transition-colors hover:bg-muted-foreground/80";
 // Keep tile corners modest so ReactFlow zoom does not make thumbnails look over-rounded.
 const MEDIA_TILE_RADIUS_CLASS = "rounded-[6px]";
+
+function IconButtonTooltip({
+  children,
+  label,
+}: {
+  children: ReactNode;
+  label: string;
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{children}</TooltipTrigger>
+      <TooltipContent side="top">{label}</TooltipContent>
+    </Tooltip>
+  );
+}
 
 function MediaPreview({
   hasActiveSelection,
@@ -102,19 +119,23 @@ function MediaPreview({
           MEDIA_TILE_RADIUS_CLASS,
         )}
       >
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-xs"
-          aria-label={t("mediaGrid.upload")}
-          className="absolute left-1 top-1 z-30 size-6 bg-background/90 text-foreground opacity-0 shadow-sm transition-opacity hover:bg-accent group-hover:opacity-100"
-          onClick={(event) => {
-            event.stopPropagation();
-            fileInputRef.current?.click();
-          }}
-        >
-          <Upload className="size-3.5" />
-        </Button>
+        <TooltipProvider delayDuration={200}>
+          <IconButtonTooltip label={t("mediaGrid.upload")}>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-xs"
+              aria-label={t("mediaGrid.upload")}
+              className="absolute left-1 top-1 z-30 size-6 bg-background/90 text-foreground opacity-0 shadow-sm transition-opacity hover:bg-accent group-hover:opacity-100"
+              onClick={(event) => {
+                event.stopPropagation();
+                fileInputRef.current?.click();
+              }}
+            >
+              <Upload className="size-3.5" />
+            </Button>
+          </IconButtonTooltip>
+        </TooltipProvider>
         <input
           ref={fileInputRef}
           type="file"
@@ -128,57 +149,69 @@ function MediaPreview({
         />
         <div className="absolute right-1 top-1 z-30 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
           {item.type === "image" && onLibrary ? (
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-xs"
-              aria-label={t("mediaGrid.addToLibrary")}
-              className="size-6 bg-background/90 text-foreground shadow-sm hover:bg-accent"
-              onClick={(event) => {
-                event.stopPropagation();
-                onLibrary(item);
-              }}
-            >
-              <PackagePlus className="size-3.5" />
-            </Button>
+            <TooltipProvider delayDuration={200}>
+              <IconButtonTooltip label={t("mediaGrid.addToLibrary")}>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-xs"
+                  aria-label={t("mediaGrid.addToLibrary")}
+                  className="size-6 bg-background/90 text-foreground shadow-sm hover:bg-accent"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onLibrary(item);
+                  }}
+                >
+                  <PackagePlus className="size-3.5" />
+                </Button>
+              </IconButtonTooltip>
+            </TooltipProvider>
           ) : null}
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-xs"
-            aria-label={t("mediaGrid.delete")}
-            className="size-6 bg-background/90 text-foreground shadow-sm hover:bg-accent hover:text-destructive"
-            onClick={(event) => {
-              event.stopPropagation();
-              onDelete(item);
-            }}
-          >
-            <Trash2 className="size-3.5" />
-          </Button>
+          <TooltipProvider delayDuration={200}>
+            <IconButtonTooltip label={t("mediaGrid.delete")}>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-xs"
+                aria-label={t("mediaGrid.delete")}
+                className="size-6 bg-background/90 text-foreground shadow-sm hover:bg-accent hover:text-destructive"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onDelete(item);
+                }}
+              >
+                <Trash2 className="size-3.5" />
+              </Button>
+            </IconButtonTooltip>
+          </TooltipProvider>
         </div>
         {item.type === "video" && onSelectVideo ? (
-          <button
-            type="button"
-            aria-label={t("mediaGrid.selectVideo", { name: item.name || item.id })}
-            aria-pressed={isSelectedVideo}
-            className={cn(
-              "absolute bottom-1 left-1 z-30 flex size-6 items-center justify-center rounded-md border bg-background/90 shadow-sm transition-colors",
-              isSelectedVideo
-                ? "border-primary text-primary"
-                : "border-border text-muted-foreground hover:border-primary hover:text-primary",
-            )}
-            onClick={(event) => {
-              event.stopPropagation();
-              onSelectVideo(item);
-            }}
-          >
-            <Star
-              className={cn(
-                "size-3.5 transition-colors",
-                isSelectedVideo ? "fill-primary text-primary" : "fill-transparent",
-              )}
-            />
-          </button>
+          <TooltipProvider delayDuration={200}>
+            <IconButtonTooltip label={t("mediaGrid.selectVideo", { name: item.name || item.id })}>
+              <button
+                type="button"
+                aria-label={t("mediaGrid.selectVideo", { name: item.name || item.id })}
+                aria-pressed={isSelectedVideo}
+                className={cn(
+                  "absolute bottom-1 left-1 z-30 flex size-6 items-center justify-center rounded-md border bg-background/90 shadow-sm transition-colors",
+                  isSelectedVideo
+                    ? "border-primary text-primary"
+                    : "border-border text-muted-foreground hover:border-primary hover:text-primary",
+                )}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onSelectVideo(item);
+                }}
+              >
+                <Star
+                  className={cn(
+                    "size-3.5 transition-colors",
+                    isSelectedVideo ? "fill-primary text-primary" : "fill-transparent",
+                  )}
+                />
+              </button>
+            </IconButtonTooltip>
+          </TooltipProvider>
         ) : null}
         {source && !isError ? (
           // Project media URLs are data from the project JSON and remain serializable in flow nodes.
@@ -267,6 +300,8 @@ export function MediaGrid({
   items,
   mediaType,
   nodeId,
+  scenePrompt,
+  sceneTitle,
   sceneId,
   selectedVideoId,
   showItemNames,
@@ -277,6 +312,8 @@ export function MediaGrid({
   items: MediaItem[];
   mediaType: "image" | "video";
   nodeId: string;
+  scenePrompt: string;
+  sceneTitle: string;
   sceneId: string;
   selectedVideoId?: string;
   showItemNames: boolean;
@@ -354,6 +391,18 @@ export function MediaGrid({
       }
     })();
   };
+  const handleAddImageToStoryboard = (image: ProjectImageAsset) => {
+    if (!currentProject) return;
+
+    void (async () => {
+      try {
+        await addProjectImageToStoryboard(currentProject.id, sceneId, image.id);
+        addImageToStoryboard(sceneId, image);
+      } catch {
+        // Binding can be retried by adding the image again from the library.
+      }
+    })();
+  };
 
   return (
     <>
@@ -390,6 +439,8 @@ export function MediaGrid({
                 selectMediaGridItem({
                   nodeId,
                   sceneId,
+                  scenePrompt,
+                  sceneTitle,
                   item: selectedItem,
                   anchorRect: {
                     height: anchorRect.height,
@@ -424,8 +475,8 @@ export function MediaGrid({
         <AssetCreateDialog
           hiddenSources={["local"]}
           images={currentCanvasData?.data.images ?? []}
-          onCreated={(image) => addImageToStoryboard(sceneId, image)}
-          onImported={(image) => addImageToStoryboard(sceneId, image)}
+          onCreated={handleAddImageToStoryboard}
+          onImported={handleAddImageToStoryboard}
           onProjectUpdated={setCurrentProject}
           onOpenChange={setCreateDialogOpen}
           open={createDialogOpen}

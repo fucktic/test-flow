@@ -139,6 +139,13 @@
       "promptPairSeparator": ": ",
       "firstFrame": "First frame image",
       "lastFrame": "Last frame image",
+      "assetCategories": {
+        "character": "Character",
+        "prop": "Prop",
+        "scene": "Scene",
+        "reference": "Reference image",
+        "unknown": "Other"
+      },
       "videoShot": "Shot",
       "videoDuration": "Duration",
       "videoDurationUnit": "s",

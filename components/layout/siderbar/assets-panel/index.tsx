@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   AlertCircle,
@@ -54,17 +54,23 @@ import { AssetDetailCard } from "./components/asset-detail-card";
 type AssetTabKey = "all" | "character" | "scene" | "prop" | "voice" | "video";
 type AssetCategoryKey = Exclude<AssetTabKey, "all">;
 type ConfirmAction = "parse" | "generate" | "clear" | null;
-
-const ASSET_TYPE_TOKENS: Record<AssetCategoryKey, string[]> = {
-  character: ["character", "角色"],
-  scene: ["scene", "场景"],
-  prop: ["prop", "道具"],
-  voice: ["voice", "音色"],
-  video: ["video", "视频", "分镜"],
+type ProjectAssetCategory = keyof ProjectAssets;
+type AssetDetailPosition = {
+  left: number;
+  top: number;
 };
 
-const ASSET_GRID_COLUMNS = 5;
-const ASSET_DETAIL_SPAN = 3;
+const ASSET_TAB_CATEGORY: Record<AssetCategoryKey, ProjectAssetCategory> = {
+  character: "characters",
+  scene: "scenes",
+  prop: "props",
+  voice: "voices",
+  video: "videos",
+};
+
+const ASSET_DETAIL_CARD_WIDTH = 356;
+const ASSET_DETAIL_GAP = 10;
+const ASSET_DETAIL_VIEWPORT_MARGIN = 12;
 const ASSET_DETAIL_CLOSE_SELECTOR =
   "[data-asset-detail-card], [data-asset-detail-trigger], [data-asset-chat-window], [data-slot='select-content']";
 const EMPTY_CONFIG: AppConfig = {
@@ -74,19 +80,31 @@ const EMPTY_CONFIG: AppConfig = {
 };
 const ASSET_SYNC_POLL_INTERVAL_MS = 5000;
 
-function matchesAssetTab(asset: ProjectImageAsset, activeTab: AssetTabKey) {
-  if (activeTab === "all") return true;
-
-  const normalizedType = asset.type.toLowerCase();
-  return ASSET_TYPE_TOKENS[activeTab].some((token) => normalizedType.includes(token));
-}
-
 function getAssetChildIds(projectAssets: ProjectAssets | undefined, assetId: string) {
   if (!projectAssets) return [];
 
   const assetGroups = Object.values(projectAssets);
   const matchedAsset = assetGroups.flat().find((assetItem) => assetItem.id === assetId);
   return matchedAsset?.children ?? [];
+}
+
+function getProjectAssetIds(projectAssets: ProjectAssets | undefined, activeTab: AssetTabKey) {
+  if (!projectAssets) return [];
+
+  const assetGroups =
+    activeTab === "all"
+      ? Object.values(projectAssets)
+      : [projectAssets[ASSET_TAB_CATEGORY[activeTab]]];
+
+  const seenAssetIds = new Set<string>();
+  return assetGroups
+    .flatMap((assetGroup) => assetGroup.map((asset) => asset.id))
+    .filter((assetId) => {
+      if (seenAssetIds.has(assetId)) return false;
+
+      seenAssetIds.add(assetId);
+      return true;
+    });
 }
 
 function getProjectSyncSignature(project: ProjectDetail) {
@@ -106,6 +124,7 @@ export function AssetsPanel() {
   const { execute: executeSilentAgentCommand } = useSilentAgentCommand();
   const currentProject = useCanvasStore((state) => state.currentProject);
   const currentProjectRef = useRef<ProjectDetail | null>(currentProject);
+  const assetTileRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const setCurrentProject = useCanvasStore((state) => state.setCurrentProject);
   const commandStatuses = useCanvasStore((state) => state.commandStatuses);
   const assetLoadingAction = useLayoutStore((state) => state.assetLoadingAction);
@@ -123,6 +142,7 @@ export function AssetsPanel() {
   const [confirmAction, setConfirmAction] = useState<ConfirmAction>(null);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
+  const [assetDetailPosition, setAssetDetailPosition] = useState<AssetDetailPosition | null>(null);
   const [selectedChatAssetId, setSelectedChatAssetId] = useState<string | null>(null);
   const [assetChatPosition, setAssetChatPosition] = useState<{ left: number; top: number } | null>(
     null,
@@ -141,12 +161,53 @@ export function AssetsPanel() {
     currentProjectRef.current = currentProject;
   }, [currentProject]);
 
+  const setAssetTileRef = useCallback(
+    (assetId: string) => (node: HTMLDivElement | null) => {
+      if (node) {
+        assetTileRefs.current.set(assetId, node);
+        return;
+      }
+
+      assetTileRefs.current.delete(assetId);
+    },
+    [],
+  );
+
+  const updateAssetDetailPosition = useCallback((assetId: string | null) => {
+    if (!assetId) {
+      setAssetDetailPosition(null);
+      return;
+    }
+
+    const anchorElement = assetTileRefs.current.get(assetId);
+    if (!anchorElement) {
+      setAssetDetailPosition(null);
+      return;
+    }
+
+    const anchorRect = anchorElement.getBoundingClientRect();
+    const rightSideLeft = anchorRect.right + ASSET_DETAIL_GAP;
+    const leftSideLeft = anchorRect.left - ASSET_DETAIL_CARD_WIDTH - ASSET_DETAIL_GAP;
+    const hasRightSpace =
+      rightSideLeft + ASSET_DETAIL_CARD_WIDTH + ASSET_DETAIL_VIEWPORT_MARGIN <= window.innerWidth;
+    const hasLeftSpace = leftSideLeft >= ASSET_DETAIL_VIEWPORT_MARGIN;
+    const left = hasRightSpace
+      ? rightSideLeft
+      : hasLeftSpace
+        ? leftSideLeft
+        : Math.max(
+            ASSET_DETAIL_VIEWPORT_MARGIN,
+            window.innerWidth - ASSET_DETAIL_CARD_WIDTH - ASSET_DETAIL_VIEWPORT_MARGIN,
+          );
+
+    setAssetDetailPosition({
+      left,
+      top: Math.max(80, anchorRect.top),
+    });
+  }, []);
+
   const syncAssetData = useCallback(
-    async (
-      projectId: string,
-      showLoading: boolean,
-      loadingAction: AssetLoadingAction = null,
-    ) => {
+    async (projectId: string, showLoading: boolean, loadingAction: AssetLoadingAction = null) => {
       if (showLoading) setLoadingImages(true);
 
       try {
@@ -159,10 +220,8 @@ export function AssetsPanel() {
 
         if (
           project &&
-          (
-            !currentProjectRef.current ||
-            getProjectSyncSignature(currentProjectRef.current) !== getProjectSyncSignature(project)
-          )
+          (!currentProjectRef.current ||
+            getProjectSyncSignature(currentProjectRef.current) !== getProjectSyncSignature(project))
         ) {
           currentProjectRef.current = project;
           setCurrentProject(project);
@@ -255,16 +314,20 @@ export function AssetsPanel() {
 
   const visibleAssets = useMemo(() => {
     const normalizedSearch = searchValue.trim().toLowerCase();
-    return projectImages.filter(
-      (asset) =>
-        matchesAssetTab(asset, activeTab) &&
-        (normalizedSearch
+    const imageById = new Map(projectImages.map((asset) => [asset.id, asset]));
+    const assetIds = getProjectAssetIds(currentProject?.assets, activeTab);
+
+    return assetIds
+      .map((assetId) => imageById.get(assetId))
+      .filter((asset): asset is ProjectImageAsset => Boolean(asset))
+      .filter((asset) =>
+        normalizedSearch
           ? `${asset.id} ${asset.name} ${asset.type} ${asset.prompt} ${asset.source}`
               .toLowerCase()
               .includes(normalizedSearch)
-          : true),
-    );
-  }, [activeTab, projectImages, searchValue]);
+          : true,
+      );
+  }, [activeTab, currentProject?.assets, projectImages, searchValue]);
   const selectedAsset = useMemo(
     () => visibleAssets.find((asset) => asset.id === selectedAssetId) ?? null,
     [selectedAssetId, visibleAssets],
@@ -283,9 +346,11 @@ export function AssetsPanel() {
   );
   const selectedModelId = imageModelOptions.some((model) => model.id === selectedImageModelId)
     ? selectedImageModelId
-    : imageModelOptions[0]?.id ?? "";
+    : (imageModelOptions[0]?.id ?? "");
   const selectedImageModel = config.imageModels.find((model) => model.id === selectedModelId);
-  const selectedChatCommandStatus = selectedChatAsset ? commandStatuses[selectedChatAsset.id] : undefined;
+  const selectedChatCommandStatus = selectedChatAsset
+    ? commandStatuses[selectedChatAsset.id]
+    : undefined;
   const selectedChatCommandStatusLabel = selectedChatCommandStatus
     ? tCanvas(`mediaGrid.${selectedChatCommandStatus}`)
     : undefined;
@@ -300,24 +365,34 @@ export function AssetsPanel() {
   useEffect(() => {
     if (!selectedAssetId) return;
 
+    const handleAssetDetailReposition = () => updateAssetDetailPosition(selectedAssetId);
+    const frameId = requestAnimationFrame(handleAssetDetailReposition);
+
     function handlePointerDown(event: PointerEvent) {
       const target = event.target;
       if (!(target instanceof Element)) {
         setSelectedAssetId(null);
+        setAssetDetailPosition(null);
         return;
       }
 
       if (!target.closest(ASSET_DETAIL_CLOSE_SELECTOR)) {
         setSelectedAssetId(null);
+        setAssetDetailPosition(null);
       }
     }
 
     document.addEventListener("pointerdown", handlePointerDown);
+    window.addEventListener("resize", handleAssetDetailReposition);
+    window.addEventListener("scroll", handleAssetDetailReposition, true);
 
     return () => {
+      cancelAnimationFrame(frameId);
       document.removeEventListener("pointerdown", handlePointerDown);
+      window.removeEventListener("resize", handleAssetDetailReposition);
+      window.removeEventListener("scroll", handleAssetDetailReposition, true);
     };
-  }, [selectedAssetId]);
+  }, [selectedAssetId, updateAssetDetailPosition]);
 
   useEffect(() => {
     if (!selectedChatAssetId) return;
@@ -362,6 +437,7 @@ export function AssetsPanel() {
       });
       if (selectedAssetId === deletingAsset.id) {
         setSelectedAssetId(null);
+        setAssetDetailPosition(null);
       }
       if (selectedChatAssetId === deletingAsset.id) {
         setSelectedChatAssetId(null);
@@ -396,10 +472,7 @@ export function AssetsPanel() {
       {
         attachments: [],
         html: "",
-        text:
-          action === "parse"
-            ? ASSET_PARSE_USER_PROMPT
-            : ASSET_GENERATE_USER_PROMPT,
+        text: action === "parse" ? ASSET_PARSE_USER_PROMPT : ASSET_GENERATE_USER_PROMPT,
       },
       {
         featureSkill: action === "parse" ? "asset-parse" : "asset-generate",
@@ -410,6 +483,8 @@ export function AssetsPanel() {
   const openAssetChat = (assetId: string, anchorElement: HTMLElement) => {
     const anchorRect = anchorElement.getBoundingClientRect();
 
+    setSelectedAssetId(null);
+    setAssetDetailPosition(null);
     setSelectedChatAssetId(assetId);
     setAssetChatPosition({
       left: anchorRect.right + 12,
@@ -559,133 +634,127 @@ export function AssetsPanel() {
                       <span className="text-xs">{t("assetPanel.addAsset")}</span>
                     </Button>
 
-                    {visibleAssets.map((asset, assetIndex) => {
-                      const gridIndex = assetIndex + 1;
+                    {visibleAssets.map((asset) => {
                       const commandStatus = commandStatuses[asset.id];
                       const commandStatusLabel = commandStatus
                         ? tCanvas(`mediaGrid.${commandStatus}`)
                         : "";
-                      const gridColumn = gridIndex % ASSET_GRID_COLUMNS;
-                      const canShowDetailToRight =
-                        gridColumn <= ASSET_GRID_COLUMNS - ASSET_DETAIL_SPAN - 1;
-                      const detailColumnClass = canShowDetailToRight
-                        ? "col-span-3"
-                        : "col-start-2 col-span-4";
 
                       return (
-                        <Fragment key={asset.id}>
-                          <div
-                            data-asset-chat-trigger={asset.id}
-                            className="group relative cursor-pointer overflow-hidden rounded-lg"
-                            onClick={(event) => openAssetChat(asset.id, event.currentTarget)}
-                          >
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  data-asset-detail-trigger
-                                  type="button"
-                                  variant="ghost"
-                                  size="icon-xs"
-                                  aria-label={t("assetPanel.deleteAsset")}
-                                  onClick={(event) => {
-                                    event.stopPropagation();
-                                    setDeletingAsset(asset);
-                                  }}
-                                  className="absolute top-1 right-1 z-10 size-6 bg-background/90 text-muted-foreground opacity-0 shadow-sm transition-opacity hover:text-destructive group-hover:opacity-100"
-                                >
-                                  <Trash2 className="size-3.5" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent side="top">
-                                {t("assetPanel.deleteAsset")}
-                              </TooltipContent>
-                            </Tooltip>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="icon-xs"
-                                  aria-label={t("assetPanel.detail.open")}
-                                  aria-pressed={selectedAssetId === asset.id}
-                                  onClick={(event) => {
-                                    event.stopPropagation();
-                                    setSelectedAssetId((currentAssetId) =>
-                                      currentAssetId === asset.id ? null : asset.id,
+                        <div
+                          key={asset.id}
+                          ref={setAssetTileRef(asset.id)}
+                          data-asset-chat-trigger={asset.id}
+                          className="group relative cursor-pointer overflow-hidden rounded-lg"
+                          onClick={(event) => openAssetChat(asset.id, event.currentTarget)}
+                        >
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                data-asset-detail-trigger
+                                type="button"
+                                variant="ghost"
+                                size="icon-xs"
+                                aria-label={t("assetPanel.deleteAsset")}
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  setDeletingAsset(asset);
+                                }}
+                                className="absolute top-1 right-1 z-10 size-6 bg-background/90 text-muted-foreground opacity-0 shadow-sm transition-opacity hover:text-destructive group-hover:opacity-100"
+                              >
+                                <Trash2 className="size-3.5" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top">
+                              {t("assetPanel.deleteAsset")}
+                            </TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                data-asset-detail-trigger
+                                type="button"
+                                variant="ghost"
+                                size="icon-xs"
+                                aria-label={t("assetPanel.detail.open")}
+                                aria-pressed={selectedAssetId === asset.id}
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  setSelectedAssetId((currentAssetId) => {
+                                    if (currentAssetId === asset.id) {
+                                      setAssetDetailPosition(null);
+                                      return null;
+                                    }
+
+                                    setSelectedChatAssetId(null);
+                                    setAssetChatPosition(null);
+                                    requestAnimationFrame(() =>
+                                      updateAssetDetailPosition(asset.id),
                                     );
-                                  }}
-                                  className="absolute top-1 left-1 z-10 size-6 bg-background/90 text-muted-foreground opacity-0 shadow-sm transition-opacity hover:text-foreground aria-pressed:opacity-100 aria-pressed:text-foreground group-hover:opacity-100"
-                                >
-                                  <Info className="size-3.5" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent side="top">
-                                {t("assetPanel.detail.open")}
-                              </TooltipContent>
-                            </Tooltip>
-                            <div
-                              className={cn(
-                                "relative flex aspect-square items-center justify-center overflow-hidden rounded-md border bg-muted/40 transition-colors duration-150",
-                                selectedAssetId === asset.id
-                                  ? "border-primary"
-                                  : "border-border group-hover:border-primary",
-                              )}
-                            >
-                              {asset.url && !failedImageIds.has(asset.id) ? (
-                                <Image
-                                  src={asset.url}
-                                  alt={asset.name || asset.id}
-                                  fill
-                                  sizes="88px"
-                                  className="object-cover"
-                                  onError={() => handleImageError(asset.id)}
-                                />
-                              ) : (
-                                <div className="flex flex-col items-center gap-1 text-muted-foreground">
-                                  {commandStatus === "loading" ? (
-                                    <Loader2 className="size-6 animate-spin" />
-                                  ) : (
-                                    <ImageIcon className="size-6" />
-                                  )}
-                                  <span className="text-xs">
-                                    {commandStatusLabel || t("assetPanel.imagePending")}
-                                  </span>
-                                </div>
-                              )}
-                              {commandStatusLabel && asset.url && !failedImageIds.has(asset.id) ? (
-                                <div className="pointer-events-none absolute right-1 top-1 z-10 flex items-center gap-1 rounded-full bg-background/90 px-1.5 py-0.5 text-[10px] text-foreground shadow-sm">
-                                  {commandStatus === "loading" ? (
-                                    <Loader2 className="size-3 animate-spin" />
-                                  ) : commandStatus === "success" ? (
-                                    <CheckCircle2 className="size-3 text-emerald-500" />
-                                  ) : (
-                                    <AlertCircle className="size-3 text-destructive" />
-                                  )}
-                                  <span>{commandStatusLabel}</span>
-                                </div>
-                              ) : null}
-                              {selectedChatAssetId && selectedChatAssetId !== asset.id ? (
-                                <div
-                                  className="pointer-events-none absolute inset-0 z-20 bg-background/70 backdrop-blur-[1px]"
-                                  aria-hidden="true"
-                                />
-                              ) : null}
-                            </div>
-                            <div className="flex min-h-7 items-center px-1.5 py-1">
-                              <span className="truncate text-xs">{asset.name || asset.id}</span>
-                            </div>
+                                    return asset.id;
+                                  });
+                                }}
+                                className="absolute top-1 left-1 z-10 size-6 bg-background/90 text-muted-foreground opacity-0 shadow-sm transition-opacity hover:text-foreground aria-pressed:opacity-100 aria-pressed:text-foreground group-hover:opacity-100"
+                              >
+                                <Info className="size-3.5" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top">
+                              {t("assetPanel.detail.open")}
+                            </TooltipContent>
+                          </Tooltip>
+                          <div
+                            className={cn(
+                              "relative flex aspect-square items-center justify-center overflow-hidden rounded-md border bg-muted/40 transition-colors duration-150",
+                              selectedAssetId === asset.id
+                                ? "border-primary"
+                                : "border-border group-hover:border-primary",
+                            )}
+                          >
+                            {asset.url && !failedImageIds.has(asset.id) ? (
+                              <Image
+                                src={asset.url}
+                                alt={asset.name || asset.id}
+                                fill
+                                sizes="88px"
+                                className="object-cover"
+                                onError={() => handleImageError(asset.id)}
+                              />
+                            ) : (
+                              <div className="flex flex-col items-center gap-1 text-muted-foreground">
+                                {commandStatus === "loading" ? (
+                                  <Loader2 className="size-6 animate-spin" />
+                                ) : (
+                                  <ImageIcon className="size-6" />
+                                )}
+                                <span className="text-xs">
+                                  {commandStatusLabel || t("assetPanel.imagePending")}
+                                </span>
+                              </div>
+                            )}
+                            {commandStatusLabel && asset.url && !failedImageIds.has(asset.id) ? (
+                              <div className="pointer-events-none absolute right-1 top-1 z-10 flex items-center gap-1 rounded-full bg-background/90 px-1.5 py-0.5 text-[10px] text-foreground shadow-sm">
+                                {commandStatus === "loading" ? (
+                                  <Loader2 className="size-3 animate-spin" />
+                                ) : commandStatus === "success" ? (
+                                  <CheckCircle2 className="size-3 text-emerald-500" />
+                                ) : (
+                                  <AlertCircle className="size-3 text-destructive" />
+                                )}
+                                <span>{commandStatusLabel}</span>
+                              </div>
+                            ) : null}
+                            {selectedChatAssetId && selectedChatAssetId !== asset.id ? (
+                              <div
+                                className="pointer-events-none absolute inset-0 z-20 bg-background/70 backdrop-blur-[1px]"
+                                aria-hidden="true"
+                              />
+                            ) : null}
                           </div>
-                          {selectedAsset?.id === asset.id ? (
-                            <AssetDetailCard
-                              asset={selectedAsset}
-                              childAssets={selectedAssetChildren}
-                              failedImageIds={failedImageIds}
-                              onImageError={handleImageError}
-                              onClose={() => setSelectedAssetId(null)}
-                              className={detailColumnClass}
-                            />
-                          ) : null}
-                        </Fragment>
+                          <div className="flex min-h-7 items-center px-1.5 py-1">
+                            <span className="truncate text-xs">{asset.name || asset.id}</span>
+                          </div>
+                        </div>
                       );
                     })}
                   </div>
@@ -695,6 +764,31 @@ export function AssetsPanel() {
           </TabsContent>
         ))}
       </Tabs>
+
+      {typeof document !== "undefined" && selectedAsset && assetDetailPosition
+        ? createPortal(
+            <div
+              className="fixed z-[998] w-[min(356px,calc(100vw-24px))]"
+              style={{
+                left: assetDetailPosition.left,
+                top: assetDetailPosition.top,
+              }}
+            >
+              <AssetDetailCard
+                asset={selectedAsset}
+                childAssets={selectedAssetChildren}
+                failedImageIds={failedImageIds}
+                onImageError={handleImageError}
+                onClose={() => {
+                  setSelectedAssetId(null);
+                  setAssetDetailPosition(null);
+                }}
+                className="max-h-[min(560px,calc(100vh-96px))]"
+              />
+            </div>,
+            document.body,
+          )
+        : null}
 
       {typeof document !== "undefined" && selectedChatAsset && assetChatPosition
         ? createPortal(
@@ -725,6 +819,7 @@ export function AssetsPanel() {
                 modelSelectLabel={tCanvas("chatWindow.modelSelect")}
                 modelOptions={imageModelOptions}
                 mediaMentionImages={[]}
+                preferMediaMentions={false}
                 referenceImages={[]}
                 requiresFirstLastFrame={false}
                 selectedModelId={selectedModelId}
@@ -741,37 +836,37 @@ export function AssetsPanel() {
                   tilt: tCanvas("chatWindow.videoShots.tilt"),
                   tracking: tCanvas("chatWindow.videoShots.tracking"),
                   orbit: tCanvas("chatWindow.videoShots.orbit"),
-                handheld: tCanvas("chatWindow.videoShots.handheld"),
-              }}
-              onModelChange={setSelectedImageModelId}
-              onSubmit={(payload) => {
-                if (!selectedChatAsset) return;
+                  handheld: tCanvas("chatWindow.videoShots.handheld"),
+                }}
+                onModelChange={setSelectedImageModelId}
+                onSubmit={(payload) => {
+                  if (!selectedChatAsset) return;
 
-                void (async () => {
-                  if (!currentProject || !selectedImageModel) return;
+                  void (async () => {
+                    if (!currentProject || !selectedImageModel) return;
 
-                  try {
-                    await saveProjectSelectedModel(currentProject.id, {
-                      apiKey: selectedImageModel.apiKey,
-                      example: selectedImageModel.example,
-                      id: selectedImageModel.id,
-                      name: selectedImageModel.name,
-                      type: "image",
-                    });
+                    try {
+                      await saveProjectSelectedModel(currentProject.id, {
+                        apiKey: selectedImageModel.apiKey,
+                        example: selectedImageModel.example,
+                        id: selectedImageModel.id,
+                        name: selectedImageModel.name,
+                        type: "image",
+                      });
 
-                    await executeSilentAgentCommand(payload, {
-                      featureSkill: "node-image-generate",
-                      mediaId: selectedChatAsset.id,
-                      mediaName: selectedChatAsset.name || selectedChatAsset.id,
-                      mediaType: selectedChatAsset.type,
-                      scope: "asset-grid",
-                    });
-                  } catch {
-                    // The agent run depends on the project model config being current.
-                  }
-                })();
-              }}
-            />
+                      await executeSilentAgentCommand(payload, {
+                        featureSkill: "node-image-generate",
+                        mediaId: selectedChatAsset.id,
+                        mediaName: selectedChatAsset.name || selectedChatAsset.id,
+                        mediaType: selectedChatAsset.type,
+                        scope: "asset-grid",
+                      });
+                    } catch {
+                      // The agent run depends on the project model config being current.
+                    }
+                  })();
+                }}
+              />
             </div>,
             document.body,
           )
@@ -811,7 +906,11 @@ export function AssetsPanel() {
           setProjectImages(images);
           setFailedImageIds(new Set());
         }}
-        onImported={(image) => setSelectedAssetId(image.id)}
+        onImported={(image) => {
+          setSelectedChatAssetId(null);
+          setAssetChatPosition(null);
+          setSelectedAssetId(image.id);
+        }}
         onProjectUpdated={setCurrentProject}
         onOpenChange={setCreateDialogOpen}
         open={createDialogOpen}

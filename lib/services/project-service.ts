@@ -27,6 +27,7 @@ const PROJECT_COMMAND_FILE_NAME = "command.json";
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const TEMP_FILE_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.[a-z0-9]{1,12}$/i;
 const IMAGE_FILE_PATTERN = /^image-[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.[a-z0-9]{1,12}$/i;
+const PROJECT_IMAGE_FILE_PATTERN = /^[a-z0-9][a-z0-9._-]{0,127}\.(png|jpg|jpeg|webp|gif)$/i;
 const VIDEO_FILE_PATTERN = /^video-[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.[a-z0-9]{1,12}$/i;
 const COMMAND_STATUS_VALUES = new Set(["loading", "error", "success"]);
 const EMPTY_FLOW_STATE: FlowState = { nodes: [], edges: [] };
@@ -198,6 +199,7 @@ function readProjectStoryboards(value: unknown): ProjectStoryboard[] {
         name: readString(storyboard.name),
         description: readString(storyboard.description),
         prompt: readString(storyboard.prompt),
+        videoPrompt: readString(storyboard.videoPrompt),
         images: readStringArray(storyboard.images),
         videos: readStringArray(storyboard.videos),
         selectedVideo: readString(storyboard.selectedVideo),
@@ -1067,6 +1069,28 @@ export async function updateProjectImageFile(params: {
   }
 }
 
+export async function addProjectImageToStoryboard(params: {
+  imageId: string;
+  projectId: string;
+  storyboardId: string;
+}): Promise<
+  | { success: true; episodeId: string; storyboards: ProjectStoryboard[] }
+  | { success: false; error: string }
+> {
+  return updateProjectStoryboard({
+    projectId: params.projectId,
+    update: (storyboard) => {
+      if (storyboard.id !== params.storyboardId) return storyboard;
+      if (storyboard.images.includes(params.imageId)) return storyboard;
+
+      return {
+        ...storyboard,
+        images: [params.imageId, ...storyboard.images],
+      };
+    },
+  });
+}
+
 export async function addExistingImageToProjectAssets(params: {
   category: string;
   imageId: string;
@@ -1465,7 +1489,7 @@ export async function readProjectImageFile(params: {
   { success: true; buffer: Buffer; contentType: string } | { success: false; error: string }
 > {
   try {
-    if (!IMAGE_FILE_PATTERN.test(params.fileName)) {
+    if (!IMAGE_FILE_PATTERN.test(params.fileName) && !PROJECT_IMAGE_FILE_PATTERN.test(params.fileName)) {
       return { success: false, error: "INVALID_IMAGE_FILE_NAME" };
     }
 

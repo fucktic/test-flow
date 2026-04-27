@@ -5,6 +5,8 @@ import Image from "next/image";
 import { useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { ProjectImageAsset } from "@/lib/project-types";
 import { cn } from "@/lib/utils";
 
@@ -70,7 +72,7 @@ export function AssetDetailCard({
     <section
       data-asset-detail-card
       className={cn(
-        "overflow-hidden rounded-md border border-border bg-foreground/15 text-foreground shadow-sm  backdrop-blur-2xl",
+        "flex flex-col overflow-hidden rounded-md border border-border bg-foreground/15 text-foreground shadow-sm  backdrop-blur-2xl",
         "motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-left-2 motion-safe:zoom-in-95 motion-safe:duration-200",
         className,
       )}
@@ -117,28 +119,43 @@ export function AssetDetailCard({
         </div>
       </div>
 
-      <div className=" px-3 py-2">
-        <div className="space-y-2">
-          {childAssets.map((childAsset) => (
-            <div key={childAsset.id} className="flex items-start gap-2 border-l border-border pl-2">
-              <div className="size-9 shrink-0">
-                <AssetPreview
-                  asset={childAsset}
-                  failedImageIds={failedImageIds}
-                  imageSize="36px"
-                  onImageError={onImageError}
-                />
+      {childAssets.length > 0 ? (
+        <ScrollArea className="h-[min(360px,calc(100vh-220px))] px-3 pb-3">
+          <div className="space-y-2 pl-20 pr-2">
+            {childAssets.map((childAsset) => (
+              <div
+                key={childAsset.id}
+                className="flex items-start gap-2 border-l border-border pl-2"
+              >
+                <div className="size-14 shrink-0">
+                  <AssetPreview
+                    asset={childAsset}
+                    failedImageIds={failedImageIds}
+                    imageSize="56px"
+                    onImageError={onImageError}
+                  />
+                </div>
+                <div className="min-w-0 flex-1 pt-0.5">
+                  <p className="truncate text-xs font-medium">{getAssetLabel(childAsset)}</p>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <p className="mt-0.5 line-clamp-2 cursor-help text-xs leading-relaxed">
+                        {childAsset.prompt || t("assetPanel.detail.emptyValue")}
+                      </p>
+                    </TooltipTrigger>
+                    <TooltipContent
+                      className="z-[1000] max-w-80 whitespace-normal leading-relaxed"
+                      side="top"
+                    >
+                      {childAsset.prompt || t("assetPanel.detail.emptyValue")}
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
               </div>
-              <div className="min-w-0 flex-1 pt-0.5">
-                <p className="truncate text-xs font-medium">{getAssetLabel(childAsset)}</p>
-                <p className="mt-0.5 line-clamp-2 text-xs leading-relaxed ">
-                  {childAsset.prompt || t("assetPanel.detail.emptyValue")}
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+            ))}
+          </div>
+        </ScrollArea>
+      ) : null}
     </section>
   );
 }

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import {
   addExistingImageToProjectAssets,
+  addProjectImageToStoryboard,
   createProjectImage,
   deleteProjectImage,
   getProjectImages,
@@ -121,10 +122,30 @@ export async function PATCH(request: Request, context: { params: Promise<{ proje
   try {
     const { projectId } = await context.params;
     const body = (await request.json()) as {
+      action?: unknown;
       category?: unknown;
       imageId?: unknown;
       parentId?: unknown;
+      storyboardId?: unknown;
     };
+    if (
+      body.action === "storyboard" &&
+      typeof body.storyboardId === "string" &&
+      typeof body.imageId === "string"
+    ) {
+      const result = await addProjectImageToStoryboard({
+        imageId: body.imageId,
+        projectId,
+        storyboardId: body.storyboardId,
+      });
+      if (!result.success) return toErrorResponse();
+
+      return NextResponse.json({
+        episodeId: result.episodeId,
+        storyboards: result.storyboards,
+      });
+    }
+
     if (typeof body.category !== "string" || typeof body.imageId !== "string") {
       return toErrorResponse();
     }

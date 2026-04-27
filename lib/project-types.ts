@@ -41,6 +41,7 @@ export type ProjectStoryboard = {
   name: string;
   description: string;
   prompt: string;
+  videoPrompt: string;
   images: string[];
   videos: string[];
   selectedVideo: string;

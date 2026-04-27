@@ -139,6 +139,13 @@
       "promptPairSeparator": "：",
       "firstFrame": "首帧图",
       "lastFrame": "尾帧图",
+      "assetCategories": {
+        "character": "角色",
+        "prop": "道具",
+        "scene": "场景",
+        "reference": "参考图",
+        "unknown": "其他"
+      },
       "videoShot": "镜头",
       "videoDuration": "时长",
       "videoDurationUnit": "s",
