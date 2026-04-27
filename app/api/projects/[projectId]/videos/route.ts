@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import {
   addProjectVideoToStoryboard,
+  clearProjectStoryboardSelectedVideo,
   createProjectVideo,
   deleteProjectVideo,
   getProjectVideos,
@@ -88,7 +89,9 @@ export async function PATCH(request: Request, context: { params: Promise<{ proje
     if (!storyboardId || !videoId) return toErrorResponse();
 
     const result =
-      body.action === "select"
+      body.action === "clear-selection"
+        ? await clearProjectStoryboardSelectedVideo({ projectId, storyboardId, videoId })
+        : body.action === "select"
         ? await setProjectStoryboardSelectedVideo({ projectId, storyboardId, videoId })
         : await addProjectVideoToStoryboard({ projectId, storyboardId, videoId });
     if (!result.success) return toErrorResponse();

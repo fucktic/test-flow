@@ -1249,6 +1249,29 @@ export async function setProjectStoryboardSelectedVideo(params: {
   });
 }
 
+export async function clearProjectStoryboardSelectedVideo(params: {
+  projectId: string;
+  storyboardId: string;
+  videoId: string;
+}): Promise<
+  | { success: true; episodeId: string; storyboards: ProjectStoryboard[] }
+  | { success: false; error: string }
+> {
+  return updateProjectStoryboard({
+    projectId: params.projectId,
+    update: (storyboard) => {
+      if (storyboard.id !== params.storyboardId || storyboard.selectedVideo !== params.videoId) {
+        return storyboard;
+      }
+
+      return {
+        ...storyboard,
+        selectedVideo: "",
+      };
+    },
+  });
+}
+
 export async function deleteProjectVideo(params: {
   projectId: string;
   videoId: string;

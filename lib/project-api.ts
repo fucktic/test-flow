@@ -386,6 +386,22 @@ export async function selectProjectStoryboardVideo(
   );
 }
 
+export async function clearProjectStoryboardSelectedVideo(
+  projectId: string,
+  storyboardId: string,
+  videoId: string,
+): Promise<void> {
+  await readJsonResponse<{ storyboards?: ProjectStoryboard[] }>(
+    await fetch(`/api/projects/${encodeURIComponent(projectId)}/videos`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ action: "clear-selection", storyboardId, videoId }),
+    }),
+  );
+}
+
 export async function deleteProjectVideo(
   projectId: string,
   videoId: string,

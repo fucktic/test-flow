@@ -93,6 +93,7 @@ type CanvasState = {
     mediaType: "image" | "video",
   ) => void;
   setStoryboardSelectedVideo: (storyboardId: string, videoId: string) => void;
+  clearStoryboardSelectedVideo: (storyboardId: string, videoId: string) => void;
   updateImageAsset: (image: ProjectImageAsset) => void;
   updateVideoAsset: (video: ProjectVideoAsset) => void;
   addNode: (label: string) => void;
@@ -805,6 +806,49 @@ export const useCanvasStore = create<CanvasState>((set) => ({
               ? {
                   ...storyboard,
                   selectedVideo: videoId,
+                }
+              : storyboard,
+          ),
+        },
+      };
+      const nextCanvasDataByEpisode = {
+        ...state.currentCanvasDataByEpisode,
+        [targetEpisodeId]: nextTargetCanvasData,
+      };
+      const nextCanvas = buildSelectedEpisodesCanvas(
+        state.currentProject,
+        state.selectedEpisodeIds,
+        nextCanvasDataByEpisode,
+        state.selectedStoryboardIds,
+        state.commandStatuses,
+      );
+
+      return {
+        currentCanvasData: nextCanvas.currentCanvasData,
+        currentCanvasDataByEpisode: nextCanvasDataByEpisode,
+        nodes: nextCanvas.nodes,
+        edges: nextCanvas.edges,
+      };
+    }),
+  clearStoryboardSelectedVideo: (storyboardId, videoId) =>
+    set((state) => {
+      const targetEpisodeId = Object.entries(state.currentCanvasDataByEpisode).find(([, canvasData]) =>
+        canvasData.data.storyboards.some((storyboard) => storyboard.id === storyboardId),
+      )?.[0];
+      if (!targetEpisodeId) return {};
+
+      const targetCanvasData = state.currentCanvasDataByEpisode[targetEpisodeId];
+      if (!targetCanvasData) return {};
+
+      const nextTargetCanvasData: CurrentCanvasData = {
+        ...targetCanvasData,
+        data: {
+          ...targetCanvasData.data,
+          storyboards: targetCanvasData.data.storyboards.map((storyboard) =>
+            storyboard.id === storyboardId && storyboard.selectedVideo === videoId
+              ? {
+                  ...storyboard,
+                  selectedVideo: "",
                 }
               : storyboard,
           ),
