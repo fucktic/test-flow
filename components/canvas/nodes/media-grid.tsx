@@ -212,7 +212,7 @@ function MediaPreview({
       ) : null}
         {hasActiveSelection && !isSelected ? (
           <div
-            className="pointer-events-none absolute inset-0 z-[5] bg-black/55 backdrop-blur-[1px]"
+            className="pointer-events-none absolute inset-0 z-5 bg-black/55 backdrop-blur-[1px]"
             aria-hidden="true"
           />
         ) : null}
