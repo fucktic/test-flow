@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { fetchProjectCanvasData, type ProjectCanvasData } from "@/lib/project-api";
 import type { ProjectEpisode, ProjectVideoAsset } from "@/lib/project-types";
 import { cn } from "@/lib/utils";
@@ -46,10 +47,6 @@ function createMissingVideo(videoId: string): ProjectVideoAsset {
   };
 }
 
-function readNodeSceneId(data: Record<string, unknown>) {
-  return typeof data.sceneId === "string" ? data.sceneId : "";
-}
-
 function parseVideoDuration(duration: string) {
   const value = duration.trim().toLowerCase();
   if (!value) return null;
@@ -87,10 +84,11 @@ export function VideoFooter() {
   const currentProject = useCanvasStore((state) => state.currentProject);
   const currentCanvasData = useCanvasStore((state) => state.currentCanvasData);
   const storeCanvasDataByEpisode = useCanvasStore((state) => state.currentCanvasDataByEpisode);
-  const nodes = useCanvasStore((state) => state.nodes);
-  const selectedMediaGridItem = useCanvasStore((state) => state.selectedMediaGridItem);
+  const activeEpisodeIdFromStore = useCanvasStore((state) => state.activeEpisodeId);
+  const activeStoryboardIdFromStore = useCanvasStore((state) => state.activeStoryboardId);
   const open = useLayoutStore((state) => state.videoFooterOpen);
   const onClose = useLayoutStore((state) => state.closeVideoFooter);
+  const toggleVideoFooter = useLayoutStore((state) => state.toggleVideoFooter);
   const [canvasDataByEpisode, setCanvasDataByEpisode] = useState<CanvasDataByEpisode>({});
 
   useEffect(() => {
@@ -139,16 +137,20 @@ export function VideoFooter() {
   }, [canvasDataByEpisode, storeCanvasDataByEpisode]);
 
   const activeStoryboardId = useMemo(() => {
-    if (selectedMediaGridItem?.sceneId) return selectedMediaGridItem.sceneId;
-
-    const selectedNode = nodes.find((node) => node.selected && readNodeSceneId(node.data));
-    if (selectedNode) return readNodeSceneId(selectedNode.data);
-
+    if (activeStoryboardIdFromStore) return activeStoryboardIdFromStore;
     return currentCanvasData?.data.storyboards[0]?.id ?? "";
-  }, [currentCanvasData?.data.storyboards, nodes, selectedMediaGridItem?.sceneId]);
+  }, [activeStoryboardIdFromStore, currentCanvasData?.data.storyboards]);
 
   const activeEpisode = useMemo<ActiveEpisode | null>(() => {
     if (!currentProject) return null;
+
+    const activeEpisodeFromStore = currentProject.episodes.find(
+      (episode) => episode.id === activeEpisodeIdFromStore,
+    );
+    if (activeEpisodeFromStore) {
+      const canvasData = visibleCanvasDataByEpisode[activeEpisodeFromStore.id];
+      return canvasData ? { canvasData, episode: activeEpisodeFromStore } : null;
+    }
 
     const matchedEpisode = currentProject.episodes.find((episode) =>
       visibleCanvasDataByEpisode[episode.id]?.storyboards.some(
@@ -170,7 +172,13 @@ export function VideoFooter() {
       canvasData: currentCanvasData.data,
       episode: fallbackEpisode,
     };
-  }, [activeStoryboardId, currentCanvasData, currentProject, visibleCanvasDataByEpisode]);
+  }, [
+    activeEpisodeIdFromStore,
+    activeStoryboardId,
+    currentCanvasData,
+    currentProject,
+    visibleCanvasDataByEpisode,
+  ]);
 
   const selectedVideos = useMemo<SelectedStoryboardVideo[]>(() => {
     if (!activeEpisode) return [];
@@ -219,18 +227,38 @@ export function VideoFooter() {
     0,
   );
   return (
-    <div
-      className={cn(
-        "relative w-full overflow-hidden border-t border-border bg-card/95 text-card-foreground shadow-[0_-18px_50px_rgba(0,0,0,0.34)] backdrop-blur-md",
-        !open && "pointer-events-none",
-      )}
-      style={{
-        maxHeight: open ? "12.5rem" : "0rem",
-        opacity: open ? 1 : 0,
-        transition: "max-height 360ms cubic-bezier(0.22, 1, 0.36, 1), opacity 220ms ease-out",
-      }}
-      aria-hidden={!open}
-    >
+    <>
+      {!open ? (
+        <TooltipProvider delayDuration={300}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                aria-label={t("open")}
+                className="fixed bottom-4 left-1/2 z-30 flex size-9 -translate-x-1/2 items-center justify-center rounded-lg border bg-card text-muted-foreground shadow-xl transition-colors hover:bg-accent hover:text-foreground"
+                onClick={toggleVideoFooter}
+              >
+                <Video className="size-5" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="top">
+              <p>{t("open")}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      ) : null}
+      <div
+        className={cn(
+          "relative w-full overflow-hidden border-t border-border bg-card/95 text-card-foreground shadow-[0_-18px_50px_rgba(0,0,0,0.34)] backdrop-blur-md",
+          !open && "pointer-events-none",
+        )}
+        style={{
+          maxHeight: open ? "12.5rem" : "0rem",
+          opacity: open ? 1 : 0,
+          transition: "max-height 360ms cubic-bezier(0.22, 1, 0.36, 1), opacity 220ms ease-out",
+        }}
+        aria-hidden={!open}
+      >
       <Button
         type="button"
         size="icon"
@@ -257,7 +285,7 @@ export function VideoFooter() {
             </span>
           </div>
 
-          <div className="h-[7.75rem] overflow-x-auto overflow-y-hidden pb-2">
+          <div className="h-31 overflow-x-auto overflow-y-hidden pb-2">
             {timelineVideos.length > 0 ? (
               <div className="flex h-full min-w-full flex-nowrap items-stretch gap-1 border-l border-border">
                 {timelineVideos.map(
@@ -332,6 +360,7 @@ export function VideoFooter() {
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 }

@@ -78,6 +78,8 @@ type CanvasState = {
   nodes: CanvasNode[];
   edges: CanvasEdge[];
   selectedEpisodeIds: string[];
+  activeEpisodeId: string;
+  activeStoryboardId: string;
   selectedStoryboardIds: string[];
   selectedMediaGridItem: SelectedMediaGridItem | null;
   addImageToStoryboard: (storyboardId: string, image: ProjectImageAsset) => void;
@@ -99,6 +101,8 @@ type CanvasState = {
   selectMediaGridItem: (selection: SelectedMediaGridItem) => void;
   setCommandStatus: (gridId: string, status: ProjectCommandStatus) => void;
   setCommandStatuses: (statuses: Record<string, ProjectCommandStatus>) => void;
+  setActiveEpisodeId: (episodeId: string) => void;
+  setActiveStoryboardId: (storyboardId: string) => void;
   setProjectCanvasData: (projectId: string, episodeId: string, data: ProjectCanvasData) => void;
   setProjectCanvasDataBatch: (
     projectId: string,
@@ -358,6 +362,8 @@ export const useCanvasStore = create<CanvasState>((set) => ({
   currentCanvasData: null,
   currentCanvasDataByEpisode: {},
   selectedEpisodeIds: [],
+  activeEpisodeId: "",
+  activeStoryboardId: "",
   selectedStoryboardIds: [],
   selectedMediaGridItem: null,
   ...buildInitialState(),
@@ -371,6 +377,8 @@ export const useCanvasStore = create<CanvasState>((set) => ({
     }),
   clearSelectedMediaGridItem: () => set({ selectedMediaGridItem: null }),
   selectMediaGridItem: (selection) => set({ selectedMediaGridItem: selection }),
+  setActiveEpisodeId: (episodeId) => set({ activeEpisodeId: episodeId }),
+  setActiveStoryboardId: (storyboardId) => set({ activeStoryboardId: storyboardId }),
   setCurrentProject: (project) =>
     set((state) => ({
       currentProject: project,
@@ -765,6 +773,9 @@ export const useCanvasStore = create<CanvasState>((set) => ({
     }),
   toggleStoryboardSelection: (storyboardId) =>
     set((state) => {
+      const targetEpisodeId = Object.entries(state.currentCanvasDataByEpisode).find(([, canvasData]) =>
+        canvasData.data.storyboards.some((storyboard) => storyboard.id === storyboardId),
+      )?.[0] ?? "";
       const toCanvasState = (selectedStoryboardIds: string[]) => {
         if (!state.currentCanvasData) return { selectedStoryboardIds };
 
@@ -784,10 +795,12 @@ export const useCanvasStore = create<CanvasState>((set) => ({
       };
 
       if (state.selectedStoryboardIds.includes(storyboardId)) {
-        return {
-          ...toCanvasState(state.selectedStoryboardIds.filter((id) => id !== storyboardId)),
-          selectedMediaGridItem: null,
-        };
+      return {
+        ...toCanvasState(state.selectedStoryboardIds.filter((id) => id !== storyboardId)),
+        activeEpisodeId: targetEpisodeId || state.activeEpisodeId,
+        activeStoryboardId: storyboardId,
+        selectedMediaGridItem: null,
+      };
       }
 
       if (state.selectedStoryboardIds.length >= MAX_SELECTED_STORYBOARDS) {
@@ -796,6 +809,8 @@ export const useCanvasStore = create<CanvasState>((set) => ({
 
       return {
         ...toCanvasState([...state.selectedStoryboardIds, storyboardId]),
+        activeEpisodeId: targetEpisodeId || state.activeEpisodeId,
+        activeStoryboardId: storyboardId,
         selectedMediaGridItem: null,
       };
     }),
@@ -980,8 +995,14 @@ export const useCanvasStore = create<CanvasState>((set) => ({
       const currentCanvasData = state.currentCanvasData?.episodeId
         ? nextCanvasDataByEpisode[state.currentCanvasData.episodeId] ?? state.currentCanvasData
         : state.currentCanvasData;
+      const selectedListNode = nextNodes.find(
+        (node) => node.type === "storyboard-list-node" && node.selected,
+      );
+      const selectedListEpisodeId =
+        typeof selectedListNode?.data.episodeId === "string" ? selectedListNode.data.episodeId : "";
 
       return {
+        activeEpisodeId: selectedListEpisodeId || state.activeEpisodeId,
         currentCanvasData,
         currentCanvasDataByEpisode: nextCanvasDataByEpisode,
         nodes: nextNodes,

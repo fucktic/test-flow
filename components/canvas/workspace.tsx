@@ -80,6 +80,7 @@ function CanvasWorkspaceInner() {
     clearSelectedMediaGridItem,
     selectedEpisodeIds,
     selectedMediaGridItem,
+    setActiveEpisodeId,
     setProjectCanvasDataBatch,
   } = useCanvasStore();
   const activeEpisodeIds = useMemo(() => {
@@ -345,6 +346,12 @@ function CanvasWorkspaceInner() {
         onConnect={onConnect}
         onEdgesChange={onEdgesChange}
         onMove={updateChatWindowPosition}
+        onNodeClick={(_event, node) => {
+          if (node.type !== "storyboard-list-node") return;
+
+          const episodeId = typeof node.data.episodeId === "string" ? node.data.episodeId : "";
+          if (episodeId) setActiveEpisodeId(episodeId);
+        }}
         onNodesChange={onNodesChange}
         onPaneClick={clearSelectedMediaGridItem}
       >

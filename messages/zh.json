@@ -247,6 +247,7 @@
       "unknownDuration": "未知",
       "export": "导出",
       "mergeError": "视频合并失败，请确认已安装 ffmpeg。",
+      "open": "展开视频栏",
       "close": "关闭视频栏",
       "storyboardFallback": "S{index}"
     },
