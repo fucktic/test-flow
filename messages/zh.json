@@ -115,7 +115,8 @@
       "cancel": "取消",
       "confirmDelete": "删除",
       "empty": "暂无分镜",
-      "parse": "一键解析"
+      "parse": "一键解析",
+      "parseAssetsFirst": "请先解析资产"
     },
     "storyboardImage": {
       "title": "图片",
@@ -316,6 +317,7 @@
       "confirmDelete": "确认删除",
       "deleting": "删除中...",
       "notParsed": "还未解析资产",
+      "parsing": "正在解析资产...",
       "noCurrentProject": "请先进入项目",
       "loading": "正在加载资产",
       "imagePending": "待生成",

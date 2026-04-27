@@ -41,8 +41,19 @@ const splitExecutable = (raw: string) => {
   };
 };
 
+const logAgentExecute = (label: string, payload: Record<string, unknown>) => {
+  process.stdout.write(
+    `[agent-execute:${label}] ${JSON.stringify(payload, null, 2)}\n`,
+  );
+};
+
 export async function POST(request: Request) {
   try {
+    const requestId = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    logAgentExecute("request", {
+      requestId,
+      url: request.url,
+    });
     const body = (await request.json()) as ExecuteAgentRequest;
     const rawLocale = typeof body.locale === "string" ? body.locale : "zh";
     const messages = AGENT_EXECUTE_MESSAGES[rawLocale] ?? AGENT_EXECUTE_MESSAGES.zh;
@@ -62,6 +73,14 @@ export async function POST(request: Request) {
 
     const spawnArgs = [...prependArgs, ...finalArgs];
     const encoder = new TextEncoder();
+
+    logAgentExecute("spawn", {
+      args: spawnArgs,
+      command: [executable, ...spawnArgs],
+      executable,
+      locale: rawLocale,
+      requestId,
+    });
 
     const stream = new ReadableStream({
       start(controller) {
@@ -87,15 +106,21 @@ export async function POST(request: Request) {
         });
 
         child.stdout.on("data", (data: Buffer) => {
-          safeEnqueue(data.toString());
+          const chunk = data.toString();
+          logAgentExecute("stdout", { chunk, requestId });
+          safeEnqueue(chunk);
         });
 
         child.stderr.on("data", (data: Buffer) => {
-          safeEnqueue(data.toString());
+          const chunk = data.toString();
+          logAgentExecute("stderr", { chunk, requestId });
+          safeEnqueue(chunk);
         });
 
         child.on("close", (code) => {
           if (closed) return;
+
+          logAgentExecute("close", { code, requestId });
 
           if (code !== 0) {
             safeEnqueue(formatMessage(messages.processExitCode, { code: String(code) }));
@@ -108,6 +133,7 @@ export async function POST(request: Request) {
         child.on("error", (error) => {
           if (closed) return;
 
+          logAgentExecute("error", { message: error.message, requestId });
           safeEnqueue(formatMessage(messages.errorMessage, { message: error.message }));
           closed = true;
           controller.close();
@@ -117,6 +143,7 @@ export async function POST(request: Request) {
           if (closed) return;
 
           closed = true;
+          logAgentExecute("abort", { requestId });
           child.kill("SIGKILL");
           controller.close();
         });

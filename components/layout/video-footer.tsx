@@ -86,25 +86,35 @@ export function VideoFooter() {
   const storeCanvasDataByEpisode = useCanvasStore((state) => state.currentCanvasDataByEpisode);
   const activeEpisodeIdFromStore = useCanvasStore((state) => state.activeEpisodeId);
   const activeStoryboardIdFromStore = useCanvasStore((state) => state.activeStoryboardId);
+  const selectedEpisodeIds = useCanvasStore((state) => state.selectedEpisodeIds);
   const open = useLayoutStore((state) => state.videoFooterOpen);
   const onClose = useLayoutStore((state) => state.closeVideoFooter);
   const toggleVideoFooter = useLayoutStore((state) => state.toggleVideoFooter);
   const [canvasDataByEpisode, setCanvasDataByEpisode] = useState<CanvasDataByEpisode>({});
+  const selectedEpisodeKey = selectedEpisodeIds.join(",");
+  const fallbackEpisodeId = currentProject?.episodes[0]?.id ?? "";
+  const currentProjectId = currentProject?.id ?? "";
 
   useEffect(() => {
     let active = true;
+    const episodeIds =
+      selectedEpisodeKey.length > 0
+        ? selectedEpisodeKey.split(",")
+        : fallbackEpisodeId
+          ? [fallbackEpisodeId]
+          : [];
 
     const loadAllStoryboardVideos = async () => {
-      if (!currentProject) {
+      if (!currentProjectId) {
         setCanvasDataByEpisode({});
         return;
       }
 
       try {
         const episodeEntries = await Promise.all(
-          currentProject.episodes.map(async (episode) => [
-            episode.id,
-            await fetchProjectCanvasData(currentProject.id, episode.id),
+          episodeIds.map(async (episodeId) => [
+            episodeId,
+            await fetchProjectCanvasData(currentProjectId, episodeId),
           ] as const),
         );
 
@@ -119,7 +129,7 @@ export function VideoFooter() {
     return () => {
       active = false;
     };
-  }, [currentProject]);
+  }, [currentProjectId, fallbackEpisodeId, selectedEpisodeKey]);
 
   const visibleCanvasDataByEpisode = useMemo<CanvasDataByEpisode>(() => {
     const storeData = Object.fromEntries(
@@ -206,21 +216,26 @@ export function VideoFooter() {
     });
   }, [activeEpisode, t]);
   const timelineVideos = useMemo<TimelineVideo[]>(() => {
-    let elapsedSeconds = 0;
+    return selectedVideos.reduce<{ elapsedSeconds: number; items: TimelineVideo[] }>(
+      (timeline, item) => {
+        const durationSeconds = parseVideoDuration(item.video.duration);
+        const layoutSeconds = durationSeconds ?? FALLBACK_SEGMENT_SECONDS;
 
-    return selectedVideos.map((item) => {
-      const durationSeconds = parseVideoDuration(item.video.duration);
-      const layoutSeconds = durationSeconds ?? FALLBACK_SEGMENT_SECONDS;
-      const timelineItem = {
-        ...item,
-        durationSeconds,
-        layoutSeconds,
-        startSeconds: elapsedSeconds,
-      };
-
-      elapsedSeconds += layoutSeconds;
-      return timelineItem;
-    });
+        return {
+          elapsedSeconds: timeline.elapsedSeconds + layoutSeconds,
+          items: [
+            ...timeline.items,
+            {
+              ...item,
+              durationSeconds,
+              layoutSeconds,
+              startSeconds: timeline.elapsedSeconds,
+            },
+          ],
+        };
+      },
+      { elapsedSeconds: 0, items: [] },
+    ).items;
   }, [selectedVideos]);
   const totalDurationSeconds = timelineVideos.reduce(
     (total, item) => total + (item.durationSeconds ?? 0),

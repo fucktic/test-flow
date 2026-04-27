@@ -3,7 +3,8 @@
 import { useState, type KeyboardEvent } from "react";
 import { useTranslations } from "next-intl";
 import { Handle, Position, type Node, type NodeProps } from "@xyflow/react";
-import { ChevronDown, ChevronUp, Plus, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronUp, Loader2, Plus, Trash2 } from "lucide-react";
+import { useSilentAgentCommand } from "@/components/canvas/use-silent-agent-command";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -15,8 +16,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { type StoryboardListNodeData, useCanvasStore } from "@/store/use-canvas-store";
+import { useLayoutStore } from "@/store/use-layout-store";
 import { NODE_WIDTH_CLASS } from "../constants";
 
 const MAX_SELECTED_STORYBOARDS = 3;
@@ -25,13 +28,16 @@ type StoryboardListNodeType = Node<StoryboardListNodeData, "storyboard-list-node
 
 export function StoryboardListNode({ data, selected }: NodeProps<StoryboardListNodeType>) {
   const t = useTranslations("Canvas");
+  const { execute: executeSilentAgentCommand } = useSilentAgentCommand();
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const addStoryboard = useCanvasStore((state) => state.addStoryboard);
+  const currentProject = useCanvasStore((state) => state.currentProject);
   const deleteStoryboard = useCanvasStore((state) => state.deleteStoryboard);
   const moveStoryboard = useCanvasStore((state) => state.moveStoryboard);
   const selectedMediaGridSceneId = useCanvasStore((state) => state.selectedMediaGridItem?.sceneId);
   const selectedStoryboardIds = useCanvasStore((state) => state.selectedStoryboardIds);
   const toggleStoryboardSelection = useCanvasStore((state) => state.toggleStoryboardSelection);
+  const storyboardCommandLoading = useLayoutStore((state) => state.sidebarLoading.episodes > 0);
   const active =
     selected ||
     data.storyboards.some(
@@ -61,6 +67,26 @@ export function StoryboardListNode({ data, selected }: NodeProps<StoryboardListN
 
     event.preventDefault();
     toggleSelectedStoryboard(storyboardId, disabled);
+  };
+  const handleParseStoryboard = () => {
+    if (!currentProject?.assetsParsed) {
+      return;
+    }
+
+    void executeSilentAgentCommand(
+      {
+        attachments: [],
+        html: "",
+        text: `Parse storyboard scenes for episode ${data.episodeName}.`,
+      },
+      {
+        featureSkill: "storyboard-parse",
+        mediaId: data.episodeId,
+        mediaName: data.episodeName,
+        mediaType: "storyboard-list",
+        scope: "storyboard-list",
+      },
+    );
   };
 
   return (
@@ -195,9 +221,37 @@ export function StoryboardListNode({ data, selected }: NodeProps<StoryboardListN
         ) : (
           <div className="flex h-45 flex-col items-center justify-center gap-3 rounded-3xl border border-dashed border-border text-xs text-muted-foreground">
             <span>{t("storyboardList.empty")}</span>
-            <Button type="button" size="sm" variant="outline" className="bg-transparent">
-              {t("storyboardList.parse")}
-            </Button>
+            <TooltipProvider delayDuration={200}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span
+                    className={cn(
+                      "inline-flex rounded-md",
+                      !currentProject?.assetsParsed && "cursor-not-allowed",
+                    )}
+                  >
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={!currentProject?.assetsParsed || storyboardCommandLoading}
+                      className="gap-2 bg-transparent disabled:pointer-events-none"
+                      onClick={handleParseStoryboard}
+                    >
+                      {storyboardCommandLoading ? (
+                        <Loader2 className="size-3.5 animate-spin" />
+                      ) : null}
+                      {t("storyboardList.parse")}
+                    </Button>
+                  </span>
+                </TooltipTrigger>
+                {!currentProject?.assetsParsed ? (
+                  <TooltipContent side="top">
+                    {t("storyboardList.parseAssetsFirst")}
+                  </TooltipContent>
+                ) : null}
+              </Tooltip>
+            </TooltipProvider>
           </div>
         )}
       </section>

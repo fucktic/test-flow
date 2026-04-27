@@ -5,22 +5,23 @@ import { useLocale } from "next-intl";
 import type { ChatWindowSubmitPayload } from "@/components/canvas/chat-window";
 import { resolveGlobalAgentCommand } from "@/components/layout/global-chat-drawer/resolve-agent-command";
 import type { AgentRecord } from "@/lib/agent-schema";
+import {
+  buildFeatureUserPrompt,
+  type ChatFeatureSkill,
+} from "@/lib/chat-prompts";
+import { fetchAgentsCached } from "@/lib/client-data-cache";
 import { saveProjectCommandStatus } from "@/lib/project-api";
 import { useAgentStore } from "@/store/use-agent-store";
 import { useCanvasStore } from "@/store/use-canvas-store";
+import { useLayoutStore, type SidebarLoadingKey } from "@/store/use-layout-store";
 
 type SilentAgentContext = {
   mediaId?: string;
   mediaName?: string;
   mediaType?: string;
-  scope: "asset-grid" | "canvas-grid";
+  scope: "asset-grid" | "canvas-grid" | "storyboard-list";
+  featureSkill: ChatFeatureSkill;
 };
-
-const FIXED_SYSTEM_PROMPT_TEMPLATE =
-  "[System Instruction] " +
-  "Skills are located at {projectRoot}/skills/. Before responding, list the available skill folders, read the best matching SKILL.md, and execute the matching workflow directly when useful. " +
-  "All file reads and writes must stay within {projectRoot}/projects/{projectId}/. Never create or modify files inside the skills/ directory. " +
-  "This request comes from an inline grid chat. Execute the requested work directly and do not format a chat reply.";
 
 function formatAttachmentContext(projectId: string, payload: ChatWindowSubmitPayload) {
   return payload.attachments
@@ -53,18 +54,55 @@ function buildInlineGridCommand(params: {
     params.context.mediaId ? `Media ID: ${params.context.mediaId}` : "",
     params.context.mediaName ? `Media Name: ${params.context.mediaName}` : "",
     params.context.mediaType ? `Media Type: ${params.context.mediaType}` : "",
+    `Feature Skill: ${params.context.featureSkill}`,
     videoOptions ? `[Video Options]\n${videoOptions}` : "",
     attachmentContext ? `[Attached Files]\n${attachmentContext}` : "",
-    `[User Prompt]\n${params.payload.text}`,
+    buildFeatureUserPrompt({
+      featureSkill: params.context.featureSkill,
+      userText: params.payload.text,
+    }),
   ]
     .filter(Boolean)
     .join("\n");
+}
+
+function getSidebarLoadingKey(context: SilentAgentContext): SidebarLoadingKey {
+  if (context.scope === "asset-grid") return "assets";
+  return "episodes";
+}
+
+function logAgentStreamSend(params: {
+  args: string[];
+  context: SilentAgentContext;
+  executable: string;
+  finalCommandText: string;
+  isFirstContextMessage: boolean;
+  projectId: string;
+}) {
+  console.log("[agent-stream:send]", {
+    args: params.args,
+    context: params.context,
+    cliCommand: [params.executable, ...params.args],
+    executable: params.executable,
+    isFirstContextMessage: params.isFirstContextMessage,
+    message: params.finalCommandText,
+    projectId: params.projectId,
+  });
+}
+
+function logAgentStreamReceive(featureSkill: ChatFeatureSkill, chunk: string) {
+  console.log("[agent-stream:receive]", {
+    chunk,
+    featureSkill,
+  });
 }
 
 export function useSilentAgentCommand() {
   const locale = useLocale();
   const currentProject = useCanvasStore((state) => state.currentProject);
   const setCommandStatus = useCanvasStore((state) => state.setCommandStatus);
+  const finishSidebarLoading = useLayoutStore((state) => state.finishSidebarLoading);
+  const startSidebarLoading = useLayoutStore((state) => state.startSidebarLoading);
   const selectedAgentId = useAgentStore((state) => state.selectedAgentId);
   const [agents, setAgents] = useState<AgentRecord[]>([]);
   const [isExecuting, setIsExecuting] = useState(false);
@@ -80,11 +118,8 @@ export function useSilentAgentCommand() {
 
     async function loadAgents() {
       try {
-        const response = await fetch("/api/agents");
-        if (!response.ok) return;
-
-        const payload = (await response.json()) as { agents?: AgentRecord[] };
-        if (active) setAgents(payload.agents ?? []);
+        const payload = await fetchAgentsCached();
+        if (active) setAgents(payload);
       } catch {
         // Inline grid chat silently waits until agents are available.
       }
@@ -99,38 +134,47 @@ export function useSilentAgentCommand() {
 
   const execute = useCallback(
     async (payload: ChatWindowSubmitPayload, context: SilentAgentContext) => {
-      if (!selectedAgent || !currentProject || isExecuting || !context.mediaId) return;
+      if (!selectedAgent || !currentProject || isExecuting) return;
 
-      const contextKey = `${selectedAgent.id}:${currentProject.id}:${context.scope}`;
+      const contextKey = `${selectedAgent.id}:${currentProject.id}:${context.scope}:${context.featureSkill}`;
       const isFirstContextMessage = lastContextKeyRef.current !== contextKey;
       if (lastContextKeyRef.current !== contextKey) {
         codexSessionIdRef.current = null;
       }
 
-      const projectRootPlaceholder = "{{PROJECT_ROOT}}";
-      const systemPrompt = FIXED_SYSTEM_PROMPT_TEMPLATE.replaceAll(
-        "{projectRoot}",
-        projectRootPlaceholder,
-      ).replaceAll("{projectId}", currentProject.id);
       const commandText = buildInlineGridCommand({
         context,
         payload,
         projectId: currentProject.id,
       });
+      const executionInstruction =
+        "This request comes from a UI-triggered command. Execute the requested work directly and do not format a chat reply.";
       const finalCommandText = isFirstContextMessage
-        ? `${systemPrompt}\nCurrent selected project ID is: ${currentProject.id}.\n[Latest Command]\nUser: ${commandText}`
+        ? `${executionInstruction}\nCurrent selected project ID is: ${currentProject.id}.\n[Latest Command]\nUser: ${commandText}`
         : `Current selected project ID is: ${currentProject.id}.\n[Latest Command]\nUser: ${commandText}`;
       const resolvedCommand = resolveGlobalAgentCommand(selectedAgent, finalCommandText, {
         isFirstMessage: isFirstContextMessage,
         sessionId: codexSessionIdRef.current ?? undefined,
       });
 
+      logAgentStreamSend({
+        args: resolvedCommand.args,
+        context,
+        executable: resolvedCommand.executable,
+        finalCommandText,
+        isFirstContextMessage,
+        projectId: currentProject.id,
+      });
       lastContextKeyRef.current = contextKey;
+      const sidebarLoadingKey = getSidebarLoadingKey(context);
       setIsExecuting(true);
+      startSidebarLoading(sidebarLoadingKey);
 
       try {
-        setCommandStatus(context.mediaId, "loading");
-        await saveProjectCommandStatus(currentProject.id, context.mediaId, "loading");
+        if (context.mediaId) {
+          setCommandStatus(context.mediaId, "loading");
+          await saveProjectCommandStatus(currentProject.id, context.mediaId, "loading");
+        }
 
         const response = await fetch("/api/agents/execute", {
           method: "POST",
@@ -143,34 +187,56 @@ export function useSilentAgentCommand() {
         });
 
         if (!response.ok || !response.body) {
-          setCommandStatus(context.mediaId, "error");
-          await saveProjectCommandStatus(currentProject.id, context.mediaId, "error");
+          if (context.mediaId) {
+            setCommandStatus(context.mediaId, "error");
+            await saveProjectCommandStatus(currentProject.id, context.mediaId, "error");
+          }
           return;
         }
 
         const reader = response.body.getReader();
+        const decoder = new TextDecoder("utf-8");
         try {
           while (true) {
-            const { done } = await reader.read();
+            const { done, value } = await reader.read();
             if (done) break;
+
+            const chunk = decoder.decode(value, { stream: true });
+            if (chunk) logAgentStreamReceive(context.featureSkill, chunk);
           }
+
+          const tailChunk = decoder.decode();
+          if (tailChunk) logAgentStreamReceive(context.featureSkill, tailChunk);
         } finally {
           reader.releaseLock();
         }
 
-        setCommandStatus(context.mediaId, "success");
-        await saveProjectCommandStatus(currentProject.id, context.mediaId, "success");
+        if (context.mediaId) {
+          setCommandStatus(context.mediaId, "success");
+          await saveProjectCommandStatus(currentProject.id, context.mediaId, "success");
+        }
       } catch {
-        setCommandStatus(context.mediaId, "error");
-        await saveProjectCommandStatus(currentProject.id, context.mediaId, "error").catch(() => {
-          // command.json status is best-effort and should not surface inline UI errors.
-        });
+        if (context.mediaId) {
+          setCommandStatus(context.mediaId, "error");
+          await saveProjectCommandStatus(currentProject.id, context.mediaId, "error").catch(() => {
+            // command.json status is best-effort and should not surface inline UI errors.
+          });
+        }
         // Inline grid chat intentionally does not render execution output.
       } finally {
         setIsExecuting(false);
+        finishSidebarLoading(sidebarLoadingKey);
       }
     },
-    [currentProject, isExecuting, locale, selectedAgent, setCommandStatus],
+    [
+      currentProject,
+      finishSidebarLoading,
+      isExecuting,
+      locale,
+      selectedAgent,
+      setCommandStatus,
+      startSidebarLoading,
+    ],
   );
 
   return {

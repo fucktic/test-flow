@@ -19,6 +19,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
+import { fetchConfigCached, setConfigCache } from "@/lib/client-data-cache";
 import { cn } from "@/lib/utils";
 import type {
   AppConfig,
@@ -152,13 +153,10 @@ export function SettingsPanel() {
 
     const loadConfig = async () => {
       try {
-        const response = await fetch("/api/config");
-        if (!response.ok) throw new Error("CONFIG_LOAD_FAILED");
-
-        const payload = (await response.json()) as { config: AppConfig };
+        const payload = await fetchConfigCached();
         if (!isMounted) return;
 
-        setConfig(payload.config);
+        if (payload) setConfig(payload);
         setFeedbackKey("");
       } catch {
         if (isMounted) setFeedbackKey("modelManager.feedback.loadError");
@@ -186,6 +184,7 @@ export function SettingsPanel() {
 
       const payload = (await response.json()) as { config: AppConfig };
       setConfig(payload.config);
+      setConfigCache(payload.config);
       setFeedbackKey("modelManager.feedback.saved");
       return true;
     } catch {

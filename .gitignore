@@ -20,6 +20,7 @@
 # production
 /build
 /projects
+/skills
 /db
 # misc
 .DS_Store

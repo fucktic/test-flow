@@ -28,6 +28,8 @@ type ProjectVideosResponse = {
   videos?: ProjectVideoAsset[];
 };
 
+const inFlightGetRequests = new Map<string, Promise<unknown>>();
+
 export type ProjectTempImage = {
   id: string;
   label: string;
@@ -54,21 +56,31 @@ async function readJsonResponse<T>(response: Response): Promise<T> {
   return (await response.json()) as T;
 }
 
-export async function fetchProjects(): Promise<ProjectListItem[]> {
-  const data = await readJsonResponse<ProjectsResponse>(
-    await fetch("/api/projects", {
+async function fetchJsonOnce<T>(url: string): Promise<T> {
+  const cachedRequest = inFlightGetRequests.get(url) as Promise<T> | undefined;
+  if (cachedRequest) return cachedRequest;
+
+  const request = fetch(url, {
       cache: "no-store",
-    }),
-  );
+    })
+    .then((response) => readJsonResponse<T>(response))
+    .finally(() => {
+      inFlightGetRequests.delete(url);
+    });
+
+  inFlightGetRequests.set(url, request);
+  return request;
+}
+
+export async function fetchProjects(): Promise<ProjectListItem[]> {
+  const data = await fetchJsonOnce<ProjectsResponse>("/api/projects");
 
   return Array.isArray(data.projects) ? data.projects : [];
 }
 
 export async function fetchProject(projectId: string): Promise<ProjectDetail> {
-  const data = await readJsonResponse<ProjectResponse>(
-    await fetch(`/api/projects/${encodeURIComponent(projectId)}`, {
-      cache: "no-store",
-    }),
+  const data = await fetchJsonOnce<ProjectResponse>(
+    `/api/projects/${encodeURIComponent(projectId)}`,
   );
 
   if (!data.project) {
@@ -79,10 +91,8 @@ export async function fetchProject(projectId: string): Promise<ProjectDetail> {
 }
 
 export async function fetchProjectImages(projectId: string): Promise<ProjectImageAsset[]> {
-  const data = await readJsonResponse<ProjectImagesResponse>(
-    await fetch(`/api/projects/${encodeURIComponent(projectId)}/images`, {
-      cache: "no-store",
-    }),
+  const data = await fetchJsonOnce<ProjectImagesResponse>(
+    `/api/projects/${encodeURIComponent(projectId)}/images`,
   );
 
   return Array.isArray(data.images) ? data.images : [];
@@ -92,13 +102,8 @@ export async function fetchProjectCanvasData(
   projectId: string,
   episodeId: string,
 ): Promise<ProjectCanvasData> {
-  return readJsonResponse<ProjectCanvasData>(
-    await fetch(
-      `/api/projects/${encodeURIComponent(projectId)}/flow?episodeId=${encodeURIComponent(episodeId)}`,
-      {
-        cache: "no-store",
-      },
-    ),
+  return fetchJsonOnce<ProjectCanvasData>(
+    `/api/projects/${encodeURIComponent(projectId)}/flow?episodeId=${encodeURIComponent(episodeId)}`,
   );
 }
 
@@ -160,10 +165,8 @@ export async function saveProjectCommandStatus(
 export async function fetchProjectCommands(
   projectId: string,
 ): Promise<Record<string, ProjectCommandStatus>> {
-  const data = await readJsonResponse<{ commands?: Record<string, ProjectCommandStatus> }>(
-    await fetch(`/api/projects/${encodeURIComponent(projectId)}/command`, {
-      cache: "no-store",
-    }),
+  const data = await fetchJsonOnce<{ commands?: Record<string, ProjectCommandStatus> }>(
+    `/api/projects/${encodeURIComponent(projectId)}/command`,
   );
 
   return data.commands ?? {};
@@ -406,11 +409,7 @@ export async function uploadProjectTempImages(
 }
 
 export async function fetchCurrentProject(): Promise<ProjectDetail | null> {
-  const data = await readJsonResponse<ProjectResponse>(
-    await fetch("/api/projects/current", {
-      cache: "no-store",
-    }),
-  );
+  const data = await fetchJsonOnce<ProjectResponse>("/api/projects/current");
 
   return data.project ?? null;
 }

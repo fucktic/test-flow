@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   AlertCircle,
@@ -34,15 +34,19 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { fetchConfigCached } from "@/lib/client-data-cache";
 import type { AppConfig } from "@/lib/config-schema";
 import {
   deleteProjectImage,
+  fetchProject,
   fetchProjectImages,
   saveProjectSelectedModel,
 } from "@/lib/project-api";
 import type { ProjectAssets, ProjectImageAsset } from "@/lib/project-types";
+import type { ProjectDetail } from "@/lib/project-types";
 import { cn } from "@/lib/utils";
 import { useCanvasStore } from "@/store/use-canvas-store";
+import { useLayoutStore, type AssetLoadingAction } from "@/store/use-layout-store";
 
 import { AssetDetailCard } from "./components/asset-detail-card";
 
@@ -67,6 +71,7 @@ const EMPTY_CONFIG: AppConfig = {
   imageModels: [],
   videoModels: [],
 };
+const ASSET_SYNC_POLL_INTERVAL_MS = 5000;
 
 function matchesAssetTab(asset: ProjectImageAsset, activeTab: AssetTabKey) {
   if (activeTab === "all") return true;
@@ -83,13 +88,29 @@ function getAssetChildIds(projectAssets: ProjectAssets | undefined, assetId: str
   return matchedAsset?.children ?? [];
 }
 
+function getProjectSyncSignature(project: ProjectDetail) {
+  return JSON.stringify({
+    assets: project.assets,
+    assetsParsed: project.assetsParsed,
+    description: project.description,
+    episodes: project.episodes,
+    id: project.id,
+    name: project.name,
+  });
+}
+
 export function AssetsPanel() {
   const t = useTranslations("Sidebar");
   const tCanvas = useTranslations("Canvas");
   const { execute: executeSilentAgentCommand } = useSilentAgentCommand();
   const currentProject = useCanvasStore((state) => state.currentProject);
+  const currentProjectRef = useRef<ProjectDetail | null>(currentProject);
   const setCurrentProject = useCanvasStore((state) => state.setCurrentProject);
   const commandStatuses = useCanvasStore((state) => state.commandStatuses);
+  const assetLoadingAction = useLayoutStore((state) => state.assetLoadingAction);
+  const assetCommandLoading = useLayoutStore((state) => state.sidebarLoading.assets > 0);
+  const assetLoadingVersion = useLayoutStore((state) => state.sidebarLoadingVersion.assets);
+  const setAssetLoadingAction = useLayoutStore((state) => state.setAssetLoadingAction);
   const [activeTab, setActiveTab] = useState<AssetTabKey>("all");
   const [searchValue, setSearchValue] = useState("");
   const [config, setConfig] = useState<AppConfig>(EMPTY_CONFIG);
@@ -116,26 +137,62 @@ export function AssetsPanel() {
   ];
 
   useEffect(() => {
-    let ignoreResult = false;
+    currentProjectRef.current = currentProject;
+  }, [currentProject]);
 
-    async function loadProjectImages(projectId: string | null) {
-      setLoadingImages(true);
+  const syncAssetData = useCallback(
+    async (
+      projectId: string,
+      showLoading: boolean,
+      loadingAction: AssetLoadingAction = null,
+    ) => {
+      if (showLoading) setLoadingImages(true);
+
       try {
-        const nextProjectImages = projectId ? await fetchProjectImages(projectId) : [];
-        if (!ignoreResult) {
+        const shouldSyncProject = loadingAction !== "generate";
+        const shouldSyncImages = loadingAction !== "parse";
+        const [project, nextProjectImages] = await Promise.all([
+          shouldSyncProject ? fetchProject(projectId) : Promise.resolve(null),
+          shouldSyncImages ? fetchProjectImages(projectId) : Promise.resolve(null),
+        ]);
+
+        if (
+          project &&
+          (
+            !currentProjectRef.current ||
+            getProjectSyncSignature(currentProjectRef.current) !== getProjectSyncSignature(project)
+          )
+        ) {
+          currentProjectRef.current = project;
+          setCurrentProject(project);
+        }
+        if (nextProjectImages) {
           setProjectImages(nextProjectImages);
           setFailedImageIds(new Set());
         }
       } catch {
-        if (!ignoreResult) {
+        if (showLoading) {
           setProjectImages([]);
           setFailedImageIds(new Set());
         }
       } finally {
-        if (!ignoreResult) {
-          setLoadingImages(false);
-        }
+        if (showLoading) setLoadingImages(false);
       }
+    },
+    [setCurrentProject],
+  );
+
+  useEffect(() => {
+    let ignoreResult = false;
+
+    async function loadProjectImages(projectId: string | null) {
+      if (!projectId) {
+        setProjectImages([]);
+        setFailedImageIds(new Set());
+        return;
+      }
+
+      if (!ignoreResult) await syncAssetData(projectId, true);
     }
 
     void loadProjectImages(currentProject?.id ?? null);
@@ -143,18 +200,46 @@ export function AssetsPanel() {
     return () => {
       ignoreResult = true;
     };
-  }, [currentProject?.id]);
+  }, [currentProject?.id, syncAssetData]);
+
+  useEffect(() => {
+    if (!currentProject?.id || !assetCommandLoading) return;
+
+    let active = true;
+    let timeoutId: number | null = null;
+    const syncNow = async () => {
+      if (!active) return;
+
+      await syncAssetData(currentProject.id, false, assetLoadingAction);
+
+      if (active) {
+        timeoutId = window.setTimeout(() => {
+          void syncNow();
+        }, ASSET_SYNC_POLL_INTERVAL_MS);
+      }
+    };
+
+    void syncNow();
+
+    return () => {
+      active = false;
+      if (timeoutId !== null) window.clearTimeout(timeoutId);
+    };
+  }, [
+    assetCommandLoading,
+    assetLoadingAction,
+    assetLoadingVersion,
+    currentProject?.id,
+    syncAssetData,
+  ]);
 
   useEffect(() => {
     let active = true;
 
     async function loadConfig() {
       try {
-        const response = await fetch("/api/config");
-        if (!response.ok) return;
-
-        const payload = (await response.json()) as { config?: AppConfig };
-        if (active && payload.config) setConfig(payload.config);
+        const payload = await fetchConfigCached();
+        if (active && payload) setConfig(payload);
       } catch {
         // Keep the asset chat available even if settings are temporarily unavailable.
       }
@@ -291,6 +376,36 @@ export function AssetsPanel() {
   const handleImageError = (assetId: string) => {
     setFailedImageIds((currentFailedIds) => new Set(currentFailedIds).add(assetId));
   };
+  const executeAssetPanelAction = async (action: Exclude<ConfirmAction, "clear" | null>) => {
+    if (!currentProject) return;
+
+    setAssetLoadingAction(action);
+
+    if (action === "generate" && selectedImageModel) {
+      await saveProjectSelectedModel(currentProject.id, {
+        apiKey: selectedImageModel.apiKey,
+        example: selectedImageModel.example,
+        id: selectedImageModel.id,
+        name: selectedImageModel.name,
+        type: "image",
+      });
+    }
+
+    await executeSilentAgentCommand(
+      {
+        attachments: [],
+        html: "",
+        text:
+          action === "parse"
+            ? "Parse reusable production assets from the current project script and flow."
+            : "Generate production asset images for the current filtered asset set.",
+      },
+      {
+        featureSkill: action === "parse" ? "asset-parse" : "asset-generate",
+        scope: "asset-grid",
+      },
+    );
+  };
   const openAssetChat = (assetId: string, anchorElement: HTMLElement) => {
     const anchorRect = anchorElement.getBoundingClientRect();
 
@@ -346,10 +461,15 @@ export function AssetsPanel() {
                 variant="ghost"
                 size="icon"
                 aria-label={t("assetPanel.parseAll")}
+                disabled={assetCommandLoading}
                 onClick={() => setConfirmAction("parse")}
                 className="size-8 shrink-0 text-muted-foreground hover:text-foreground"
               >
-                <ListTree className="size-4" />
+                {assetLoadingAction === "parse" ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <ListTree className="size-4" />
+                )}
               </Button>
             </TooltipTrigger>
             <TooltipContent side="top">{t("assetPanel.parseAll")}</TooltipContent>
@@ -361,10 +481,15 @@ export function AssetsPanel() {
                 variant="ghost"
                 size="icon"
                 aria-label={t("assetPanel.generateAsset")}
+                disabled={assetCommandLoading}
                 onClick={() => setConfirmAction("generate")}
                 className="size-8 shrink-0 text-muted-foreground hover:text-foreground"
               >
-                <WandSparkles className="size-4" />
+                {assetLoadingAction === "generate" ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <WandSparkles className="size-4" />
+                )}
               </Button>
             </TooltipTrigger>
             <TooltipContent side="top">{t("assetPanel.generateAsset")}</TooltipContent>
@@ -399,16 +524,25 @@ export function AssetsPanel() {
                 </div>
               ) : !assetsParsed ? (
                 <div className="flex h-98 flex-col items-center justify-center gap-3 rounded-md border border-dashed border-border px-3 text-center">
-                  <p className="text-xs text-muted-foreground">{t("assetPanel.notParsed")}</p>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="gap-2 border-dashed"
-                    onClick={() => setConfirmAction("parse")}
-                  >
-                    <ListTree className="size-4" />
-                    {t("assetPanel.parseAll")}
-                  </Button>
+                  {assetCommandLoading ? (
+                    <div className="flex flex-col items-center gap-2 text-xs text-muted-foreground">
+                      <Loader2 className="size-5 animate-spin text-primary" />
+                      <span>{t("assetPanel.parsing")}</span>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">{t("assetPanel.notParsed")}</p>
+                  )}
+                  {!assetCommandLoading ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="gap-2 border-dashed"
+                      onClick={() => setConfirmAction("parse")}
+                    >
+                      <ListTree className="size-4" />
+                      {t("assetPanel.parseAll")}
+                    </Button>
+                  ) : null}
                 </div>
               ) : (
                 <ScrollArea className="h-[392px] pr-2">
@@ -623,6 +757,7 @@ export function AssetsPanel() {
                     });
 
                     await executeSilentAgentCommand(payload, {
+                      featureSkill: "node-image-generate",
                       mediaId: selectedChatAsset.id,
                       mediaName: selectedChatAsset.name || selectedChatAsset.id,
                       mediaType: selectedChatAsset.type,
@@ -699,8 +834,16 @@ export function AssetsPanel() {
             <Button
               type="button"
               variant={confirmAction === "clear" ? "destructive" : "default"}
-              onClick={() => setConfirmAction(null)}
+              disabled={assetCommandLoading}
+              onClick={() => {
+                const nextAction = confirmAction;
+                setConfirmAction(null);
+                if (nextAction === "parse" || nextAction === "generate") {
+                  void executeAssetPanelAction(nextAction);
+                }
+              }}
             >
+              {assetCommandLoading ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
               {t(confirmActionButtonKey)}
             </Button>
           </DialogFooter>

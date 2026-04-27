@@ -31,7 +31,7 @@ export function resolveGlobalAgentCommand(
 ): ResolvedAgentCommand {
   const executable = (agent.instructions || agent.name).trim();
   const streamKind = getGlobalAgentStreamKind(agent);
-  const flatText = `"${commandText.replace(/\r?\n/g, " ").trim()}"`;
+  const flatText = commandText.replace(/\r?\n/g, " ").replace(/\s+/g, " ").trim();
 
   if (streamKind === "opencode") {
     const args = ["run", "--format", "json", flatText];
@@ -68,12 +68,12 @@ export function resolveGlobalAgentCommand(
   if (streamKind === "openclaw") {
     const args = ["agent", "--json"];
     if (options.sessionId) args.push("--session-id", options.sessionId);
-    args.push("--message", commandText);
+    args.push("--message", flatText);
     return { args, executable, streamKind };
   }
 
   if (streamKind === "hermes") {
-    const args = ["chat", "--quiet", "-q", commandText];
+    const args = ["chat", "--quiet", "-q", flatText];
     if (options.sessionId) args.push("--resume", options.sessionId);
     return { args, executable, streamKind };
   }

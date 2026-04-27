@@ -2,10 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import { Plus, Settings2, X } from "lucide-react";
+import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Dialog } from "radix-ui";
 import type { AgentRecord } from "@/lib/agent-schema";
+import { fetchAgentsCached, invalidateAgentsCache } from "@/lib/client-data-cache";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,18 +38,16 @@ const EMPTY_FORM: AgentFormState = {
   description: "",
 };
 
-async function parseAgentResponse(response: Response): Promise<AgentRecord[]> {
-  const payload = (await response.json()) as { agents?: AgentRecord[] };
-  return payload.agents ?? [];
-}
-
 function AgentGlyph({ icon, className }: { icon?: string; className?: string }) {
   if (icon && icon.trim().length > 0) {
     if (icon.startsWith("http://") || icon.startsWith("https://")) {
       return (
-        <img
+        <Image
           src={icon}
           alt=""
+          width={20}
+          height={20}
+          unoptimized
           className={cn("size-5 rounded-sm object-contain", className)}
         />
       );
@@ -60,9 +60,11 @@ function AgentGlyph({ icon, className }: { icon?: string; className?: string }) 
   }
 
   return (
-    <img
+    <Image
       src="/mantur-logo.svg"
       alt=""
+      width={20}
+      height={20}
       className={cn("size-5", className)}
     />
   );
@@ -91,16 +93,7 @@ export default function AgentSwitcher() {
 
   const loadAgents = useCallback(async () => {
     try {
-      const response = await fetch("/api/agents", {
-        method: "GET",
-        cache: "no-store",
-      });
-
-      if (!response.ok) {
-        throw new Error("Load failed.");
-      }
-
-      const nextAgents = await parseAgentResponse(response);
+      const nextAgents = await fetchAgentsCached();
       setAgents(nextAgents);
       const currentId = useAgentStore.getState().selectedAgentId;
       if (!nextAgents.some((agent) => agent.id === currentId)) {
@@ -186,6 +179,7 @@ export default function AgentSwitcher() {
             throw new Error(`Save failed: ${JSON.stringify(errorData)}`);
           }
 
+          invalidateAgentsCache();
           const nextAgents = await loadAgents();
           if (!form.id && nextAgents.length > 0) {
             setSelectedAgentId(nextAgents[0].id);
@@ -229,6 +223,7 @@ export default function AgentSwitcher() {
           if (form.id === deletedId) {
             openCreateForm();
           }
+          invalidateAgentsCache();
           await loadAgents();
           if (useAgentStore.getState().selectedAgentId === deletedId) {
             setSelectedAgentId("");

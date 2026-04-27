@@ -494,16 +494,19 @@ export const useCanvasStore = create<CanvasState>((set) => ({
     }),
   setProjectCanvasDataBatch: (projectId, dataByEpisode) =>
     set((state) => {
-      const nextCanvasDataByEpisode = Object.fromEntries(
-        Object.entries(dataByEpisode).map(([episodeId, data]) => [
-          episodeId,
-          {
-            projectId,
+      const nextCanvasDataByEpisode = {
+        ...state.currentCanvasDataByEpisode,
+        ...Object.fromEntries(
+          Object.entries(dataByEpisode).map(([episodeId, data]) => [
             episodeId,
-            data,
-          } satisfies CurrentCanvasData,
-        ]),
-      );
+            {
+              projectId,
+              episodeId,
+              data,
+            } satisfies CurrentCanvasData,
+          ]),
+        ),
+      };
       const nextCanvas = buildSelectedEpisodesCanvas(
         state.currentProject,
         state.selectedEpisodeIds,

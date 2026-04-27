@@ -24,35 +24,78 @@ import { StoryboardImageNode } from "@/components/canvas/nodes/storyboard-image-
 import { StoryboardListNode } from "@/components/canvas/nodes/storyboard-list-node";
 import { StoryboardVideoNode } from "@/components/canvas/nodes/storyboard-video-node";
 import { useSilentAgentCommand } from "@/components/canvas/use-silent-agent-command";
+import { fetchConfigCached } from "@/lib/client-data-cache";
 import type { AppConfig } from "@/lib/config-schema";
 import { flowStateSchema, type FlowState } from "@/lib/flow-schema";
 import { fetchProjectCanvasData, saveProjectFlow, saveProjectSelectedModel } from "@/lib/project-api";
 import { useCanvasStore } from "@/store/use-canvas-store";
+import { useLayoutStore } from "@/store/use-layout-store";
 
 const FLOW_SAVE_DELAY_MS = 500;
+const CANVAS_SYNC_POLL_INTERVAL_MS = 5000;
 const EMPTY_CONFIG: AppConfig = {
   imageBeds: [],
   imageModels: [],
   videoModels: [],
 };
 
-function toSerializableFlow(nodes: Node[], edges: Edge[]): FlowState | null {
+function toSerializableFlow(nodes: Node[], edges: Edge[], baseFlow: FlowState): FlowState | null {
+  const nodeById = new Map(nodes.map((node) => [node.id, node]));
+  const edgeById = new Map(edges.map((edge) => [edge.id, edge]));
+  const baseNodeIds = new Set(baseFlow.nodes.map((node) => node.id));
+  const baseEdgeIds = new Set(baseFlow.edges.map((edge) => edge.id));
   const parsedFlow = flowStateSchema.safeParse({
-    nodes: nodes.map((node) => ({
-      id: node.id,
-      type: node.type,
-      position: node.position,
-      hidden: node.hidden,
-    })),
-    edges: edges.map((edge) => ({
-      id: edge.id,
-      source: edge.source,
-      target: edge.target,
-      sourceHandle: edge.sourceHandle ?? undefined,
-      targetHandle: edge.targetHandle ?? undefined,
-      animated: edge.animated,
-      hidden: edge.hidden,
-    })),
+    nodes: [
+      ...baseFlow.nodes.map((baseNode) => {
+        const currentNode = nodeById.get(baseNode.id);
+
+        return currentNode
+          ? {
+              ...baseNode,
+              hidden: currentNode.hidden,
+              position: currentNode.position,
+              type: currentNode.type ?? baseNode.type,
+            }
+          : baseNode;
+      }),
+      ...nodes
+        .filter((node) => !baseNodeIds.has(node.id))
+        .map((node) => ({
+          id: node.id,
+          data: node.data,
+          hidden: node.hidden,
+          position: node.position,
+          type: node.type,
+        })),
+    ],
+    edges: [
+      ...baseFlow.edges.map((baseEdge) => {
+        const currentEdge = edgeById.get(baseEdge.id);
+
+        return currentEdge
+          ? {
+              ...baseEdge,
+              animated: currentEdge.animated,
+              hidden: currentEdge.hidden,
+              source: currentEdge.source,
+              sourceHandle: currentEdge.sourceHandle ?? undefined,
+              target: currentEdge.target,
+              targetHandle: currentEdge.targetHandle ?? undefined,
+            }
+          : baseEdge;
+      }),
+      ...edges
+        .filter((edge) => !baseEdgeIds.has(edge.id))
+        .map((edge) => ({
+          animated: edge.animated,
+          hidden: edge.hidden,
+          id: edge.id,
+          source: edge.source,
+          sourceHandle: edge.sourceHandle ?? undefined,
+          target: edge.target,
+          targetHandle: edge.targetHandle ?? undefined,
+        })),
+    ],
   });
 
   return parsedFlow.success ? parsedFlow.data : null;
@@ -63,6 +106,8 @@ function CanvasWorkspaceInner() {
   const { fitView } = useReactFlow();
   const workspaceRef = useRef<HTMLDivElement>(null);
   const { execute: executeSilentAgentCommand } = useSilentAgentCommand();
+  const episodeCommandLoading = useLayoutStore((state) => state.sidebarLoading.episodes > 0);
+  const episodeLoadingVersion = useLayoutStore((state) => state.sidebarLoadingVersion.episodes);
   const [chatWindowPosition, setChatWindowPosition] = useState<{ left: number; top: number } | null>(
     null,
   );
@@ -78,6 +123,7 @@ function CanvasWorkspaceInner() {
     onEdgesChange,
     onNodesChange,
     clearSelectedMediaGridItem,
+    commandStatuses,
     selectedEpisodeIds,
     selectedMediaGridItem,
     setActiveEpisodeId,
@@ -93,6 +139,8 @@ function CanvasWorkspaceInner() {
       ? visibleEpisodeIds
       : currentProject?.episodes.slice(0, 1).map((episode) => episode.id) ?? [];
   }, [currentProject?.episodes, selectedEpisodeIds]);
+  const activeEpisodeKey = activeEpisodeIds.join(",");
+  const currentProjectId = currentProject?.id ?? "";
   const modelOptions = useMemo<ChatWindowModelOption[]>(() => {
     const models =
       selectedMediaGridItem?.item.type === "video" ? config.videoModels : config.imageModels;
@@ -111,11 +159,14 @@ function CanvasWorkspaceInner() {
   const selectedVideoModel = config.videoModels.find((model) => model.id === selectedModelId);
   const selectedProjectModel =
     selectedMediaGridItem?.item.type === "video" ? selectedVideoModel : selectedImageModel;
+  const selectedMediaCommandStatus = selectedMediaGridItem
+    ? commandStatuses[selectedMediaGridItem.item.id] ?? selectedMediaGridItem.item.status
+    : "";
   const commandStatus =
-    selectedMediaGridItem?.item.status === "loading" ||
-    selectedMediaGridItem?.item.status === "error" ||
-    selectedMediaGridItem?.item.status === "success"
-      ? selectedMediaGridItem.item.status
+    selectedMediaCommandStatus === "loading" ||
+    selectedMediaCommandStatus === "error" ||
+    selectedMediaCommandStatus === "success"
+      ? selectedMediaCommandStatus
       : undefined;
   const commandStatusLabel = commandStatus ? t(`mediaGrid.${commandStatus}`) : undefined;
   const requiresFirstLastFrame =
@@ -253,11 +304,8 @@ function CanvasWorkspaceInner() {
 
     const loadConfig = async () => {
       try {
-        const response = await fetch("/api/config");
-        if (!response.ok) return;
-
-        const payload = (await response.json()) as { config?: AppConfig };
-        if (active && payload.config) setConfig(payload.config);
+        const payload = await fetchConfigCached();
+        if (active && payload) setConfig(payload);
       } catch {
         // The model selector can stay empty until settings are available.
       }
@@ -272,19 +320,20 @@ function CanvasWorkspaceInner() {
 
   useEffect(() => {
     let active = true;
+    const episodeIds = activeEpisodeKey ? activeEpisodeKey.split(",") : [];
 
     const loadCanvasData = async () => {
-      if (!currentProject || activeEpisodeIds.length === 0) return;
+      if (!currentProjectId || episodeIds.length === 0) return;
 
       try {
         const episodeEntries = await Promise.all(
-          activeEpisodeIds.map(async (episodeId) => [
+          episodeIds.map(async (episodeId) => [
             episodeId,
-            await fetchProjectCanvasData(currentProject.id, episodeId),
+            await fetchProjectCanvasData(currentProjectId, episodeId),
           ] as const),
         );
         if (!active) return;
-        setProjectCanvasDataBatch(currentProject.id, Object.fromEntries(episodeEntries));
+        setProjectCanvasDataBatch(currentProjectId, Object.fromEntries(episodeEntries));
       } catch {
         // Keep the existing canvas visible if project files are temporarily unavailable.
       }
@@ -296,15 +345,58 @@ function CanvasWorkspaceInner() {
       active = false;
     };
   }, [
-    activeEpisodeIds,
-    currentProject,
+    activeEpisodeKey,
+    currentProjectId,
+    setProjectCanvasDataBatch,
+  ]);
+
+  useEffect(() => {
+    const episodeIds = activeEpisodeKey ? activeEpisodeKey.split(",") : [];
+    if (!currentProjectId || episodeIds.length === 0 || !episodeCommandLoading) return;
+
+    let active = true;
+    let timeoutId: number | null = null;
+    const syncCanvasData = async () => {
+      try {
+        const episodeEntries = await Promise.all(
+          episodeIds.map(async (episodeId) => [
+            episodeId,
+            await fetchProjectCanvasData(currentProjectId, episodeId),
+          ] as const),
+        );
+        if (active) {
+          setProjectCanvasDataBatch(currentProjectId, Object.fromEntries(episodeEntries));
+        }
+      } catch {
+        // Keep polling while the agent writes files; transient read errors are expected.
+      }
+
+      if (active) {
+        timeoutId = window.setTimeout(() => {
+          void syncCanvasData();
+        }, CANVAS_SYNC_POLL_INTERVAL_MS);
+      }
+    };
+
+    void syncCanvasData();
+
+    return () => {
+      active = false;
+      if (timeoutId !== null) window.clearTimeout(timeoutId);
+    };
+  }, [
+    activeEpisodeKey,
+    currentProjectId,
+    episodeCommandLoading,
+    episodeLoadingVersion,
     setProjectCanvasDataBatch,
   ]);
 
   useEffect(() => {
     if (!currentCanvasData) return;
+    if (episodeCommandLoading) return;
 
-    const flow = toSerializableFlow(nodes, edges);
+    const flow = toSerializableFlow(nodes, edges, currentCanvasData.data.flow);
     if (!flow) return;
 
     const timeoutId = window.setTimeout(() => {
@@ -316,7 +408,7 @@ function CanvasWorkspaceInner() {
     return () => {
       window.clearTimeout(timeoutId);
     };
-  }, [currentCanvasData, edges, nodes]);
+  }, [currentCanvasData, edges, episodeCommandLoading, nodes]);
 
   useEffect(() => {
     if (!currentProject || nodes.length === 0) return;
@@ -418,6 +510,10 @@ function CanvasWorkspaceInner() {
                   if (!saved) return;
 
                   await executeSilentAgentCommand(payload, {
+                    featureSkill:
+                      selectedMediaGridItem.item.type === "video"
+                        ? "video-generate"
+                        : "node-image-generate",
                     mediaId: selectedMediaGridItem.item.id,
                     mediaName: selectedMediaGridItem.item.name,
                     mediaType: selectedMediaGridItem.item.type,

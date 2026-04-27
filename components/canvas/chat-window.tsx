@@ -4,7 +4,7 @@ import { useMemo, useRef, useState } from "react";
 import { mergeAttributes, Node as TiptapNode } from "@tiptap/core";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import { ArrowUp, Clapperboard, ImagePlus, Plus, Sparkles, Timer, X } from "lucide-react";
+import { ArrowUp, Clapperboard, ImagePlus, Loader2, Plus, Sparkles, Timer, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -629,7 +629,11 @@ export function ChatWindow({
               disabled={isCommandLoading || !editor || (isEmpty && activeAttachments.length === 0)}
               onClick={handleSubmit}
             >
-              <ArrowUp className="size-5" />
+              {isCommandLoading ? (
+                <Loader2 className="size-5 animate-spin" />
+              ) : (
+                <ArrowUp className="size-5" />
+              )}
             </Button>
           </div>
         </div>

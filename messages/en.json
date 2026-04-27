@@ -115,7 +115,8 @@
       "cancel": "Cancel",
       "confirmDelete": "Delete",
       "empty": "No storyboards",
-      "parse": "Parse now"
+      "parse": "Parse now",
+      "parseAssetsFirst": "Parse assets first"
     },
     "storyboardImage": {
       "title": "Image",
@@ -316,6 +317,7 @@
       "confirmDelete": "Delete",
       "deleting": "Deleting...",
       "notParsed": "Assets have not been parsed",
+      "parsing": "Parsing assets...",
       "noCurrentProject": "Enter a project first",
       "loading": "Loading assets",
       "imagePending": "Pending",

@@ -20,6 +20,9 @@ import {
   parseAgentOutput,
 } from "./parse-agent-output";
 import { resolveGlobalAgentCommand } from "./resolve-agent-command";
+import { buildFeatureUserPrompt } from "@/lib/chat-prompts";
+import { fetchAgentsCached, fetchConfigCached } from "@/lib/client-data-cache";
+import { useLayoutStore } from "@/store/use-layout-store";
 
 type GlobalChatDrawerProps = {
   open: boolean;
@@ -50,12 +53,9 @@ const EMPTY_CONFIG: AppConfig = {
   videoModels: [],
 };
 
+const AUTO_HELLO_PROMPT = "hello";
 const COMMAND_KEYS: CommandKey[] = ["help", "clear", "project", "agent", "models"];
-
-const FIXED_SYSTEM_PROMPT_TEMPLATE =
-  "[System Instruction] " +
-  "Skills are located at {projectRoot}/skills/. Before responding, list the available skill folders, read the best matching SKILL.md, and execute the matching workflow directly when useful. " +
-  "All file reads and writes must stay within {projectRoot}/projects/{projectId}/. Never create or modify files inside the skills/ directory.";
+const autoHelloContextKeys = new Set<string>();
 
 const createMessageId = () => {
   return createUuid();
@@ -90,6 +90,8 @@ export function GlobalChatDrawer({ open, onClose }: GlobalChatDrawerProps) {
   const canvasT = useTranslations("Canvas");
   const locale = useLocale();
   const currentProject = useCanvasStore((state) => state.currentProject);
+  const finishSidebarLoading = useLayoutStore((state) => state.finishSidebarLoading);
+  const startSidebarLoading = useLayoutStore((state) => state.startSidebarLoading);
   const selectedAgentId = useAgentStore((state) => state.selectedAgentId);
   const abortControllerRef = useRef<AbortController | null>(null);
   const codexSessionIdRef = useRef<string | null>(null);
@@ -119,11 +121,8 @@ export function GlobalChatDrawer({ open, onClose }: GlobalChatDrawerProps) {
 
     const loadConfig = async () => {
       try {
-        const response = await fetch("/api/config");
-        if (!response.ok) return;
-
-        const payload = (await response.json()) as { config?: AppConfig };
-        if (active && payload.config) setConfig(payload.config);
+        const payload = await fetchConfigCached();
+        if (active && payload) setConfig(payload);
       } catch {
         // The drawer can still be used for text while model settings load or fail.
       }
@@ -141,11 +140,8 @@ export function GlobalChatDrawer({ open, onClose }: GlobalChatDrawerProps) {
 
     const loadAgents = async () => {
       try {
-        const response = await fetch("/api/agents");
-        if (!response.ok) return;
-
-        const payload = (await response.json()) as { agents?: AgentRecord[] };
-        if (active) setAgents(payload.agents ?? []);
+        const payload = await fetchAgentsCached();
+        if (active) setAgents(payload);
       } catch {
         // Agent context is optional for command replies.
       }
@@ -200,16 +196,15 @@ export function GlobalChatDrawer({ open, onClose }: GlobalChatDrawerProps) {
         codexSessionIdRef.current = null;
       }
 
-      const projectRootPlaceholder = "{{PROJECT_ROOT}}";
       const projectId = currentProject?.id ?? "";
       const projectContext = currentProject ? `\nCurrent selected project ID is: ${projectId}.` : "";
-      const systemPrompt = FIXED_SYSTEM_PROMPT_TEMPLATE.replaceAll(
-        "{projectRoot}",
-        projectRootPlaceholder,
-      ).replaceAll("{projectId}", projectId);
+      const featureCommandText = buildFeatureUserPrompt({
+        featureSkill: "general-chat",
+        userText: commandText,
+      });
       const finalCommandText = isFirstContextMessage
-        ? `${systemPrompt}${projectContext}\n[Latest Command]\nUser: ${commandText}`
-        : `${projectContext}\n[Latest Command]\nUser: ${commandText}`;
+        ? `${projectContext}\n[Latest Command]\nUser: ${featureCommandText}`
+        : `${projectContext}\n[Latest Command]\nUser: ${featureCommandText}`;
       const resolvedCommand = resolveGlobalAgentCommand(selectedAgent, finalCommandText, {
         isFirstMessage: isFirstContextMessage,
         sessionId: codexSessionIdRef.current ?? undefined,
@@ -220,6 +215,7 @@ export function GlobalChatDrawer({ open, onClose }: GlobalChatDrawerProps) {
       abortControllerRef.current = abortController;
       lastContextKeyRef.current = contextKey;
       setIsExecuting(true);
+      startSidebarLoading("chat");
       setMessages((currentMessages) => [
         ...currentMessages,
         {
@@ -297,10 +293,28 @@ export function GlobalChatDrawer({ open, onClose }: GlobalChatDrawerProps) {
       } finally {
         abortControllerRef.current = null;
         setIsExecuting(false);
+        finishSidebarLoading("chat");
       }
     },
-    [currentProject, locale, selectedAgent, t],
+    [currentProject, finishSidebarLoading, locale, selectedAgent, startSidebarLoading, t],
   );
+
+  useEffect(() => {
+    if (!selectedAgent || !currentProject || isExecuting) return;
+
+    const contextKey = `${selectedAgent.id}:${currentProject.id}`;
+    if (autoHelloContextKeys.has(contextKey)) return;
+
+    autoHelloContextKeys.add(contextKey);
+    let active = true;
+    queueMicrotask(() => {
+      if (active) void executeAgentCommand(AUTO_HELLO_PROMPT);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [currentProject, executeAgentCommand, isExecuting, selectedAgent]);
 
   const resolveCommand = (text: string): CommandResult | null => {
     const trimmedText = text.trim();

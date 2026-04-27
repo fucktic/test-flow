@@ -3,6 +3,7 @@
 import { useState, Fragment } from "react";
 import {
   Layers,
+  Loader2,
   Package,
   FolderKanban,
   MessageCircle,
@@ -137,6 +138,7 @@ function DialogPanel({
 const Sidebar = () => {
   const t = useTranslations("Sidebar");
   const [active, setActive] = useState<NavSection>(null);
+  const sidebarLoading = useLayoutStore((state) => state.sidebarLoading);
   const videoFooterOpen = useLayoutStore((state) => state.videoFooterOpen);
   const toggleVideoFooter = useLayoutStore((state) => state.toggleVideoFooter);
 
@@ -154,31 +156,41 @@ const Sidebar = () => {
     <TooltipProvider delayDuration={300}>
       {/* Icon strip */}
       <aside className="fixed top-16 left-4 z-30 flex w-12 flex-col items-center gap-1 border bg-card py-3 rounded-full">
-        {NAV_ITEMS.map(({ key, icon: Icon, group }, i) => (
-          <Fragment key={key}>
-            {i > 0 && group !== NAV_ITEMS[i - 1].group && (
-              <Separator key={`sep-${group}`} className="w-6" />
-            )}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={() => toggle(key)}
-                  className={cn(
-                    "flex size-9 items-center justify-center rounded-lg transition-colors",
-                    active === key || (key === "video" && videoFooterOpen)
-                      ? "bg-primary/10 text-primary"
-                      : "text-muted-foreground hover:bg-accent hover:text-foreground",
-                  )}
-                >
-                  <Icon className="size-5" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="right">
-                <p>{t(key)}</p>
-              </TooltipContent>
-            </Tooltip>
-          </Fragment>
-        ))}
+        {NAV_ITEMS.map(({ key, icon: Icon, group }, i) => {
+          const loading =
+            (key === "assets" && sidebarLoading.assets > 0) ||
+            (key === "episodes" && sidebarLoading.episodes > 0);
+
+          return (
+            <Fragment key={key}>
+              {i > 0 && group !== NAV_ITEMS[i - 1].group && (
+                <Separator key={`sep-${group}`} className="w-6" />
+              )}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => toggle(key)}
+                    className={cn(
+                      "flex size-9 items-center justify-center rounded-lg transition-colors",
+                      active === key || (key === "video" && videoFooterOpen) || loading
+                        ? "bg-primary/10 text-primary"
+                        : "text-muted-foreground hover:bg-accent hover:text-foreground",
+                    )}
+                  >
+                    {loading ? (
+                      <Loader2 className="size-5 animate-spin" />
+                    ) : (
+                      <Icon className="size-5" />
+                    )}
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="right">
+                  <p>{t(key)}</p>
+                </TooltipContent>
+              </Tooltip>
+            </Fragment>
+          );
+        })}
       </aside>
 
       <Button
@@ -194,7 +206,11 @@ const Sidebar = () => {
       >
         <span className="relative flex size-5 items-center justify-center">
           <span className="absolute inset-0 rounded-full bg-foreground/20 animate-ping animation-duration-[2.2s]" />
-          <MessageCircle className="relative size-5" />
+          {sidebarLoading.chat > 0 ? (
+            <Loader2 className="relative size-5 animate-spin" />
+          ) : (
+            <MessageCircle className="relative size-5" />
+          )}
         </span>
       </Button>
 
